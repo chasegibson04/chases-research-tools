@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this tool, please cite it as below."
+title: "Peptide Mass Calculator"
+type: software
+version: 1.0.0
+date-released: 2026-10-13
+authors:
+  - family-names: Gibson
+    given-names: Chase
+url: "https://CHANGEME.example/tools/peptide-mass-calculator/"
+license: MIT

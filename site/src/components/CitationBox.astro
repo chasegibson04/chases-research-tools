@@ -1,0 +1,34 @@
+---
+import { buildCitations, CITATION_FORMATS } from '@/lib/citation';
+import { SITE } from '@/config/site';
+import type { ToolManifest } from '@/lib/types';
+interface Props { tool: ToolManifest }
+const { tool } = Astro.props;
+const cites = buildCitations(tool, { siteName: SITE.name, siteUrl: SITE.url });
+const preferred = tool.citation.preferredFormat ?? 'apa';
+---
+<section class="cite" id="cite" aria-labelledby="cite-h">
+  <header><h3 id="cite-h">Cite this tool</h3>{tool.citation.doi && <span class="badge">DOI</span>}</header>
+  <div class="row">
+    <label class="small muted" for="cite-fmt">Format</label>
+    <select id="cite-fmt">{CITATION_FORMATS.map((f) => <option value={f.id} selected={f.id === preferred}>{f.label}</option>)}</select>
+    <button class="btn-sm" id="cite-copy" type="button">Copy</button>
+    <span class="small faint" id="cite-msg" aria-live="polite"></span>
+  </div>
+  <pre id="cite-text">{(cites as any)[preferred]}</pre>
+  {tool.citation.alsoCite?.length && (
+    <p class="small muted" style="margin:.75rem 0 0">Also cite: {tool.citation.alsoCite.map((c) => <span>{c.text}{c.doi && <> (<a href={`https://doi.org/${c.doi}`}>doi:{c.doi}</a>)</>} </span>)}</p>
+  )}
+  <script type="application/json" id="cite-data" set:html={JSON.stringify(cites)} />
+  <script>
+    const data = JSON.parse(document.getElementById('cite-data')!.textContent!);
+    const sel = document.getElementById('cite-fmt') as HTMLSelectElement;
+    const pre = document.getElementById('cite-text')!;
+    const msg = document.getElementById('cite-msg')!;
+    sel.addEventListener('change', () => { pre.textContent = data[sel.value]; });
+    document.getElementById('cite-copy')!.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(pre.textContent ?? '');
+      msg.textContent = 'Copied'; setTimeout(() => (msg.textContent = ''), 1500);
+    });
+  </script>
+</section>

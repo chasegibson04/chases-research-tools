@@ -1,0 +1,18 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE } from '@/config/site';
+---
+<Base title="About" description={`What ${SITE.name} is, how the tools run, and how to cite them.`}>
+  <div class="container prose" style="padding-top:var(--space-8)">
+    <h1>About</h1>
+    <p>{SITE.name} is a collection of small scientific tools built by {SITE.author.name} ({SITE.author.affiliation}) during research work and published so others can use them.</p>
+    <h2>How the tools run</h2>
+    <p>Everything runs in your browser. Inputs, files, and results never leave your computer: there is no server doing the computation, no account, and no upload. Tools written in Python or R run through WebAssembly builds of those languages, which are downloaded once and cached.</p>
+    <h2 id="cite">Citing</h2>
+    <p>Each tool page has a "Cite this tool" box with copy-ready formats. To cite the site as a whole: {SITE.author.name}. ({SITE.launchedYear}). <em>{SITE.name}</em>. {SITE.url}</p>
+    <h2>Source code</h2>
+    <p>The entire site, including every tool, is open source under the MIT license: <a href={SITE.repo}>{SITE.repo}</a>. Bug reports and pull requests are welcome.</p>
+    <h2>Support</h2>
+    <p>The site is free and ad-supported. If a tool saved you time, you can also buy me a coffee via the link in the footer.</p>
+  </div>
+</Base>

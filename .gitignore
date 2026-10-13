@@ -1,0 +1,21 @@
+# dependencies / build
+node_modules/
+site/dist/
+site/.astro/
+.wrangler/
+# env + secrets (never commit)
+.env
+.env.*
+!.env.example
+# test + tooling output
+site/test-results/
+site/playwright-report/
+site/coverage/
+.lighthouseci/
+# OS / editor / cloud-sync noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.box*
+.vscode/
+.idea/

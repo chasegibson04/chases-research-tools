@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use a tool from this site, please cite the tool's own CITATION.cff (shown on its page) or this repository."
+title: "Chase's Research Tools"
+type: software
+authors:
+  - family-names: Gibson
+    given-names: Chase
+    affiliation: "University of Wisconsin–Madison"
+repository-code: "https://github.com/CHANGEME/chases-research-tools"
+url: "https://CHANGEME.example"
+license: MIT
+version: 0.1.0
+date-released: 2026-10-13

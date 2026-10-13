@@ -1,0 +1,12 @@
+/* SPECTRA — light, cool, "clean lab" feel. Slate text, indigo accent, faint spectrum line in header. */
+:root[data-theme="spectra"] {
+  --bg: #f5f7fa; --bg-elev: #ffffff; --bg-sunken: #e9edf3; --bg-panel: #fbfcfe;
+  --fg: #1a2233; --fg-muted: #55617a; --fg-faint: #94a0b8;
+  --line: #dde3ec; --line-strong: #c3ccda;
+  --accent: #4f46e5; --accent-fg: #ffffff; --accent-soft: rgb(79 70 229 / 0.09);
+  --link: #4338ca; --ok: #15803d; --warn: #b45309; --err: #b91c1c;
+  --code-bg: #eef1f6;
+  color-scheme: light;
+  --grid-dot: rgb(26 34 51 / 0.05);
+}
+:root[data-theme="spectra"] .site-header { border-image: linear-gradient(90deg,#7c3aed,#2563eb,#06b6d4,#22c55e,#eab308,#ef4444) 1; border-bottom-width: 2px; }

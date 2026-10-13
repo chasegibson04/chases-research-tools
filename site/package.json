@@ -1,0 +1,31 @@
+{
+  "name": "crt-site",
+  "private": true,
+  "type": "module",
+  "description": "Chase's Research Tools — static Astro site with client-side scientific tools.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node ../scripts/validate-tools.mjs && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "validate": "node ../scripts/validate-tools.mjs"
+  },
+  "dependencies": {
+    "@astrojs/preact": "^6.0.6",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.8",
+    "plotly.js-basic-dist-min": "^4.1.2",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@playwright/test": "^1.64.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

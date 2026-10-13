@@ -1,0 +1,14 @@
+---
+import type { ToolManifest } from '@/lib/types';
+import { toolUrl, getSubcategory } from '@/lib/tools';
+interface Props { tool: ToolManifest }
+const { tool } = Astro.props;
+---
+<a class="card" href={toolUrl(tool.id)}>
+  <h3>{tool.name} {tool.status !== 'stable' && <span class:list={['badge', `badge-${tool.status}`]}>{tool.status}</span>}</h3>
+  <p>{tool.tagline}</p>
+  <div class="tags">
+    {tool.subcategories.map((s) => <span class="tag">{getSubcategory(tool.category, s)?.name ?? s}</span>)}
+    <span class="tag">{tool.runtime.engine === 'js' ? 'JavaScript' : tool.runtime.engine === 'python' ? 'Python' : tool.runtime.engine === 'r' ? 'R' : tool.runtime.engine}</span>
+  </div>
+</a>

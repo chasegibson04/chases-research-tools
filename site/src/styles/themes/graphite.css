@@ -1,0 +1,11 @@
+/* GRAPHITE — dark, instrument-panel feel. Teal accent, warm grey text. Good for long sessions. */
+:root[data-theme="graphite"] {
+  --bg: #111417; --bg-elev: #181c21; --bg-sunken: #0c0e11; --bg-panel: #1d2228;
+  --fg: #e6e4df; --fg-muted: #a09d96; --fg-faint: #6b6963;
+  --line: #2a3038; --line-strong: #3a424c;
+  --accent: #2dd4bf; --accent-fg: #06231f; --accent-soft: rgb(45 212 191 / 0.12);
+  --link: #7dd3c9; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+  --code-bg: #0c0e11;
+  color-scheme: dark;
+  --grid-dot: rgb(255 255 255 / 0.045);
+}

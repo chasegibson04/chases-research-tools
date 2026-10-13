@@ -1,0 +1,25 @@
+{
+  "$comment": "CV content. Edit this file (or regenerate from a .docx per docs/CV_PAGE_GUIDE.md). Headshot lives at site/public/cv/headshot.jpg.",
+  "name": "Chase Gibson",
+  "role": "PhD Candidate, University of Wisconsin–Madison",
+  "summary": "Short professional summary goes here (2–3 sentences).",
+  "headshot": "/cv/headshot.jpg",
+  "links": [
+    { "label": "Email", "href": "mailto:CHANGEME" },
+    { "label": "GitHub", "href": "https://github.com/CHANGEME" },
+    { "label": "ORCID", "href": "https://orcid.org/0000-0000-0000-0000" },
+    { "label": "Google Scholar", "href": "https://scholar.google.com/" }
+  ],
+  "sections": [
+    { "id": "education", "title": "Education", "type": "timeline", "items": [
+      { "title": "Ph.D., Chemistry (in progress)", "org": "University of Wisconsin–Madison", "dates": "2023 – present", "bullets": ["Advisor: CHANGEME", "Research: mass spectrometry, peptidomics"] }
+    ]},
+    { "id": "publications", "title": "Publications", "type": "publications", "items": [
+      { "authors": "Gibson C, et al.", "title": "Example publication title", "venue": "Journal Name", "year": 2025, "doi": "" }
+    ]},
+    { "id": "skills", "title": "Skills", "type": "list", "items": [
+      { "title": "Mass spectrometry", "bullets": ["LC–MS/MS", "Peptidomics", "Method development"] },
+      { "title": "Software", "bullets": ["R", "Python", "JavaScript"] }
+    ]}
+  ]
+}

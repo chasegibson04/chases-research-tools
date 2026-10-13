@@ -1,0 +1,11 @@
+# Cloudflare static-asset headers. COOP/COEP are intentionally NOT set globally:
+# they would block third-party ad scripts. Multithreaded WASM is opt-in per tool (docs/RUNTIMES.md).
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+/runtimes/*
+  Cache-Control: public, max-age=31536000, immutable

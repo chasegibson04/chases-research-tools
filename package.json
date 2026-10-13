@@ -1,0 +1,20 @@
+{
+  "name": "chases-research-tools",
+  "private": true,
+  "description": "Root wrapper. The web app lives in ./site. Cloudflare Workers Builds runs `npm run build` here then `npx wrangler deploy`.",
+  "scripts": {
+    "install:site": "npm --prefix site ci",
+    "dev": "npm --prefix site run dev",
+    "build": "npm --prefix site ci && npm --prefix site run build",
+    "check": "npm --prefix site run check",
+    "test": "npm --prefix site run test",
+    "log": "node scripts/log.mjs",
+    "new-tool": "node scripts/new-tool.mjs",
+    "validate": "node scripts/validate-tools.mjs",
+    "check:changelog": "node scripts/check-changelog.mjs",
+    "deploy": "npx wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

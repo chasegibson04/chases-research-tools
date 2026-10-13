@@ -1,0 +1,14 @@
+---
+import Base from '@/layouts/Base.astro';
+import { getAllTools, CATEGORIES } from '@/lib/tools';
+const tools = await getAllTools();
+---
+<Base title="Categories" description="Browse tools by scientific discipline and subcategory.">
+  <div class="container" style="padding-top:var(--space-8)">
+    <h1>Categories</h1>
+    <div class="card-grid">
+      {CATEGORIES.map((c) => { const n = tools.filter((t) => t.category === c.id).length; return (
+        <a class="card" href={`/categories/${c.id}/`}><h3>{c.name} <span class="badge">{n}</span></h3><p>{c.description}</p><div class="tags">{c.subcategories.map((s) => <span class="tag">{s.name}</span>)}</div></a>); })}
+    </div>
+  </div>
+</Base>

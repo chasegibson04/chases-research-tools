@@ -1,0 +1,6 @@
+{
+  "label": "Angiotensin II (DRVYIHPF)",
+  "description": "Common MS calibration standard.",
+  "input": { "sequence": "DRVYIHPF", "maxCharge": 3, "carbamidomethyl": false, "cyclic": false, "isotopePeaks": 8 },
+  "expected": { "mono": 1045.5345, "mz1": 1046.5418, "mz2": 523.7745, "formula": "C50H71N13O12" }
+}

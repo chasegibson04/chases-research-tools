@@ -1,0 +1,11 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE } from '@/config/site';
+---
+<Base title="Terms of use" description="Terms for using the tools on this site.">
+  <div class="container prose" style="padding-top:var(--space-8)">
+    <h1>Terms of use</h1>
+    <p>The tools on {SITE.name} are provided free of charge, "as is", without warranty of any kind. They are intended for research and educational use. Verify results independently before relying on them for decisions, publications, or anything safety-critical.</p>
+    <p>Source code is licensed under the MIT License. Written content and figures on this site are © {SITE.author.name} unless noted otherwise and may be reused with attribution.</p>
+  </div>
+</Base>

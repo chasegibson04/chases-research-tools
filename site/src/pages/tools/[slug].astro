@@ -1,0 +1,87 @@
+---
+import Base from '@/layouts/Base.astro';
+import ToolHost from '@/components/tool/ToolHost';
+import CitationBox from '@/components/CitationBox.astro';
+import RelatedTools from '@/components/RelatedTools.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import AdScripts from '@/components/AdScripts.astro';
+import { SITE } from '@/config/site';
+import { getAllTools, getToolDoc, relatedTools, getCategory, getSubcategory, categoryUrl, subcategoryUrl } from '@/lib/tools';
+import type { ToolManifest } from '@/lib/types';
+
+export async function getStaticPaths() {
+  const tools = await getAllTools({ includeDrafts: true });
+  return tools.map((t) => ({ params: { slug: t.id }, props: { tool: t } }));
+}
+const { tool } = Astro.props as { tool: ToolManifest };
+const all = await getAllTools();
+const related = relatedTools(tool, all);
+const doc = await getToolDoc(tool.id);
+const cat = getCategory(tool.category);
+const url = new URL(`/tools/${tool.id}/`, SITE.url).href;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org', '@type': tool.seo.schemaType, name: tool.name, description: tool.seo.metaDescription, url,
+    applicationCategory: 'ScienceApplication', operatingSystem: 'Any (web browser)', browserRequirements: 'Requires JavaScript',
+    softwareVersion: tool.version, isAccessibleForFree: true, offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    author: tool.citation.authors.map((a) => ({ '@type': 'Person', name: `${a.given} ${a.family}` })),
+    keywords: [...tool.keywords, ...tool.tags].join(', '), license: 'https://opensource.org/licenses/MIT',
+    datePublished: tool.maintenance.created, dateModified: tool.maintenance.updated,
+    ...(tool.citation.doi ? { identifier: `https://doi.org/${tool.citation.doi}` } : {}),
+  },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Tools', item: new URL('/tools/', SITE.url).href },
+    { '@type': 'ListItem', position: 2, name: cat?.name ?? tool.category, item: new URL(categoryUrl(tool.category), SITE.url).href },
+    { '@type': 'ListItem', position: 3, name: tool.name, item: url } ] },
+  ...(tool.seo.faq?.length ? [{ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: tool.seo.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
+];
+---
+<Base title={tool.seo.title} description={tool.seo.metaDescription} canonical={url} jsonLd={jsonLd} noindex={tool.status === 'draft'} ogImage={tool.seo.ogImage ? new URL(tool.seo.ogImage, SITE.url).href : undefined}>
+  <AdScripts slot="head" />
+  <div class:list={['container', { 'container-wide': tool.layout.fullWidth }]}>
+    <div class="tool-head">
+      <div style="flex:1;min-width:0">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/tools/">Tools</a><span>/</span><a href={categoryUrl(tool.category)}>{cat?.name}</a><span>/</span>{tool.subcategories.map((s, i) => <><a href={subcategoryUrl(tool.category, s)}>{getSubcategory(tool.category, s)?.name ?? s}</a>{i < tool.subcategories.length - 1 && <span>·</span>}</>)}</nav>
+        <h1>{tool.name} <span class:list={['badge', `badge-${tool.status}`]}>{tool.status} · v{tool.version}</span></h1>
+        <p class="tagline">{tool.tagline}</p>
+      </div>
+      <div class="ts-bar small"><a href="#about">About</a><a href="#cite">Cite</a>{tool.links.repo && <a href={tool.links.repo}>Source</a>}</div>
+    </div>
+
+    {tool.kind === 'interactive' ? (
+      <div class="tool-frame" data-aspect={tool.layout.aspect}>
+        <ToolHost client:only="preact" manifest={tool} />
+        <noscript><p style="padding:1rem">This tool runs entirely in your browser and needs JavaScript enabled.</p></noscript>
+      </div>
+    ) : (
+      <section class="tool-frame" style="padding:var(--space-6)">
+        <p><a class="btn btn-primary" href={tool.showcase?.releaseUrl ?? tool.links.release ?? '#'}>Download / release</a> <span class="muted small">Platforms: {tool.showcase?.platforms.join(', ')}</span></p>
+        <div class="card-grid" style="margin-top:var(--space-4)">
+          {tool.showcase?.figures.map((f) => <figure class="card" style="margin:0"><img src={`/tools/${tool.id}/${f.src}`} alt={f.alt} style="width:100%;border-radius:var(--radius-md)" loading="lazy" /><figcaption class="small muted" style="margin-top:.5rem">{f.caption}</figcaption></figure>)}
+        </div>
+        {tool.showcase?.install && <><h3 style="margin-top:var(--space-6)">Install</h3><pre><code>{tool.showcase.install}</code></pre></>}
+      </section>
+    )}
+
+    <AdSlot slot="toolBelow" allow={tool.ads.allow} format="horizontal" />
+
+    <div class="tool-below">
+      <article class="tool-doc prose" id="about">
+        {doc ? <doc.Content /> : <p class="muted">No documentation yet.</p>}
+      </article>
+      <aside style="display:grid;gap:var(--space-4);align-content:start">
+        <CitationBox tool={tool} />
+        <dl class="kv cite" style="margin:0">
+          <dt>Version</dt><dd>{tool.version}</dd>
+          <dt>Updated</dt><dd>{tool.maintenance.updated}</dd>
+          <dt>Runs in</dt><dd>{tool.runtime.languages.join(', ')} (your browser)</dd>
+          <dt>Data sent</dt><dd>none</dd>
+          <dt>License</dt><dd>{tool.license}</dd>
+          {tool.links.repo && <><dt>Source</dt><dd><a href={tool.links.repo}>GitHub</a></dd></>}
+        </dl>
+      </aside>
+    </div>
+    <RelatedTools tools={related} />
+  </div>
+</Base>

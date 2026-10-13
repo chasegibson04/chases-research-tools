@@ -1,0 +1,14 @@
+---
+import { MONETIZATION } from '@/config/monetization';
+const d = MONETIZATION.donate;
+const href = d.primary === 'kofi' && d.kofi.username ? `https://ko-fi.com/${d.kofi.username}`
+  : d.primary === 'github' && d.githubSponsors.username ? `https://github.com/sponsors/${d.githubSponsors.username}` : null;
+const secondary = d.primary === 'kofi' && d.githubSponsors.username ? { label: 'GitHub Sponsors', href: `https://github.com/sponsors/${d.githubSponsors.username}` }
+  : d.primary === 'github' && d.kofi.username ? { label: 'Ko-fi', href: `https://ko-fi.com/${d.kofi.username}` } : null;
+---
+{href ? (
+  <p style="margin:0">
+    <a class="btn btn-sm" href={href} target="_blank" rel="noopener">☕ {d.label}</a>
+    {secondary && <a class="small" style="margin-left:.6rem" href={secondary.href} target="_blank" rel="noopener">or via {secondary.label}</a>}
+  </p>
+) : (import.meta.env.DEV && <span class="faint small">[donate button: set MONETIZATION.donate]</span>)}

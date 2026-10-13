@@ -1,0 +1,18 @@
+---
+import Base from '@/layouts/Base.astro';
+import ToolCard from '@/components/ToolCard.astro';
+import { getAllTools, CATEGORIES } from '@/lib/tools';
+export function getStaticPaths() { return CATEGORIES.map((c) => ({ params: { category: c.id }, props: { cat: c } })); }
+const { cat } = Astro.props;
+const tools = (await getAllTools()).filter((t) => t.category === cat.id);
+---
+<Base title={`${cat.name} tools`} description={cat.description}>
+  <div class="container" style="padding-top:var(--space-8)">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/categories/">Categories</a><span>/</span><span>{cat.name}</span></nav>
+    <h1>{cat.name}</h1><p class="muted">{cat.description}</p>
+    {cat.subcategories.map((s) => { const inSub = tools.filter((t) => t.subcategories.includes(s.id)); return (
+      <section style="margin-top:var(--space-6)"><h2><a href={`/categories/${cat.id}/${s.id}/`}>{s.name}</a></h2><p class="muted small">{s.description}</p>
+        {inSub.length ? <div class="card-grid">{inSub.map((t) => <ToolCard tool={t} />)}</div> : <p class="faint small">No tools here yet.</p>}
+      </section>); })}
+  </div>
+</Base>

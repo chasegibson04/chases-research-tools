@@ -1,0 +1,6 @@
+{
+  "label": "Cyclic peptide with alkylated Cys",
+  "description": "cyclo(ACDEFG) with carbamidomethyl cysteine.",
+  "input": { "sequence": "ACDEFG", "maxCharge": 2, "carbamidomethyl": true, "cyclic": true, "isotopePeaks": 6 },
+  "expected": { "mono": 679.2272 }
+}

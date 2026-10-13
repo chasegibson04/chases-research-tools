@@ -1,0 +1,14 @@
+// Cloudflare Workers (static assets) deployment config.
+// The site is a pure static build; no Worker script runs on request.
+// Docs: docs/DEPLOYMENT.md
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chases-research-tools",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./site/dist",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  "observability": { "enabled": true }
+}

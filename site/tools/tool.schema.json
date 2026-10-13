@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chases-research-tools/tool.schema.json",
+  "title": "Tool manifest (tool.json)",
+  "description": "Every tool folder under site/tools/<id>/ must contain a tool.json matching this schema. Field-by-field guide: docs/TOOL_MANIFEST_SPEC.md",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "tagline", "description", "version", "status", "kind", "category", "subcategories", "tags", "keywords", "runtime", "compute", "layout", "inputs", "outputs", "figures", "exports", "examples", "citation", "seo", "ads", "maintenance", "links", "privacy", "license"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "minLength": 3, "maxLength": 60, "description": "URL slug; must equal the folder name; never change after publishing." },
+    "name": { "type": "string", "minLength": 3, "maxLength": 80 },
+    "tagline": { "type": "string", "minLength": 10, "maxLength": 140, "description": "One sentence shown on cards and under the title." },
+    "description": { "type": "string", "minLength": 50, "maxLength": 600, "description": "2–4 sentences, plain language; used in listings and llms.txt." },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "status": { "enum": ["draft", "beta", "stable", "deprecated"] },
+    "kind": { "enum": ["interactive", "showcase"], "description": "interactive = runs in the browser; showcase = documented download-only project." },
+    "category": { "type": "string" },
+    "subcategories": { "type": "array", "minItems": 1, "items": { "type": "string" }, "uniqueItems": true },
+    "tags": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9-]+$" }, "uniqueItems": true, "description": "Lowercase topical tags; drive related-tool suggestions." },
+    "keywords": { "type": "array", "items": { "type": "string" }, "description": "Natural-language search phrases users would type into Google." },
+    "related": { "type": "array", "items": { "type": "string" }, "description": "Explicit related tool ids (boosted in suggestions)." },
+    "runtime": {
+      "type": "object", "additionalProperties": false, "required": ["engine", "languages"],
+      "properties": {
+        "engine": { "enum": ["js", "python", "r", "wasm", "none"], "description": "none = showcase." },
+        "languages": { "type": "array", "items": { "type": "string" }, "description": "Human-readable, e.g. [\"TypeScript\"], [\"Python\"], [\"C++ (WebAssembly)\"]." },
+        "pyodide": { "type": "object", "additionalProperties": false, "properties": { "version": { "type": "string" }, "packages": { "type": "array", "items": { "type": "string" } }, "micropip": { "type": "array", "items": { "type": "string" } } } },
+        "webr": { "type": "object", "additionalProperties": false, "properties": { "version": { "type": "string" }, "packages": { "type": "array", "items": { "type": "string" } } } },
+        "wasm": { "type": "object", "additionalProperties": false, "required": ["source"], "properties": { "source": { "type": "string", "description": "Where the WASM is built from (path or repo) and how." }, "threads": { "type": "boolean" }, "simd": { "type": "boolean" } } },
+        "bundleSizeKB": { "type": ["number", "null"], "description": "Approx. extra download the tool triggers (JS + wasm + runtime), for the performance budget." }
+      }
+    },
+    "compute": {
+      "type": "object", "additionalProperties": false,
+      "required": ["location", "worker", "maxRuntimeSeconds", "maxMemoryMB", "maxInputSizeMB", "threads", "warnOnMobile", "longRunning"],
+      "properties": {
+        "location": { "const": "client", "description": "Fixed: all compute runs on the user's machine." },
+        "worker": { "type": "boolean", "description": "true = runs in a Web Worker (required for anything over ~50 ms)." },
+        "maxRuntimeSeconds": { "type": "number", "minimum": 1, "maximum": 3600, "description": "Hard timeout; the run is killed after this." },
+        "maxMemoryMB": { "type": "number", "minimum": 16, "maximum": 4096 },
+        "maxInputSizeMB": { "type": "number", "minimum": 0.01, "maximum": 2048 },
+        "threads": { "type": "integer", "minimum": 1, "maximum": 16, "description": "Requested worker threads; clamped to half the device's cores; 1 unless cross-origin isolated." },
+        "warnOnMobile": { "type": "boolean" },
+        "longRunning": { "type": "boolean", "description": "true = may take > 10 s; UI shows progress and keeps the tab awake." }
+      }
+    },
+    "layout": {
+      "type": "object", "additionalProperties": false, "required": ["aspect", "inputsPosition", "panels"],
+      "properties": {
+        "aspect": { "enum": ["fill", "16:9", "4:3", "tall"], "description": "fill = fit the viewport below the header (default)." },
+        "inputsPosition": { "enum": ["left", "top", "right"] },
+        "inputsWidthPx": { "type": "integer", "minimum": 200, "maximum": 520 },
+        "panels": { "type": "array", "items": { "enum": ["inputs", "results", "figure", "table", "log", "custom"] } },
+        "fullWidth": { "type": "boolean" }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "label", "type", "help"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+          "label": { "type": "string" },
+          "type": { "enum": ["text", "textarea", "number", "integer", "boolean", "select", "multiselect", "file", "range", "color"] },
+          "help": { "type": "string", "minLength": 15, "description": "REQUIRED tooltip text: what it is, units, typical values, what happens if wrong." },
+          "default": {}, "required": { "type": "boolean" }, "unit": { "type": "string" },
+          "min": { "type": "number" }, "max": { "type": "number" }, "step": { "type": "number" },
+          "options": { "type": "array", "items": { "type": "object", "required": ["value", "label"], "properties": { "value": { "type": "string" }, "label": { "type": "string" } } } },
+          "placeholder": { "type": "string" }, "accept": { "type": "string" }, "maxSizeMB": { "type": "number" },
+          "group": { "type": "string" }, "advanced": { "type": "boolean" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["name", "label", "type"],
+        "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "type": { "enum": ["number", "text", "table", "figure", "file", "json"] }, "help": { "type": "string" }, "exportFormats": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf"] } } } }
+    },
+    "figures": { "type": "object", "additionalProperties": false, "required": ["enabled", "library", "exportable"], "properties": { "enabled": { "type": "boolean" }, "library": { "enum": ["plotly", "none"] }, "exportable": { "type": "boolean" }, "defaultPalette": { "type": "string" } } },
+    "exports": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf"] }, "uniqueItems": true },
+    "examples": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["file", "label"], "properties": { "file": { "type": "string", "pattern": "\\.json$" }, "label": { "type": "string" }, "description": { "type": "string" }, "expectedRuntimeSeconds": { "type": "number" } } },
+      "description": "At least one example is mandatory; each must have golden `expected` values used by tests."
+    },
+    "citation": {
+      "type": "object", "additionalProperties": false, "required": ["authors", "year", "title"],
+      "properties": {
+        "authors": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["family", "given"], "properties": { "family": { "type": "string" }, "given": { "type": "string" }, "orcid": { "type": "string" } } } },
+        "year": { "type": "integer", "minimum": 2020 }, "title": { "type": "string" },
+        "doi": { "type": ["string", "null"] }, "version": { "type": "string" }, "preferredFormat": { "enum": ["apa", "mla", "chicago", "vancouver", "bibtex", "ris"] },
+        "alsoCite": { "type": "array", "items": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" }, "doi": { "type": "string" }, "url": { "type": "string" } } }, "description": "Underlying methods/papers users should also cite." }
+      }
+    },
+    "seo": {
+      "type": "object", "additionalProperties": false, "required": ["title", "metaDescription", "schemaType"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 65, "description": "Google title: include the main keyword, e.g. 'Peptide Mass Calculator (monoisotopic, m/z, isotopes)'." },
+        "metaDescription": { "type": "string", "minLength": 70, "maxLength": 160 },
+        "ogImage": { "type": ["string", "null"] },
+        "schemaType": { "enum": ["WebApplication", "SoftwareApplication", "SoftwareSourceCode"] },
+        "faq": { "type": "array", "items": { "type": "object", "required": ["q", "a"], "properties": { "q": { "type": "string" }, "a": { "type": "string" } } }, "description": "2–5 real questions; rendered as FAQ structured data." }
+      }
+    },
+    "ads": { "type": "object", "additionalProperties": false, "required": ["allow"], "properties": { "allow": { "type": "boolean" } } },
+    "maintenance": {
+      "type": "object", "additionalProperties": false, "required": ["created", "updated", "author"],
+      "properties": { "created": { "type": "string", "format": "date" }, "updated": { "type": "string", "format": "date" }, "author": { "type": "string" }, "maintainers": { "type": "array", "items": { "type": "string" } }, "sourceOrigin": { "type": "string", "description": "Where the tool was imported from (original project path/repo), for provenance." }, "changelog": { "type": "string" } }
+    },
+    "links": { "type": "object", "additionalProperties": false, "properties": { "repo": { "type": ["string", "null"] }, "release": { "type": ["string", "null"] }, "paper": { "type": ["string", "null"] }, "docs": { "type": ["string", "null"] }, "demoVideo": { "type": ["string", "null"] } } },
+    "showcase": {
+      "type": "object", "additionalProperties": false, "required": ["install", "platforms", "figures", "releaseUrl"],
+      "properties": { "install": { "type": "string" }, "platforms": { "type": "array", "items": { "type": "string" } }, "figures": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["src", "caption", "alt"], "properties": { "src": { "type": "string" }, "caption": { "type": "string" }, "alt": { "type": "string" } } } }, "releaseUrl": { "type": "string" } }
+    },
+    "accessibility": { "type": "object", "additionalProperties": false, "properties": { "notes": { "type": "string" }, "keyboardOperable": { "type": "boolean" } } },
+    "privacy": { "type": "object", "additionalProperties": false, "required": ["sendsData", "storesLocal"], "properties": { "sendsData": { "const": false }, "storesLocal": { "type": "boolean" } } },
+    "license": { "type": "string", "default": "MIT" }
+  },
+  "allOf": [
+    { "if": { "properties": { "kind": { "const": "showcase" } } }, "then": { "required": ["showcase"], "properties": { "runtime": { "properties": { "engine": { "const": "none" } } } } } },
+    { "if": { "properties": { "runtime": { "properties": { "engine": { "const": "python" } } } } }, "then": { "properties": { "runtime": { "required": ["pyodide"] } } } },
+    { "if": { "properties": { "runtime": { "properties": { "engine": { "const": "r" } } } } }, "then": { "properties": { "runtime": { "required": ["webr"] } } } },
+    { "if": { "properties": { "runtime": { "properties": { "engine": { "const": "wasm" } } } } }, "then": { "properties": { "runtime": { "required": ["wasm"] } } } }
+  ]
+}

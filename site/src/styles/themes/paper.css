@@ -1,0 +1,11 @@
+/* PAPER — light, journal/manuscript feel. Warm off-white, ink text, oxblood accent. Prints well. */
+:root[data-theme="paper"] {
+  --bg: #f7f5f0; --bg-elev: #fffdf9; --bg-sunken: #eeeae2; --bg-panel: #fbfaf6;
+  --fg: #1c1a17; --fg-muted: #5c574f; --fg-faint: #9a948a;
+  --line: #e2ddd3; --line-strong: #c9c2b5;
+  --accent: #8b2635; --accent-fg: #ffffff; --accent-soft: rgb(139 38 53 / 0.08);
+  --link: #7a2130; --ok: #2f7d4f; --warn: #a66a00; --err: #b3261e;
+  --code-bg: #efece5;
+  color-scheme: light;
+  --grid-dot: rgb(0 0 0 / 0.05);
+}

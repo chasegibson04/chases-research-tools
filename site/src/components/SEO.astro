@@ -1,0 +1,24 @@
+---
+import { SITE } from '@/config/site';
+interface Props { title: string; description: string; canonical?: string; ogImage?: string; jsonLd?: unknown[]; noindex?: boolean }
+const { title, description, canonical, ogImage, jsonLd = [], noindex } = Astro.props;
+const fullTitle = title === SITE.name ? title : `${title} · ${SITE.name}`;
+const url = canonical ?? new URL(Astro.url.pathname, SITE.url).href;
+const img = ogImage ?? new URL('/og-default.png', SITE.url).href;
+const site: Record<string, unknown> = { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, description: SITE.description, author: { '@type': 'Person', name: SITE.author.name, affiliation: SITE.author.affiliation } };
+---
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={url} />
+{noindex && <meta name="robots" content="noindex,nofollow" />}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={url} />
+<meta property="og:image" content={img} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="theme-color" content="#111417" />
+<link rel="sitemap" href="/sitemap-index.xml" />
+<script type="application/ld+json" set:html={JSON.stringify(site)} />
+{jsonLd.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}

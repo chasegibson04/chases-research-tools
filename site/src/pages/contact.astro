@@ -1,0 +1,12 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE } from '@/config/site';
+---
+<Base title="Contact" description="How to reach the author, report a bug, or request a tool.">
+  <div class="container prose" style="padding-top:var(--space-8)">
+    <h1>Contact</h1>
+    <p><strong>Bugs and feature requests:</strong> open an issue on <a href={`${SITE.repo}/issues`}>GitHub</a>. Include the tool name, your inputs, and your browser.</p>
+    <p><strong>Everything else:</strong> {SITE.author.email ? <a href={`mailto:${SITE.author.email}`}>{SITE.author.email}</a> : <span class="muted">email address coming soon</span>}.</p>
+    <!-- TODO (docs/ROADMAP.md): optional contact form via a Cloudflare Worker + Turnstile + Email Service. Static site stays static until then. -->
+  </div>
+</Base>

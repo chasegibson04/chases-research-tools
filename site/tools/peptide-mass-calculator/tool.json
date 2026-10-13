@@ -1,0 +1,47 @@
+{
+  "$schema": "../tool.schema.json",
+  "id": "peptide-mass-calculator",
+  "name": "Peptide Mass Calculator",
+  "tagline": "Monoisotopic mass, m/z for any charge state, and the theoretical isotope envelope of a peptide sequence.",
+  "description": "Enter a peptide sequence in one-letter code and get its elemental composition, monoisotopic and average mass, m/z values across charge states, and a theoretical isotope distribution you can export as a publication-ready figure. Supports common fixed modifications. Runs entirely in your browser.",
+  "version": "1.0.0",
+  "status": "beta",
+  "kind": "interactive",
+  "category": "mass-spectrometry",
+  "subcategories": ["peptidomics", "proteomics"],
+  "tags": ["peptide", "mass", "isotope", "mz", "calculator"],
+  "keywords": ["peptide mass calculator", "monoisotopic mass peptide", "peptide m/z calculator", "isotope distribution peptide", "peptide molecular weight"],
+  "related": [],
+  "runtime": { "engine": "js", "languages": ["TypeScript"], "bundleSizeKB": 12 },
+  "compute": { "location": "client", "worker": true, "maxRuntimeSeconds": 30, "maxMemoryMB": 256, "maxInputSizeMB": 1, "threads": 1, "warnOnMobile": false, "longRunning": false },
+  "layout": { "aspect": "fill", "inputsPosition": "left", "inputsWidthPx": 320, "panels": ["inputs", "results", "figure"], "fullWidth": false },
+  "inputs": [
+    { "name": "sequence", "label": "Peptide sequence", "type": "textarea", "help": "One-letter amino acid codes (20 standard residues). Whitespace and digits are ignored. Lowercase is accepted. Example: DRVYIHPF (angiotensin II).", "default": "DRVYIHPF", "placeholder": "e.g. DRVYIHPF", "required": true },
+    { "name": "maxCharge", "label": "Max charge state", "type": "integer", "help": "m/z is reported for every charge from 1+ up to this value. Tryptic peptides are usually 2+ or 3+; large or basic peptides may reach 5+ or more.", "default": 3, "min": 1, "max": 20, "step": 1, "unit": "z", "required": true },
+    { "name": "carbamidomethyl", "label": "Carbamidomethyl cysteine (+57.021)", "type": "boolean", "help": "Adds C2H3NO to every cysteine. Use when samples were alkylated with iodoacetamide, which is standard in bottom-up proteomics.", "default": false },
+    { "name": "cyclic", "label": "Cyclic (head-to-tail)", "type": "boolean", "help": "Removes one water (−18.011 Da) to model a head-to-tail cyclic peptide, which has no free N- or C-terminus.", "default": false },
+    { "name": "isotopePeaks", "label": "Isotope peaks to compute", "type": "integer", "help": "Number of isotopologue peaks (M, M+1, M+2, ...) shown in the isotope envelope. 8 is enough for peptides under ~3 kDa; use more for larger peptides.", "default": 8, "min": 3, "max": 30, "step": 1, "advanced": true }
+  ],
+  "outputs": [
+    { "name": "mono", "label": "Monoisotopic mass", "type": "number", "help": "Neutral monoisotopic mass [M] in Da." },
+    { "name": "mz", "label": "m/z table", "type": "table", "exportFormats": ["csv", "json"] },
+    { "name": "isotopes", "label": "Isotope envelope", "type": "figure", "exportFormats": ["png", "svg", "csv"] }
+  ],
+  "figures": { "enabled": true, "library": "plotly", "exportable": true },
+  "exports": ["csv", "json", "png", "svg"],
+  "examples": [
+    { "file": "angiotensin-ii.json", "label": "Angiotensin II (DRVYIHPF)", "description": "Classic 8-residue standard.", "expectedRuntimeSeconds": 1 },
+    { "file": "cyclic-cysteine.json", "label": "Cyclic peptide with alkylated Cys", "expectedRuntimeSeconds": 1 }
+  ],
+  "citation": { "authors": [{ "family": "Gibson", "given": "Chase" }], "year": 2026, "title": "Peptide Mass Calculator", "doi": null, "preferredFormat": "apa", "alsoCite": [] },
+  "seo": { "title": "Peptide Mass Calculator: monoisotopic mass, m/z, isotopes", "metaDescription": "Free peptide mass calculator: monoisotopic and average mass, m/z for each charge state, and an exportable isotope distribution. Runs in your browser.", "ogImage": null, "schemaType": "WebApplication",
+    "faq": [
+      { "q": "What is the difference between monoisotopic and average mass?", "a": "Monoisotopic mass uses the most abundant isotope of each element (12C, 1H, 14N, 16O, 32S) and matches the first peak of the isotope envelope in high-resolution MS. Average mass weights all isotopes by natural abundance and matches the centroid of the whole envelope." },
+      { "q": "How is m/z calculated from mass?", "a": "m/z = (M + z × 1.007276) / z, where M is the neutral monoisotopic mass and 1.007276 Da is the proton mass." }
+    ] },
+  "ads": { "allow": true },
+  "maintenance": { "created": "2026-10-13", "updated": "2026-10-13", "author": "Chase Gibson", "sourceOrigin": "Written as the reference example for the site scaffold." },
+  "links": { "repo": "https://github.com/CHANGEME/chases-research-tools/tree/main/site/tools/peptide-mass-calculator", "release": null, "paper": null, "docs": null },
+  "privacy": { "sendsData": false, "storesLocal": false },
+  "license": "MIT"
+}

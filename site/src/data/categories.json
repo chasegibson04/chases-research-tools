@@ -1,0 +1,66 @@
+{
+  "$comment": "Registry of broad categories and subcategories. Every tool must reference one category id and >=1 subcategory id from that category. Add new ones here (keep ids kebab-case, stable forever: they are URLs).",
+  "categories": [
+    {
+      "id": "mass-spectrometry",
+      "name": "Mass Spectrometry",
+      "description": "Calculators and analysis tools for MS data: masses, isotopes, fragmentation, and spectra.",
+      "subcategories": [
+        { "id": "peptidomics", "name": "Peptidomics", "description": "Endogenous peptides, cyclic peptides, and peptide fragmentation." },
+        { "id": "proteomics", "name": "Proteomics", "description": "Protein identification, digestion, and quantification." },
+        { "id": "metabolomics", "name": "Metabolomics", "description": "Small molecule identification and formula tools." },
+        { "id": "lipidomics", "name": "Lipidomics", "description": "Lipid nomenclature, masses, and fragmentation." },
+        { "id": "instrumentation", "name": "Instrumentation", "description": "Resolution, calibration, and acquisition calculators." }
+      ]
+    },
+    {
+      "id": "chemistry",
+      "name": "Chemistry",
+      "description": "General and analytical chemistry calculators.",
+      "subcategories": [
+        { "id": "solutions", "name": "Solutions & Buffers", "description": "Molarity, dilution, pH, and buffer preparation." },
+        { "id": "formula-tools", "name": "Formula Tools", "description": "Elemental composition, molecular weight, and isotope patterns." },
+        { "id": "chromatography", "name": "Chromatography", "description": "LC and GC method and retention tools." }
+      ]
+    },
+    {
+      "id": "biology",
+      "name": "Biology",
+      "description": "Sequence, molecular biology, and lab-bench calculators.",
+      "subcategories": [
+        { "id": "sequence-analysis", "name": "Sequence Analysis", "description": "DNA, RNA, and protein sequence utilities." },
+        { "id": "molecular-biology", "name": "Molecular Biology", "description": "Cloning, PCR, and assay calculators." },
+        { "id": "cell-culture", "name": "Cell Culture", "description": "Seeding density, doubling time, and media calculators." }
+      ]
+    },
+    {
+      "id": "statistics",
+      "name": "Statistics & Data",
+      "description": "Statistical tests, curve fitting, and data wrangling utilities.",
+      "subcategories": [
+        { "id": "hypothesis-testing", "name": "Hypothesis Testing", "description": "t-tests, ANOVA, non-parametric tests, and power." },
+        { "id": "curve-fitting", "name": "Curve Fitting", "description": "Regression, dose–response, and calibration curves." },
+        { "id": "data-utilities", "name": "Data Utilities", "description": "Converters, reformatters, and file tools." }
+      ]
+    },
+    {
+      "id": "visualization",
+      "name": "Visualization",
+      "description": "Publication-quality figure builders.",
+      "subcategories": [
+        { "id": "plot-builders", "name": "Plot Builders", "description": "Upload data, build a figure, export vector graphics." },
+        { "id": "color-and-style", "name": "Color & Style", "description": "Palettes, colorblind checks, and figure styling." }
+      ]
+    },
+    {
+      "id": "software",
+      "name": "Software & Downloads",
+      "description": "Larger projects that run outside the browser: documented here with figures and release links.",
+      "subcategories": [
+        { "id": "desktop-apps", "name": "Desktop Applications", "description": "Installable programs." },
+        { "id": "packages", "name": "Packages & Libraries", "description": "R, Python, and other packages." },
+        { "id": "pipelines", "name": "Pipelines & Scripts", "description": "Workflows and command-line scripts." }
+      ]
+    }
+  ]
+}

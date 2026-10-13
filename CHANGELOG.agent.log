@@ -1,0 +1,21 @@
+# CHANGELOG.agent.log — APPEND-ONLY work log for agents and humans
+# Format: [YYYY-MM-DD HH:MM UTC±hh:mm] [agent] [scope] message
+#         continuation lines are indented four spaces
+# Rules:  never edit or delete existing lines (CI enforces); add entries as you work, not just at the end;
+#         append with:  npm run log -- "<scope>" "<message>"   (AGENT_NAME env var = your model name)
+# Scopes: site | docs | tools/<slug> | cv | deploy | monetization | ci | admin
+[2026-10-13 14:05 UTC-05:00] [claude-fable-5-1] [admin] starting: project kickoff. Owner chose name "Chase's Research Tools", MIT license,
+    repo stays in Box for now then moves to a Windows machine tonight (keep macOS support), monetization = AdSense + Ko-fi default
+    with EthicalAds + GitHub Sponsors as swappable alternatives.
+[2026-10-13 14:20 UTC-05:00] [claude-fable-5-1] [admin] research: Cloudflare now recommends Workers static assets (Git-connected Workers Builds)
+    over Pages for new projects; Astro 6 current; Pyodide 0.29.x/314.x and webR 0.6.0 current; AdSense needs a Google-certified CMP for EEA/UK.
+[2026-10-13 14:40 UTC-05:00] [claude-fable-5-1] [site] scaffold: Astro 6 + Preact islands, static output, wrangler.jsonc at root pointing to site/dist.
+    Design tokens + three theme candidates (graphite, paper, spectra) with /design/themes/ mockup page.
+[2026-10-13 15:00 UTC-05:00] [claude-fable-5-1] [tools/peptide-mass-calculator] added reference tool: manifest, README, examples with golden values,
+    worker compute (composition, mono/avg mass, m/z, isotope envelope), Preact UI, unit tests.
+[2026-10-13 15:10 UTC-05:00] [claude-fable-5-1] [ci] added scripts: validate-tools (JSON Schema + structural rules), check-changelog (append-only),
+    log (timestamped append), new-tool (template scaffold); GitHub Actions workflow validate→check→test→build→e2e.
+[2026-10-13 15:30 UTC-05:00] [claude-fable-5-1] [docs] wrote docs/ set: README index, ARCHITECTURE, DECISIONS (ADRs), TOOL_IMPORT_GUIDE,
+    TOOL_MANIFEST_SPEC, TESTING_PROTOCOL, RUNTIMES, FIGURES_AND_EXPORTS, DESIGN_SYSTEM, SEO_AND_DISCOVERABILITY, MONETIZATION,
+    DEPLOYMENT, CITATIONS, SHOWCASE_PROJECTS, CV_PAGE_GUIDE, CATEGORIES, MARKETING_AND_LAUNCH, ROADMAP, ADMIN.
+[2026-10-13 14:12 UTC-05:00] [claude-fable-5-1] [site] verified: validate OK, 7 unit tests pass, astro check 0 errors, build 36 pages, Playwright e2e 3/3 pass. Installed Astro 7.3 (not 6), Preact 10, Plotly 4, Vitest 5, TS 6. Added scripts/serve-dist.mjs because Astro 7 preview daemonizes (breaks Playwright webServer).

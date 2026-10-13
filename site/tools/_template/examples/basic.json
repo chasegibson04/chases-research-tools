@@ -1,0 +1,6 @@
+{
+  "label": "Basic example",
+  "description": "A minimal input that exercises the main path.",
+  "input": { "exampleParam": 1 },
+  "expected": { "value": 2 }
+}

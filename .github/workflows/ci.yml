@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: site/package-lock.json }
+      - name: Changelog is append-only
+        run: node scripts/check-changelog.mjs
+        env: { BASE_REF: "${{ github.event.pull_request.base.sha || github.event.before }}" }
+      - name: Install
+        run: npm --prefix site ci
+      - name: Validate tool manifests
+        run: node scripts/validate-tools.mjs
+      - name: Typecheck + Astro check
+        run: npm --prefix site run check
+      - name: Unit tests
+        run: npm --prefix site run test
+      - name: Build
+        run: npm --prefix site run build
+      - name: E2E (Playwright)
+        run: |
+          cd site && npx playwright install --with-deps chromium && cd ..
+          npm --prefix site run test:e2e
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with: { name: dist, path: site/dist, retention-days: 3 }

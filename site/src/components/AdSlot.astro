@@ -1,0 +1,28 @@
+---
+// One component, swappable provider. Fixed min-height prevents layout shift (CLS). Never placed inside .tool-frame.
+import { MONETIZATION } from '@/config/monetization';
+interface Props { slot: 'toolBelow' | 'directorySidebar' | 'footer'; allow?: boolean; format?: 'auto' | 'rectangle' | 'horizontal' }
+const { slot, allow = true, format = 'auto' } = Astro.props;
+const a = MONETIZATION.ads;
+const path = Astro.url.pathname;
+const blocked = !allow || a.neverOn.some((p) => path.startsWith(p));
+const adsenseReady = a.provider === 'adsense' && a.adsense.client && a.adsense.slots[slot];
+const ethicalReady = a.provider === 'ethicalads' && a.ethicalads.publisher;
+const show = !blocked && (adsenseReady || ethicalReady);
+---
+{show && adsenseReady && (
+  <div>
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-slot">
+      <ins class="adsbygoogle" style="display:block;width:100%" data-ad-client={a.adsense.client} data-ad-slot={a.adsense.slots[slot]} data-ad-format={format} data-full-width-responsive="true"></ins>
+      <script is:inline>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>
+  </div>
+)}
+{show && ethicalReady && (
+  <div>
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-slot"><div data-ea-publisher={a.ethicalads.publisher} data-ea-type={format === 'horizontal' ? 'text' : 'image'} data-ea-keywords={a.ethicalads.keywords.join('|')}></div></div>
+  </div>
+)}
+{!show && import.meta.env.DEV && !blocked && <div class="ad-slot" data-placeholder>ad slot: {slot} (provider {a.provider}, ids not set)</div>}

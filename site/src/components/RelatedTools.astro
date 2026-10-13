@@ -1,0 +1,12 @@
+---
+import type { ToolManifest } from '@/lib/types';
+import ToolCard from './ToolCard.astro';
+interface Props { tools: ToolManifest[] }
+const { tools } = Astro.props;
+---
+{tools.length > 0 && (
+  <section aria-labelledby="related-h" style="margin-top:var(--space-8)">
+    <h2 id="related-h">Related tools</h2>
+    <div class="card-grid">{tools.map((t) => <ToolCard tool={t} />)}</div>
+  </section>
+)}

@@ -1,0 +1,20 @@
+/* Design tokens. Themes override these under [data-theme="..."] in ./themes/*.css.
+   Rules: no pure black/white, no default-blue links, no gradient text, no glassmorphism. (docs/DESIGN_SYSTEM.md) */
+:root {
+  --font-sans: "Source Sans 3", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  --font-display: var(--font-sans);
+  --fs-xs: 0.78rem; --fs-sm: 0.875rem; --fs-md: 1rem; --fs-lg: 1.15rem; --fs-xl: 1.45rem; --fs-2xl: 1.9rem; --fs-3xl: 2.5rem;
+  --lh-tight: 1.2; --lh-body: 1.55;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem;
+  --max-w: 1200px; --max-w-prose: 72ch;
+  --header-h: 52px;
+  --tool-min-h: calc(100vh - var(--header-h) - 120px);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.08), 0 1px 1px rgb(0 0 0 / 0.04);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.10);
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur: 140ms;
+  /* Categorical palette for figures (colorblind-safe, Okabe–Ito based) */
+  --viz-1: #0072b2; --viz-2: #e69f00; --viz-3: #009e73; --viz-4: #d55e00; --viz-5: #cc79a7; --viz-6: #56b4e9; --viz-7: #f0e442; --viz-8: #7f7f7f;
+}

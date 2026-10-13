@@ -1,0 +1,34 @@
+{
+  "$schema": "../tool.schema.json",
+  "id": "__SLUG__",
+  "name": "__NAME__",
+  "tagline": "One-sentence description shown on cards (10–140 chars).",
+  "description": "Two to four plain-language sentences describing what the tool does, who it is for, and what it outputs. This is used on listing pages and in llms.txt, so write it for a human and a search engine at once.",
+  "version": "0.1.0",
+  "status": "draft",
+  "kind": "interactive",
+  "category": "mass-spectrometry",
+  "subcategories": ["peptidomics"],
+  "tags": ["example-tag"],
+  "keywords": ["what a user would type into google"],
+  "related": [],
+  "runtime": { "engine": "js", "languages": ["TypeScript"], "bundleSizeKB": null },
+  "compute": { "location": "client", "worker": true, "maxRuntimeSeconds": 60, "maxMemoryMB": 512, "maxInputSizeMB": 10, "threads": 1, "warnOnMobile": false, "longRunning": false },
+  "layout": { "aspect": "fill", "inputsPosition": "left", "inputsWidthPx": 320, "panels": ["inputs", "results", "figure"], "fullWidth": false },
+  "inputs": [
+    { "name": "exampleParam", "label": "Example parameter", "type": "number", "help": "What this parameter means, its units, a typical value, and what happens if it is set wrong.", "default": 1, "min": 0, "max": 100, "step": 1, "unit": "", "required": true }
+  ],
+  "outputs": [
+    { "name": "result", "label": "Result", "type": "table", "exportFormats": ["csv", "json"] }
+  ],
+  "figures": { "enabled": true, "library": "plotly", "exportable": true },
+  "exports": ["csv", "json", "png", "svg"],
+  "examples": [ { "file": "basic.json", "label": "Basic example", "expectedRuntimeSeconds": 1 } ],
+  "citation": { "authors": [{ "family": "Gibson", "given": "Chase" }], "year": 2026, "title": "__NAME__", "doi": null, "preferredFormat": "apa", "alsoCite": [] },
+  "seo": { "title": "__NAME__", "metaDescription": "A 70–160 character description containing the main keyword, what the tool computes, and that it is free and runs in the browser.", "ogImage": null, "schemaType": "WebApplication", "faq": [] },
+  "ads": { "allow": true },
+  "maintenance": { "created": "__DATE__", "updated": "__DATE__", "author": "Chase Gibson", "sourceOrigin": "" },
+  "links": { "repo": null, "release": null, "paper": null, "docs": null },
+  "privacy": { "sendsData": false, "storesLocal": false },
+  "license": "MIT"
+}

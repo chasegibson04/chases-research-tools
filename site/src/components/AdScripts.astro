@@ -1,0 +1,11 @@
+---
+// Loaded once in <head> of pages that may show ads. Deferred so it never blocks rendering.
+import { MONETIZATION } from '@/config/monetization';
+const a = MONETIZATION.ads;
+---
+{a.provider === 'adsense' && a.adsense.client && (
+  <script async is:inline src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${a.adsense.client}`} crossorigin="anonymous"></script>
+)}
+{a.provider === 'ethicalads' && a.ethicalads.publisher && (
+  <script async is:inline src="https://media.ethicalads.io/media/client/ethicalads.min.js"></script>
+)}

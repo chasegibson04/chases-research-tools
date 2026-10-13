@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /design/
+Sitemap: https://chases-research-tools.pages.dev/sitemap-index.xml

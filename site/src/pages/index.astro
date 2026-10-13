@@ -1,0 +1,33 @@
+---
+import Base from '@/layouts/Base.astro';
+import ToolCard from '@/components/ToolCard.astro';
+import { SITE } from '@/config/site';
+import { getAllTools, CATEGORIES } from '@/lib/tools';
+const tools = await getAllTools();
+const featured = tools.filter((t) => t.status === 'stable' || t.status === 'beta').slice(0, 6);
+---
+<Base title={SITE.name} description={SITE.description}>
+  <section class="container" style="padding: var(--space-12) 0 var(--space-8)">
+    <h1 style="font-size:var(--fs-3xl);max-width:20ch">Research tools that run in your browser.</h1>
+    <p class="muted" style="max-width:60ch;font-size:var(--fs-lg)">{SITE.tagline} Every tool is open source and citable.</p>
+    <p><a class="btn btn-primary" href="/tools/">Browse all tools</a> <a class="btn" href="/about/" style="margin-left:.5rem">How it works</a></p>
+  </section>
+  {featured.length > 0 && (
+    <section class="container" style="padding-bottom:var(--space-8)">
+      <h2>Tools</h2>
+      <div class="card-grid">{featured.map((t) => <ToolCard tool={t} />)}</div>
+    </section>
+  )}
+  <section class="container">
+    <h2>Categories</h2>
+    <div class="card-grid">
+      {CATEGORIES.map((c) => (
+        <a class="card" href={`/categories/${c.id}/`}>
+          <h3>{c.name}</h3>
+          <p>{c.description}</p>
+          <div class="tags">{c.subcategories.map((s) => <span class="tag">{s.name}</span>)}</div>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

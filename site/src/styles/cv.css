@@ -1,0 +1,19 @@
+/* CV page has its own scoped tokens so it can be restyled without touching the tool theme. (docs/CV_PAGE_GUIDE.md) */
+.cv { --cv-accent: var(--accent); --cv-col: 220px; }
+.cv-hero { display: grid; grid-template-columns: 140px 1fr; gap: var(--space-6); align-items: center; padding: var(--space-8) 0 var(--space-6); }
+.cv-hero img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line-strong); }
+.cv-hero h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-1); }
+.cv-hero .role { color: var(--fg-muted); font-size: var(--fs-lg); margin: 0; }
+.cv-links { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-3); font-size: var(--fs-sm); }
+.cv-section { display: grid; grid-template-columns: var(--cv-col) 1fr; gap: var(--space-6); padding: var(--space-6) 0; border-top: 1px solid var(--line); }
+.cv-section > h2 { font-size: var(--fs-md); text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-faint); margin: 0; }
+.cv-item { margin-bottom: var(--space-4); }
+.cv-item .title { font-weight: 600; }
+.cv-item .meta { color: var(--fg-muted); font-size: var(--fs-sm); }
+.cv-item ul { margin: var(--space-1) 0 0; padding-left: 1.1rem; }
+.cv-pub { margin-bottom: var(--space-3); font-size: var(--fs-sm); }
+.cv-pub .authors { color: var(--fg-muted); }
+.cv-timeline { position: relative; padding-left: var(--space-4); border-left: 2px solid var(--line); }
+.cv-timeline .cv-item::before { content: ""; position: absolute; left: -7px; width: 12px; height: 12px; border-radius: 50%; background: var(--cv-accent); margin-top: 0.4rem; }
+@media (max-width: 760px) { .cv-hero, .cv-section { grid-template-columns: 1fr; } }
+@media print { .site-header, .site-footer, .ad-slot { display: none !important; } .cv { --cv-col: 160px; } body { background: #fff; color: #000; } }

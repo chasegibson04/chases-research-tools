@@ -1,0 +1,34 @@
+---
+import Base from '@/layouts/Base.astro';
+import ToolCard from '@/components/ToolCard.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import AdScripts from '@/components/AdScripts.astro';
+import { getAllTools, CATEGORIES } from '@/lib/tools';
+const tools = await getAllTools();
+---
+<Base title="All tools" description="Directory of every tool on the site, grouped by category and subcategory.">
+  <AdScripts slot="head" />
+  <div class="container" style="padding-top:var(--space-8)">
+    <h1>All tools</h1>
+    <p class="muted">{tools.length} tool{tools.length === 1 ? '' : 's'}. Everything runs locally in your browser.</p>
+    <div class="tool-below" style="margin-top:var(--space-4)">
+      <div>
+        {CATEGORIES.map((c) => {
+          const inCat = tools.filter((t) => t.category === c.id);
+          if (!inCat.length) return null;
+          return (
+            <section style="margin-bottom:var(--space-8)">
+              <h2><a href={`/categories/${c.id}/`}>{c.name}</a></h2>
+              {c.subcategories.map((s) => {
+                const inSub = inCat.filter((t) => t.subcategories.includes(s.id));
+                if (!inSub.length) return null;
+                return (<div style="margin-bottom:var(--space-4)"><h3 class="muted small" style="text-transform:uppercase;letter-spacing:.06em"><a href={`/categories/${c.id}/${s.id}/`}>{s.name}</a></h3><div class="card-grid">{inSub.map((t) => <ToolCard tool={t} />)}</div></div>);
+              })}
+            </section>
+          );
+        })}
+      </div>
+      <aside><AdSlot slot="directorySidebar" format="rectangle" /></aside>
+    </div>
+  </div>
+</Base>

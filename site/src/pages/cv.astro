@@ -1,0 +1,30 @@
+---
+// CV page: same header/footer, its own stylesheet + data file. No ads here. docs/CV_PAGE_GUIDE.md
+import Base from '@/layouts/Base.astro';
+import cv from '@/data/cv.json';
+import '@/styles/cv.css';
+const jsonLd = [{ '@context': 'https://schema.org', '@type': 'Person', name: cv.name, jobTitle: cv.role, url: Astro.url.href, sameAs: cv.links.filter((l) => l.href.startsWith('http')).map((l) => l.href) }];
+---
+<Base title={`${cv.name} · CV`} description={`Curriculum vitae of ${cv.name}: ${cv.role}.`} jsonLd={jsonLd} class="cv">
+  <div class="container">
+    <section class="cv-hero">
+      <img src={cv.headshot} alt={`Portrait of ${cv.name}`} width="140" height="140" onerror="this.style.visibility='hidden'" />
+      <div>
+        <h1>{cv.name}</h1>
+        <p class="role">{cv.role}</p>
+        <p class="muted" style="margin-top:var(--space-2)">{cv.summary}</p>
+        <div class="cv-links">{cv.links.map((l) => <a href={l.href}>{l.label}</a>)}<a href="#" onclick="window.print();return false;">Print / PDF</a></div>
+      </div>
+    </section>
+    {cv.sections.map((s) => (
+      <section class="cv-section" id={s.id}>
+        <h2>{s.title}</h2>
+        <div class:list={{ 'cv-timeline': s.type === 'timeline' }}>
+          {s.type === 'publications'
+            ? (s.items as any[]).map((p) => <p class="cv-pub"><span class="authors">{p.authors}</span> {p.title}. <em>{p.venue}</em> ({p.year}){p.doi && <> · <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></>}</p>)
+            : (s.items as any[]).map((it) => <div class="cv-item"><div class="title">{it.title}</div>{(it.org || it.dates) && <div class="meta">{[it.org, it.dates].filter(Boolean).join(' · ')}</div>}{it.bullets && <ul>{it.bullets.map((b: string) => <li>{b}</li>)}</ul>}</div>)}
+        </div>
+      </section>
+    ))}
+  </div>
+</Base>

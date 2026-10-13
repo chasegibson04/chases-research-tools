@@ -1,0 +1,31 @@
+---
+import { SITE } from '@/config/site';
+import DonateButton from './DonateButton.astro';
+import { CATEGORIES } from '@/lib/tools';
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="container cols">
+    <div>
+      <strong style="color:var(--fg)">{SITE.name}</strong>
+      <p style="margin-top:.5rem">{SITE.tagline}</p>
+      <DonateButton />
+      <p class="faint small" style="margin-top:1rem">© {SITE.launchedYear}{year > SITE.launchedYear ? `–${year}` : ''} {SITE.author.name}. Code MIT-licensed. Tools are provided as-is for research use.</p>
+    </div>
+    <div>
+      <h4>Browse</h4>
+      <ul>
+        <li><a href="/tools/">All tools</a></li>
+        {CATEGORIES.map((c) => <li><a href={`/categories/${c.id}/`}>{c.name}</a></li>)}
+      </ul>
+    </div>
+    <div>
+      <h4>Site</h4>
+      <ul>{SITE.nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}</ul>
+    </div>
+    <div>
+      <h4>More</h4>
+      <ul>{SITE.footerLinks.map((n) => <li><a href={n.href}>{n.label}</a></li>)}</ul>
+    </div>
+  </div>
+</footer>
