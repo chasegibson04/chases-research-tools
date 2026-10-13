@@ -1,0 +1,1 @@
+Place headshot.jpg here (square crop, ≥ 600×600, JPEG quality ~80, ≤ 150 KB). The current file is a generated placeholder (initials on a dark circle) created by scripts/make-images.mjs; replace it with the real photo. See docs/CV_PAGE_GUIDE.md.

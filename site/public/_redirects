@@ -1,0 +1,2 @@
+# Cloudflare static-asset redirects. One per line: /old/path/ /new/path/ 301
+# Only add entries when a tool id or category id must change (docs/CATEGORIES.md). Keep URLs stable instead whenever possible.

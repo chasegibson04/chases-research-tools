@@ -1,0 +1,1 @@
+Self-hosted fonts go here once the theme is chosen (docs/DESIGN_SYSTEM.md). Planned: Source Sans 3 variable + JetBrains Mono variable as .woff2 (subset to latin). Reference them with @font-face in site/src/styles/tokens.css and update --font-sans / --font-mono. Until then the system font stack is used (zero download).

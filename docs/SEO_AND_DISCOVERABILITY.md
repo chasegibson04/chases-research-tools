@@ -13,7 +13,7 @@ Traffic strategy: individual tool pages rank for specific long-tail queries ("pe
 ## To do after launch (checklist in ROADMAP)
 1. Google Search Console: verify domain, submit sitemap, watch "Pages" for indexing issues.
 2. Bing Webmaster Tools (feeds Copilot/ChatGPT search). Submit sitemap.
-3. Create an `og-default.png` (1200×630) and per-tool OG images (planned: generated at build from the tool name).
+3. `og-default.png` exists (`npm run images`, uses the active theme). Per-tool OG images are planned (extend scripts/make-images.mjs).
 4. Add 2–5 FAQ entries per tool: they're both rich-result bait and exactly what an AI assistant quotes.
 5. Write each README "Method" section with real equations and constants: pages that teach rank and get cited.
 6. Get a few authoritative backlinks: your lab website, your GitHub profile README, your ORCID "Works", a Zenodo DOI record, a Wikipedia external link where genuinely relevant, answers on ResearchGate/Biostars/StackExchange that link the tool when it answers the question.

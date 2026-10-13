@@ -1,0 +1,19 @@
+# OPTIONAL deploy-from-Actions (ROADMAP). Cloudflare Workers Builds already deploys on push to main.
+# Enable this instead if you want deploys gated on CI: add CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID repo secrets,
+# disable Workers Builds auto-deploy in the dashboard, and change `workflow_dispatch` to `push: branches: [main]`.
+name: Deploy (manual)
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: site/package-lock.json }
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

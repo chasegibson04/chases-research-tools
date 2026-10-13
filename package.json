@@ -12,7 +12,10 @@
     "new-tool": "node scripts/new-tool.mjs",
     "validate": "node scripts/validate-tools.mjs",
     "check:changelog": "node scripts/check-changelog.mjs",
-    "deploy": "npx wrangler deploy"
+    "deploy": "npx wrangler deploy",
+    "images": "node scripts/make-images.mjs",
+    "test:e2e": "npm --prefix site run test:e2e",
+    "verify": "npm run validate && npm run test && npm run check && npm run build && npm run test:e2e"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

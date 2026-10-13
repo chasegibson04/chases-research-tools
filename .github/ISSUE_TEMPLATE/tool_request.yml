@@ -1,0 +1,18 @@
+name: Tool request
+description: Suggest a scientific tool that should exist here
+labels: [tool-request]
+body:
+  - type: input
+    id: name
+    attributes: { label: Proposed tool name }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: What it should compute, description: "Inputs → outputs, the method or paper it is based on" }
+    validations: { required: true }
+  - type: input
+    id: category
+    attributes: { label: Category / subcategory, placeholder: "mass-spectrometry / peptidomics" }
+  - type: textarea
+    id: existing
+    attributes: { label: Existing implementations, description: "Links to code, packages, or papers that already do this" }

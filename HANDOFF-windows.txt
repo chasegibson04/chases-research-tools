@@ -1,0 +1,41 @@
+Hi! I'm continuing a project that was scaffolded yesterday on my Mac by another Claude session. Please read this whole message before doing anything.
+
+## Context
+The project is "Chase's Research Tools": a public, open-source static website (Astro 7 + Preact islands) hosting small scientific tools that run entirely in the user's browser (Web Worker compute; Python via Pyodide, R via webR, C++/Rust via WASM). It deploys from the `main` branch to Cloudflare Workers static assets. It is NOT yet on GitHub, NOT deployed, no domain, no ad IDs. Repo has two git commits on `main`.
+
+The scaffold was fully verified on macOS: manifest validator OK, 7 unit tests pass, `astro check` 0 errors, production build of 36 pages, Playwright e2e 16/16 pass (site.spec.ts + tools.spec.ts), and the reference tool (peptide-mass-calculator) runs correctly in a browser. Your first job is to migrate it to this machine and prove all of that works on Windows. Then stop.
+
+## Step 1: migrate from Box to this project directory
+Source (Box-synced, do not work in it): <BOX_PATH>\RToolsSite
+Destination (this session's working directory): <DEST_PATH>
+
+- Copy everything EXCEPT these folders: site\node_modules, site\dist, site\.astro, .wrangler, site\test-results, site\playwright-report. Copy the hidden .git folder too (it contains the initial commit). Use robocopy or PowerShell Copy-Item with excludes.
+- Run `git status` in the destination to confirm the repo is intact with one commit on `main` and a clean tree. Run `git config core.autocrlf false` (line endings are forced to LF by .gitattributes).
+- Leave the Box copy untouched; I will delete it myself once you confirm success.
+
+## Step 2: read before touching code
+In order: AGENTS.md (binding rules, including the mandatory append-only CHANGELOG.agent.log), README.md (repo layout), docs/README.md (index), docs/ARCHITECTURE.md, docs/DEPLOYMENT.md (has a "Moving the repo between machines" section), docs/TESTING_PROTOCOL.md, docs/PROMPTS.md (the prompts I will use for future jobs), scripts/README.md. Read the last ~30 lines of CHANGELOG.agent.log. Then log a "starting: Windows migration" entry. On PowerShell the logger is:
+$env:AGENT_NAME="<your model name>"; npm run log -- "admin" "starting: migrated repo from Box to Windows machine"
+
+## Step 3: setup and verify on Windows (all must pass)
+Requires Node 24+ (the Mac used Node 26). Then, from the repo root:
+1. npm --prefix site install
+2. cd site; npx playwright install chromium; cd ..
+3. npm run verify   (runs validate -> unit tests -> astro check -> build -> Playwright e2e; expect 7 unit + 16 e2e passing, 36 pages built)
+   If you need them individually: npm run validate | npm run test | npm run check | npm run build | npm run test:e2e
+4. npm run images   (regenerates site/public/og-default.png; keeps the placeholder headshot unless --force)
+5. npm run dev, open http://localhost:4321/tools/peptide-mass-calculator/, press Run, confirm results (monoisotopic 1045.5345 Da, 1+ m/z 1046.5418), the isotope figure renders, PNG/SVG/CSV exports download, and the (?) tooltips work. Also open /design/themes/ and /cv/ to confirm they render (the headshot is a generated initials placeholder until I supply a photo).
+Known quirk: Astro 7's `astro preview` daemonizes, so Playwright uses scripts/serve-dist.mjs instead; that's intentional.
+If anything fails on Windows (path separators, scripts, line endings), fix it minimally, keep it cross-platform (Node-only scripts, no bash, no symlinks), log the fix, and commit it with a conventional message. Then log "done: Windows setup verified" with the checklist from docs/TOOL_IMPORT_GUIDE.md.
+
+## Step 4: stop
+Do not push to GitHub, do not create the repo, do not touch Cloudflare, do not change the theme or design, do not import any tools. Report: what passed, anything you fixed, and the exact next steps below so I can pick them off one at a time.
+
+## What comes next (for your awareness; do NOT do these now)
+1. Create the GitHub repo (owner action): gh repo create chases-research-tools --public --source=. --remote=origin --push
+2. Connect it to Cloudflare Workers Builds per docs/DEPLOYMENT.md (build: npm run build; deploy: npx wrangler deploy; NODE_VERSION=24). Then set the real URL in site/src/config/site.meta.json, site/public/robots.txt, CITATION.cff.
+3. Replace every CHANGEME (GitHub user, email alias, ORCID, repo URL) in site/src/config/site.ts, CITATION.cff, and the reference tool's tool.json/CITATION.cff.
+4. Pick a theme at /design/themes/ (graphite, paper, spectra) and set `theme` in site/src/config/site.ts; then self-host fonts per docs/DESIGN_SYSTEM.md.
+5. Update the CV page from my .docx + headshot per docs/CV_PAGE_GUIDE.md.
+6. Import the first real tool (cyclic peptide fragmentation predictor) using docs/TOOL_IMPORT_GUIDE.md. The canonical prompt is in README.md.
+7. Later: domain on Cloudflare Registrar, Search Console + Bing, og-default.png, AdSense application (needs ~10 polished tools + live domain), Ko-fi/GitHub Sponsors usernames in site/src/config/monetization.ts, Zenodo DOI. Full list in docs/ROADMAP.md.

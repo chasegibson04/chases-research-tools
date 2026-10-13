@@ -1,0 +1,22 @@
+name: Bug report
+description: A tool gave a wrong result, crashed, or the site misbehaved
+labels: [bug]
+body:
+  - type: input
+    id: tool
+    attributes: { label: Tool, description: "Tool name or URL (or 'site' for non-tool pages)" }
+    validations: { required: true }
+  - type: textarea
+    id: inputs
+    attributes: { label: Inputs used, description: "Exact inputs, or which built-in example you loaded" }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected vs actual, description: "What you expected and what happened; include numbers" }
+    validations: { required: true }
+  - type: input
+    id: browser
+    attributes: { label: Browser and OS, placeholder: "Chrome 140 / Windows 11" }
+  - type: textarea
+    id: console
+    attributes: { label: Console errors (optional), description: "Press F12 → Console and paste any red lines" }

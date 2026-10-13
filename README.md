@@ -28,8 +28,11 @@ The canonical prompt that triggers an import is simply:
 ├── wrangler.jsonc            # Cloudflare Workers static-assets deploy config
 ├── package.json              # Root wrapper scripts (build/validate/log/new-tool)
 ├── .github/workflows/ci.yml  # Validate → typecheck → unit → build → e2e
-├── docs/                     # All project documentation (see docs/README.md)
-├── scripts/                  # Node-only maintenance scripts (Windows + macOS)
+├── docs/                     # All project documentation (see docs/README.md; PROMPTS.md = copy-paste prompts)
+├── scripts/                  # Node-only maintenance scripts (Windows + macOS; see scripts/README.md)
+├── .github/                  # CI, optional deploy workflow, issue/PR templates, dependabot
+├── HANDOFF-windows.txt       # One-off handoff prompt for the Windows migration (delete after)
+├── SECURITY.md · CODE_OF_CONDUCT.md · CONTRIBUTING.md · .env.example
 └── site/                     # The entire website (Astro)
     ├── astro.config.mjs
     ├── src/
@@ -47,7 +50,8 @@ The canonical prompt that triggers an import is simply:
     │   ├── _template/        # Copied by `npm run new-tool`
     │   └── peptide-mass-calculator/   # Reference implementation
     ├── tests/e2e/            # Generic Playwright protocol run against every tool
-    └── public/               # Static files (_headers, robots.txt, favicon, cv/headshot)
+    └── public/               # Static files: _headers, _redirects, ads.txt, robots.txt, og-default.png,
+                              #   cv/headshot.jpg, tools/<id>/ (showcase figures), runtimes/, fonts/
 ```
 
 ## Quick start (local)
@@ -62,7 +66,7 @@ npm run dev
 
 Then open http://localhost:4321. Theme mockups: http://localhost:4321/design/themes/.
 
-Other root commands: `npm run validate` (manifests), `npm run test` (unit), `npm run check` (types), `npm run build`, `npm run new-tool -- <slug> "<Name>"`, `npm run log -- "<scope>" "<message>"`.
+Other root commands: `npm run verify` (validate → unit → types → build → e2e), `npm run validate`, `npm run test`, `npm run check`, `npm run build`, `npm run test:e2e`, `npm run images` (OG image + placeholder headshot), `npm run new-tool -- <slug> "<Name>"`, `npm run log -- "<scope>" "<message>"`.
 
 ## How a tool works (30-second version)
 
