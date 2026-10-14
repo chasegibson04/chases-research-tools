@@ -26,6 +26,8 @@ interface Props {
   /** Scale the y axis to these intensities instead of the tallest visible peak (focus mode). */
   topScale?: number;
   mirrorScale?: number;
+  /** Do not draw peaks without an annotation (series toggles). */
+  hideUnassigned?: boolean;
 }
 
 const M = { l: 58, r: 14, t: 22, b: 38 };
@@ -128,7 +130,7 @@ export function SpectrumCanvas(p: Props) {
     const ctx = c.getContext('2d')!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw(ctx, scene, screenPalette(), p, hover, band);
-  }, [scene, p.top, p.mirror, p.selected, p.markers, hover, band, tick, p.labelUnassigned, p.measureLabel]);
+  }, [scene, p.top, p.mirror, p.selected, p.markers, hover, band, tick, p.labelUnassigned, p.measureLabel, p.hideUnassigned]);
 
   // ---- interaction ---------------------------------------------------------------------------
   const hit = (px: number, py: number): { layer: 'top' | 'mirror'; index: number } | null => {
@@ -250,7 +252,7 @@ function primitives(s: Scene, pal: MsPalette, p: Props, hover?: { layer: string;
       if (prev === undefined || L.peaks[prev].intensity < L.peaks[i].intensity) col.set(px, i);
     }
     const base = y(0);
-    for (const i of col.values()) out.push({ t: 'line', x1: s.x(L.peaks[i].mz), y1: base, x2: s.x(L.peaks[i].mz), y2: y(Math.min(1, L.peaks[i].intensity / max)), c: pal.unassigned, w: 1 });
+    if (!p.hideUnassigned) for (const i of col.values()) out.push({ t: 'line', x1: s.x(L.peaks[i].mz), y1: base, x2: s.x(L.peaks[i].mz), y2: y(Math.min(1, L.peaks[i].intensity / max)), c: pal.unassigned, w: 1 });
     const cands: Array<{ x: number; y: number; text: string; color: string; pri: number }> = [];
     for (const i of ann) {
       const an = L.annotations?.get(i);

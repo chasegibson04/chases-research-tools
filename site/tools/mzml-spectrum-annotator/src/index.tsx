@@ -12,6 +12,7 @@ import { PRESETS, presetFor } from '@/lib/ms/presets';
 import { downloadJSON } from '@/lib/export';
 import { spectralCosine } from '@/lib/ms/spectrumFile';
 import type { Ion, IonType } from '@/lib/ms/fragments';
+import { SeriesToggles, seriesOf, ionVisible, type SeriesKey } from '@/components/ms/SeriesToggles';
 import '@/components/ms/ms.css';
 import { ScanChart } from './ScanChart';
 import type { Input, Output, ScanGroup, SpectrumResult, Annotation } from './compute';
@@ -53,6 +54,9 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   /** Pinned structure selection (a cleavage or one ion) that zooms the spectrum and greys out the rest. */
   const [focus, setFocus] = useState<Focus>(null);
   const [xicText, setXicText] = useState('');
+  const [hidden, setHidden] = useState<Set<SeriesKey>>(new Set());
+  /** Reference peak: every assigned peak shows its neutral-mass difference to it (ChemCalc-style read-off). */
+  const [refPeak, setRefPeak] = useState<number | null>(null);
   const [xic, setXic] = useState<Array<{ label: string; values: Map<number, number> }>>([]);
   /** Pinned reference spectrum for a mirror comparison. */
   const [reference, setReference] = useState<{ label: string; mz: Float64Array; intensity: Float64Array } | null>(null);
@@ -194,14 +198,25 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const topLayer = useMemo(() => {
     const annotations = new Map<number, SpecAnnotation>();
     for (const a of assigned.values()) {
+      if (a.ion && !ionVisible(a.ion, hidden)) continue;
+      if (a.isotope && hidden.has('isotopes')) continue;
       const inFocus = !focus || (a.ion && pinnedSet.has(a.ion.id));
-      annotations.set(a.peak, inFocus ? { label: a.label, color: a.color, dim: a.isotope } : { label: '', color: palette.faint, dim: true });
+      annotations.set(a.peak, inFocus ? { label: hidden.has('labels') ? '' : a.label, color: a.color, dim: a.isotope } : { label: '', color: palette.faint, dim: true });
     }
     const highlight = new Set<number>();
     const hovered = new Set(hoverIons ?? []);
     for (const a of assigned.values()) if (a.ion && hovered.has(a.ion.id)) highlight.add(a.peak);
     return { peaks, annotations, highlight, label: current?.label };
-  }, [peaks, assigned, hoverIons, current, focus, pinnedSet, palette]);
+  }, [peaks, assigned, hoverIons, current, focus, pinnedSet, palette, hidden]);
+  const presentSeries = useMemo(() => new Set([...assigned.values()].filter((a) => a.ion).map((a) => seriesOf(a.ion!))), [assigned]);
+  /** Neutral mass of a peak: uses its assigned charge (or 1). */
+  const neutralOf = (k: number) => { const z = assigned.get(k)?.ion?.charge ?? 1; return peaks[k].mz * z - z * 1.00727646658; };
+  const refDelta = (k: number) => {
+    if (refPeak == null || k === refPeak) return null;
+    const d = neutralOf(k) - neutralOf(refPeak);
+    const best = deltaLookup(d, Math.max(peaks[k].mz, peaks[refPeak].mz), { value: Number(values.tolerance) || 10, unit: (values.toleranceUnit ?? 'ppm') as 'ppm' | 'Da' }, 1)[0];
+    return { d, best };
+  };
   const topScale = focus && pinnedPeaks.length ? Math.max(...pinnedPeaks.map((a) => peaks[a.peak].intensity)) : undefined;
 
   // ---- Δm measurement --------------------------------------------------------------------------------
@@ -244,7 +259,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   };
 
   const activeSet = useMemo(() => new Set(current?.indices ?? []), [current]);
-  const tableRows = useMemo(() => peaks.map((p, k) => ({ p, k, a: assigned.get(k) })).filter((r) => tableFilter === 'all' || (tableFilter === 'assigned' ? r.a && !r.a.isotope : !r.a)), [peaks, assigned, tableFilter]);
+  const [tableInView, setTableInView] = useState(true);
+  const tableRows = useMemo(() => peaks.map((p, k) => ({ p, k, a: assigned.get(k) }))
+    .filter((r) => !tableInView || !view || (r.p.mz >= view[0] && r.p.mz <= view[1]))
+    .filter((r) => tableFilter === 'all' || (tableFilter === 'assigned' ? r.a && !r.a.isotope : !r.a)), [peaks, assigned, tableFilter, view, tableInView]);
   const errPts = [...assigned.values()].filter((a) => a.errorPpm != null && !a.isotope);
   const errMax = Math.max(Number(values.tolerance) || 10, ...errPts.map((a) => Math.abs(a.errorPpm!)));
   // Median error of the 30 most intense automatic, unambiguous backbone assignments (robust calibration estimate).
@@ -315,7 +333,8 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
           </div>
 
           <div class="ms-card">
-            <SpectrumCanvas top={topLayer} height={reference ? 460 : 380} mirror={reference ? { peaks: Array.from(reference.mz, (mz, i) => ({ mz, intensity: reference.intensity[i] })), label: `Reference: ${reference.label}` } : undefined} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
+            <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
+            <SpectrumCanvas hideUnassigned={hidden.has('unassigned')} top={topLayer} height={reference ? 460 : 380} mirror={reference ? { peaks: Array.from(reference.mz, (mz, i) => ({ mz, intensity: reference.intensity[i] })), label: `Reference: ${reference.label}` } : undefined} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
               selected={selected} view={view} onView={setView} topScale={topScale}
               measureLabel={delta ? `Δ ${delta.d.toFixed(4)}${delta.cands[0] ? ` · ${delta.cands[0].label}${delta.cands[0].charge > 1 ? ` (${delta.cands[0].charge}+)` : ''}` : ''}` : undefined}
               markers={current && spectra[current.indices[0]]?.precursorMz ? [{ mz: spectra[current.indices[0]].precursorMz!, label: 'precursor' }] : []}
@@ -329,6 +348,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                 {assigned.get(focusPeak) && <span style={{ color: assigned.get(focusPeak)!.color, fontWeight: 700 }}>{assigned.get(focusPeak)!.label || 'isotope'}{assigned.get(focusPeak)!.manual ? ' (manual)' : ''}</span>}
                 {assigned.get(focusPeak)?.errorPpm != null && <span class="small">{assigned.get(focusPeak)!.errorPpm!.toFixed(1)} ppm</span>}
                 <span class="small faint">shift-click another peak to measure the gap</span>
+                <span class="spacer" />
+                {refPeak === focusPeak
+                  ? <button type="button" class="btn-sm" onClick={() => setRefPeak(null)}>Clear reference peak</button>
+                  : <button type="button" class="btn-sm" onClick={() => setRefPeak(focusPeak)} title="Show every peak's mass difference to this peak in the table, with the residue that explains it">Set as reference peak</button>}
               </>) : <span class="small muted">Click a peak to inspect or assign it; shift-click a second peak to measure the mass difference.</span>}
             </div>
           </div>
@@ -400,15 +423,17 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                   {(['assigned', 'unassigned', 'all'] as const).map((f) => <button type="button" class="btn-sm" aria-pressed={tableFilter === f} onClick={() => setTableFilter(f)}>{f}</button>)}
                 </div>
                 <span class="small muted">{tableRows.length} rows</span>
+                {view && <label class="small"><input type="checkbox" checked={tableInView} onChange={(e) => setTableInView((e.target as HTMLInputElement).checked)} style={{ width: 'auto' }} /> in view only</label>}
               </div>
               <div class="results-table">
-                <table class="ion-list"><thead><tr><th>m/z</th><th>Rel. %</th><th>Assignment</th><th>Theo.</th><th>ppm</th><th /></tr></thead><tbody>
+                <table class="ion-list"><thead><tr><th>m/z</th><th>Rel. %</th><th>Assignment</th><th>Theo.</th><th>ppm</th>{refPeak != null && <th title={`Neutral-mass difference to the reference peak m/z ${peaks[refPeak]?.mz.toFixed(4)}`}>Δ ref</th>}<th /></tr></thead><tbody>
                   {tableRows.slice(0, 1500).map(({ p, k, a }) => (
                     <tr class={`${a ? 'matched' : ''}${selected.includes(k) ? ' hl' : ''}`} onClick={() => { setSelected([k]); setView([p.mz - 15, p.mz + 15]); }}
-                      onMouseEnter={() => setHoverIons(a?.ion ? [a.ion.id] : null)} onMouseLeave={() => setHoverIons(null)}>
+                      onMouseEnter={() => setHoverIons(a?.ion ? [a.ion.id] : null)} onMouseLeave={() => setHoverIons(null)} style={a?.ion && !ionVisible(a.ion, hidden) ? { opacity: 0.4 } : undefined}>
                       <td class="mono">{p.mz.toFixed(4)}</td><td class="mono">{((p.intensity / maxI) * 100).toFixed(1)}</td>
                       <td style={{ color: a?.color, fontWeight: 600 }}>{a ? (a.isotope ? '¹³C' : a.label) : ''}</td>
                       <td class="mono">{a?.theo ? f4(a.theo) : ''}</td><td class="mono">{a?.errorPpm != null ? a.errorPpm.toFixed(1) : ''}</td>
+                      {refPeak != null && (() => { const r = refDelta(k); return <td class="mono small">{k === refPeak ? 'ref' : r ? <>{r.d >= 0 ? '+' : ''}{r.d.toFixed(4)}{r.best ? <strong> {r.best.label}</strong> : null}</> : ''}</td>; })()}
                       <td class="small muted">{a?.manual ? 'manual' : ''}</td>
                     </tr>
                   ))}

@@ -16,6 +16,10 @@ interface Props {
   palette: MsPalette;
   /** Manually rejected ion ids (annotation tool). */
   rejected?: Set<string>;
+  /** The spectrum's visible m/z window; with "in view only" the table follows the plot zoom. */
+  mzRange?: [number, number];
+  /** Ions hidden by the plot's series toggles. */
+  isVisible?: (ion: Ion) => boolean;
 }
 
 const N_COLS: IonType[] = ['a', 'b', 'c', 'c-1'];
@@ -23,13 +27,15 @@ const C_COLS: IonType[] = ['x', 'y', 'z', 'z•', 'z+2'];
 const typeLabel = (t: IonType) => (t === 'c-1' ? 'c−1' : t);
 
 /** Fragment table: classic cleavage matrix for linear peptides, sortable list for everything. */
-export function IonTable({ peptide, ions, matches, maxIntensity = 1, highlight, onHover, onSelect, palette, rejected }: Props) {
+export function IonTable({ peptide, ions, matches, maxIntensity = 1, highlight, onHover, onSelect, palette, rejected, mzRange, isVisible }: Props) {
   const linear = !peptide.cyclic;
   const [view, setView] = useState<'matrix' | 'list'>(linear ? 'matrix' : 'list');
   const [matchedOnly, setMatchedOnly] = useState(false);
   const [sort, setSort] = useState<{ key: 'mz' | 'ppm' | 'int' | 'label'; dir: 1 | -1 }>({ key: 'mz', dir: 1 });
   const [limit, setLimit] = useState(400);
   const [q, setQ] = useState('');
+  const [inView, setInView] = useState(true);
+  const inRange = (i: Ion) => (!inView || !mzRange || (i.mz >= mzRange[0] && i.mz <= mzRange[1])) && (!isVisible || isVisible(i));
   const isMatched = (id: string) => !!matches?.get(id) && !rejected?.has(id);
 
   const matrix = useMemo(() => {
@@ -46,11 +52,11 @@ export function IonTable({ peptide, ions, matches, maxIntensity = 1, highlight, 
 
   const list = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    let rows = ions.filter((i) => (!matchedOnly || isMatched(i.id)) && (!ql || i.label.toLowerCase().includes(ql) || i.seq.toLowerCase().includes(ql) || i.mz.toFixed(4).includes(ql)));
+    let rows = ions.filter((i) => inRange(i) && (!matchedOnly || isMatched(i.id)) && (!ql || i.label.toLowerCase().includes(ql) || i.seq.toLowerCase().includes(ql) || i.mz.toFixed(4).includes(ql)));
     const key = (i: Ion) => sort.key === 'mz' ? i.mz : sort.key === 'label' ? i.label : sort.key === 'ppm' ? Math.abs(matches?.get(i.id)?.errorPpm ?? 1e9) : -(matches?.get(i.id)?.intensity ?? -1);
     rows = [...rows].sort((a, b) => { const ka = key(a), kb = key(b); return (ka < kb ? -1 : ka > kb ? 1 : 0) * sort.dir; });
     return rows;
-  }, [ions, matches, matchedOnly, sort, q, rejected]);
+  }, [ions, matches, matchedOnly, sort, q, rejected, inView, mzRange, isVisible]);
 
   const cell = (ion: Ion | undefined) => {
     if (!ion) return <td class="ion-cell empty">–</td>;
@@ -59,7 +65,7 @@ export function IonTable({ peptide, ions, matches, maxIntensity = 1, highlight, 
     const col = ionColor(palette, ion.type);
     const hl = highlight?.has(ion.id);
     return (
-      <td class={`ion-cell${ok ? ' matched' : ''}${hl ? ' hl' : ''}`} data-output={ion.charge === 1 ? `${ion.type}${ion.size}` : undefined} style={ok ? { background: `color-mix(in srgb, ${col} 18%, transparent)`, color: 'var(--fg)' } : undefined}
+      <td class={`ion-cell${ok ? ' matched' : ''}${hl ? ' hl' : ''}${inRange(ion) ? '' : ' out'}`} data-output={ion.charge === 1 ? `${ion.type}${ion.size}` : undefined} style={ok ? { background: `color-mix(in srgb, ${col} 18%, transparent)`, color: 'var(--fg)' } : undefined}
         title={m ? `${ion.label}  theo ${ion.mz.toFixed(4)}  obs ${m.obs.toFixed(4)}  (${m.errorPpm.toFixed(1)} ppm)` : `${ion.label}  ${ion.formula}`}
         onMouseEnter={() => onHover?.([ion.id])} onMouseLeave={() => onHover?.(null)} onClick={() => onSelect?.(ion)}>
         {ion.mz.toFixed(4)}
@@ -82,6 +88,7 @@ export function IonTable({ peptide, ions, matches, maxIntensity = 1, highlight, 
           {matches && <label class="small"><input type="checkbox" checked={matchedOnly} onChange={(e) => setMatchedOnly((e.target as HTMLInputElement).checked)} style={{ width: 'auto' }} /> matched only</label>}
           <span class="small muted">{list.length} ions</span>
         </>}
+        {mzRange && <label class="small" title="Show only ions inside the zoomed m/z range of the spectrum"><input type="checkbox" checked={inView} onChange={(e) => setInView((e.target as HTMLInputElement).checked)} style={{ width: 'auto' }} /> in view only (m/z {mzRange[0].toFixed(0)}–{mzRange[1].toFixed(0)})</label>}
       </div>
       {view === 'matrix' && matrix ? (
         <div class="results-table">

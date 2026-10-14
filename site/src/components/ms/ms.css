@@ -67,3 +67,9 @@ label.btn { display: inline-flex; align-items: center; cursor: pointer; }
 .ms-empty { padding: var(--space-4); }
 .ms-empty p { margin: var(--space-1) 0 0; }
 .ts-sticky .ms-summary { flex: 1 1 auto; min-width: 0; }
+.series-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: var(--space-1) var(--space-3); border-bottom: 1px solid var(--line); }
+.chip-xs { font-size: var(--fs-xs); padding: 0.05rem 0.45rem; }
+.ion-cell.out { opacity: 0.25; }
+.series-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: var(--space-1) var(--space-3); border-bottom: 1px solid var(--line); }
+.chip-xs { font-size: var(--fs-xs); padding: 0.05rem 0.45rem; }
+.ion-cell.out { opacity: 0.25; }

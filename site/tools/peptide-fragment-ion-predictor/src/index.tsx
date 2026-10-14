@@ -9,6 +9,7 @@ import { IonTypePicker } from '@/components/ms/IonTypePicker';
 import { screenPalette, ionColor } from '@/components/ms/palette';
 import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedBonds, focusedIons, ionForLabel, frameMz, type Focus } from '@/components/ms/linking';
 import type { Ion, IonType } from '@/lib/ms/fragments';
+import { SeriesToggles, seriesOf, ionVisible, type SeriesKey } from '@/components/ms/SeriesToggles';
 import '@/components/ms/ms.css';
 import { PRESETS, type Input, type Output } from './compute';
 
@@ -28,6 +29,8 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
   const [focus, setFocus] = useState<Focus>(null);
   const [view, setView] = useState<[number, number] | undefined>();
   const [obsFile, setObsFile] = useState<File | null>(null);
+  const [hidden, setHidden] = useState<Set<SeriesKey>>(new Set());
+  const visible = (ion: Ion) => ionVisible(ion, hidden);
   const palette = useMemo(() => screenPalette(), [out]);
 
   const shellManifest = useMemo(() => ({ ...manifest, inputs: manifest.inputs.filter((i) => !CUSTOM.has(i.name)) }), [manifest]);
@@ -77,29 +80,33 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
     const annotations = new Map<number, SpecAnnotation>();
     out.predicted.forEach((p, k) => {
       const ion = ionById.get(p.ionId); if (!ion) return;
+      if (!ionVisible(ion, hidden) || (p.isotope > 0 && hidden.has('isotopes'))) return;
       const inFocus = !focus || pinnedSet.has(ion.id);
-      annotations.set(k, inFocus ? { label: p.isotope === 0 ? ion.label : '', color: ionColor(palette, ion.type), dim: p.isotope > 0 } : { label: '', color: palette.faint, dim: true });
+      annotations.set(k, inFocus ? { label: p.isotope === 0 && !hidden.has('labels') ? ion.label : '', color: ionColor(palette, ion.type), dim: p.isotope > 0 } : { label: '', color: palette.faint, dim: true });
     });
     const highlight = new Set<number>();
     out.predicted.forEach((p, k) => { if (hoverSet.has(p.ionId)) highlight.add(k); });
     return { peaks, annotations, highlight, label: 'Representative (illustrative intensities)' };
-  }, [out, hoverSet, palette, focus, pinnedSet]);
+  }, [out, hoverSet, palette, focus, pinnedSet, hidden]);
 
   const observedLayer = useMemo(() => {
     if (!out?.observed || !out.match) return null;
     const annotations = new Map<number, SpecAnnotation>();
     for (const [k, list] of out.match.byPeak) {
-      const best = (focus ? list.find((m) => pinnedSet.has(m.ion.id)) : undefined) ?? list[0];
+      const vis = list.filter((m) => ionVisible(m.ion, hidden));
+      if (!vis.length) continue;
+      const best = (focus ? vis.find((m) => pinnedSet.has(m.ion.id)) : undefined) ?? vis[0];
       const inFocus = !focus || pinnedSet.has(best.ion.id);
-      annotations.set(k, inFocus ? { label: best.ion.label, color: ionColor(palette, best.ion.type) } : { label: '', color: palette.faint, dim: true });
+      annotations.set(k, inFocus ? { label: hidden.has('labels') ? '' : best.ion.label, color: ionColor(palette, best.ion.type) } : { label: '', color: palette.faint, dim: true });
     }
-    for (const [k, mono] of out.match.isotopeOf) { const a = annotations.get(mono); if (a) annotations.set(k, { label: '', color: a.color, dim: true }); }
+    if (!hidden.has('isotopes')) for (const [k, mono] of out.match.isotopeOf) { const a = annotations.get(mono); if (a) annotations.set(k, { label: '', color: a.color, dim: true }); }
     const highlight = new Set<number>();
     for (const id of hoverSet) { const m = out.match.byIon.get(id); if (m) highlight.add(m.peak); }
     return { peaks: out.observed.peaks, annotations, highlight, label: out.observed.title ?? 'Observed' };
-  }, [out, hoverSet, palette, focus, pinnedSet]);
+  }, [out, hoverSet, palette, focus, pinnedSet, hidden]);
+  const presentSeries = useMemo(() => new Set((out?.ions ?? []).map(seriesOf)), [out]);
 
-  // Zoom (and rescale) to the pinned ions: all fragments of a cleavage, or one ion with its isotopes.
+  // Zoom to the pinned ions: all fragments of a cleavage, or one ion with its isotopes.
   const scales = useMemo(() => {
     if (!out || !pinned.length) return { top: undefined as number | undefined, mirror: undefined as number | undefined };
     const pred = out.predicted.filter((p) => pinnedSet.has(p.ionId));
@@ -180,21 +187,22 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
           </div>
 
           <div class="ms-card">
+            <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
             {observedLayer
               ? <SpectrumCanvas top={observedLayer} mirror={predictedLayer!} height={380} title="Observed (top) vs representative (bottom)" filename={`${manifest.id}-mirror`}
-                  view={view} onView={setView} topScale={scales.top} mirrorScale={scales.mirror}
+                  view={view} onView={setView} topScale={scales.top} mirrorScale={scales.mirror} hideUnassigned={hidden.has('unassigned')}
                   markers={out.precursors.slice(-1).map((p) => ({ mz: p.mz, label: 'precursor' }))}
                   onHover={(h) => { if (!h) { setHover(null); return; } if (h.layer === 'top') { const l = out.match!.byPeak.get(h.index); setHover(l ? [l[0].ion.id] : null); } else setHover([out.predicted[h.index].ionId]); }}
                   onPeakClick={(h) => { if (h.layer === 'top') { const l = out.match!.byPeak.get(h.index); pinIon(l?.[0].ion.id ?? null); } else pinIon(out.predicted[h.index].ionId); }} />
               : <SpectrumCanvas top={predictedLayer!} height={320} title="Representative spectrum" filename={`${manifest.id}-spectrum`}
-                  view={view} onView={setView} topScale={scales.top}
+                  view={view} onView={setView} topScale={scales.top} hideUnassigned={hidden.has('unassigned')}
                   markers={out.precursors.slice(-1).map((p) => ({ mz: p.mz, label: 'precursor' }))}
                   onHover={(h) => setHover(h ? [out.predicted[h.index].ionId] : null)} onPeakClick={(h) => pinIon(out.predicted[h.index].ionId)} />}
           </div>
 
           <div class="ms-card">
             <IonTable peptide={out.peptide} ions={out.ions} matches={out.match?.byIon} maxIntensity={maxObs} highlight={hlSet} palette={palette}
-              onHover={(ids) => setHover(ids)} onSelect={(ion) => pinIon(ion.id)} />
+              onHover={(ids) => setHover(ids)} onSelect={(ion) => pinIon(ion.id)} mzRange={view} isVisible={visible} />
           </div>
           <ExportMenu filename={`${manifest.id}-${out.peptide.text.replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}`} rows={rows()} json={{ peptide: out.peptide.text, mono: out.mono, formula: out.formula, precursors: out.precursors, ions: rows() }} text={mgf()} formats={['csv', 'tsv', 'json', 'txt']} />
           <p class="small faint" style={{ margin: 0 }}>TXT exports the representative spectrum as MGF. Intensities are illustrative (rule-based), not a trained prediction.</p>
