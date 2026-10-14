@@ -96,7 +96,7 @@ Licensing: the tool is MIT; the Thermo reader bundles OpenTFRaw (Apache-2.0, `sr
 
 - **Size and speed.**
   - Inputs are limited to 2 GB each, and a run to one hour per input.
-  - Conversion is single-threaded and slower than native msconvert. Measured on a desktop: a 23 MB Thermo .raw converts to mzML in about 8 s and a 27 MB mzML in about 11 s, so plan for roughly 5–8 minutes per GB.
+  - Conversion is single-threaded and slower than native msconvert. Measured on a desktop: a 23 MB Thermo .raw converts to mzML in about 5 s and a 27 MB mzML in about 7 s, so plan for roughly 3–5 minutes per GB. Arrays are zlib-compressed in parallel by the browser's native zlib (`CompressionStream`), with fflate as the fallback.
   - Extra downloads load only when needed: the Thermo reader is ~310 KB of WebAssembly, the Bruker reader adds sql.js (~650 KB), and MOBILion files add h5wasm (~1 MB gzipped).
   - Output is assembled as a Blob before saving. Chromium spills large Blobs to disk; other browsers may hold them in memory.
 - **Thermo (OpenTFRaw 3.0.0).**

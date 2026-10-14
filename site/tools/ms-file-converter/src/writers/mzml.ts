@@ -3,7 +3,7 @@
 // shifted by the header length when the file is assembled. mzML inputs keep their original XML ("pass-through").
 import type { SpectrumSource, SpectrumRecord, ChromatogramRecord, CvParam, BinaryArray, RunMetadata } from '../model';
 import { CV } from '../model';
-import { ByteBuilder, base64Bytes, encodeArray, xmlEsc, fmt, ticOf, basePeak, type ArrayEncoding, type OutputFormat, type WriteContext, type Numpress } from './util';
+import { ByteBuilder, base64Bytes, encodeArray, encodeArrays, xmlEsc, fmt, ticOf, basePeak, type ArrayEncoding, type EncodedArray, type OutputFormat, type WriteContext, type Numpress } from './util';
 
 export interface MzmlOptions {
   indexed: boolean;
@@ -27,34 +27,43 @@ const MS_: [string, string] = ['UO:0000028', 'millisecond'];
 const EV: [string, string] = ['UO:0000266', 'electronvolt'];
 const COUNTS: [string, string] = ['MS:1000131', 'number of detector counts'];
 
-function arrayXml(values: Float64Array, typeCv: string, enc: ArrayEncoding, b: ByteBuilder) {
-  const { bytes, cvs } = encodeArray(values, enc);
-  const b64 = base64Bytes(bytes);
-  b.push(`<binaryDataArray encodedLength="${b64.length}">${cvs.map(([a, n]) => cv(a, n)).join('')}${typeCv}<binary>`);
+function arrayXml(enc: EncodedArray, typeCv: string, b: ByteBuilder) {
+  const b64 = base64Bytes(enc.bytes);
+  b.push(`<binaryDataArray encodedLength="${b64.length}">${enc.cvs.map(([a, n]) => cv(a, n)).join('')}${typeCv}<binary>`);
   b.push(b64);
   b.push('</binary></binaryDataArray>');
 }
 
-function arraysXml(rec: { mz?: Float64Array; intensity: Float64Array; time?: Float64Array; arrays?: BinaryArray[] }, o: MzmlOptions, b: ByteBuilder) {
-  const n = 2 + (rec.arrays?.length ?? 0);
+type ArrayRec = { mz?: Float64Array; intensity: Float64Array; time?: Float64Array; arrays?: BinaryArray[] };
+/** The arrays of a spectrum or chromatogram with their encodings and type cvParam, in write order. */
+function arrayJobs(rec: ArrayRec, o: MzmlOptions): Array<{ values: Float64Array; e: ArrayEncoding; typeCv: string }> {
   const np = (x: Numpress, bits: 32 | 64): ArrayEncoding => ({ bits, zlib: o.zlib, numpress: x });
-  b.push(`<binaryDataArrayList count="${n}">`);
-  if (rec.time) arrayXml(rec.time, cv('MS:1000595', 'time array', undefined, MIN), np(o.mzNumpress === 'linear' ? 'linear' : 'none', 64), b);
-  else arrayXml(rec.mz!, cv('MS:1000514', 'm/z array', undefined, MZ), np(o.mzNumpress, o.mzBits), b);
-  arrayXml(rec.intensity, cv('MS:1000515', 'intensity array', undefined, COUNTS), np(o.intensityNumpress, o.intensityBits), b);
+  const jobs = [
+    rec.time
+      ? { values: rec.time, e: np(o.mzNumpress === 'linear' ? 'linear' : 'none', 64), typeCv: cv('MS:1000595', 'time array', undefined, MIN) }
+      : { values: rec.mz!, e: np(o.mzNumpress, o.mzBits), typeCv: cv('MS:1000514', 'm/z array', undefined, MZ) },
+    { values: rec.intensity, e: np(o.intensityNumpress, o.intensityBits), typeCv: cv('MS:1000515', 'intensity array', undefined, COUNTS) },
+  ];
   for (const a of rec.arrays ?? []) {
     const named = a.cv.accession === 'MS:1000786' ? cv('MS:1000786', 'non-standard data array', a.name, a.unit ? [a.unit.accession, a.unit.name] : undefined) : cvp(a.cv);
-    arrayXml(a.values, named, np('none', o.otherBits), b);
+    jobs.push({ values: a.values, e: np('none', o.otherBits), typeCv: named });
   }
-  b.push('</binaryDataArrayList>');
+  return jobs;
 }
 
-function spectrumXml(s: SpectrumRecord, idx: number, o: MzmlOptions, passthrough: boolean, b: ByteBuilder) {
+/** Write the binaryDataArrayList; `pre` holds the arrays already encoded (in arrayJobs order) when batching. */
+function arraysXml(rec: ArrayRec, o: MzmlOptions, b: ByteBuilder, pre?: EncodedArray[]) {
+  const jobs = arrayJobs(rec, o);
+  b.push(`<binaryDataArrayList count="${jobs.length}">`);
+  jobs.forEach((j, k) => arrayXml(pre?.[k] ?? encodeArray(j.values, j.e), j.typeCv, b));
+  b.push('</binaryDataArrayList>');
+}
+function spectrumXml(s: SpectrumRecord, idx: number, o: MzmlOptions, passthrough: boolean, b: ByteBuilder, pre?: EncodedArray[]) {
   const n = s.mz.length;
   if (passthrough && s.sourceXml) {
     const head = s.sourceXml.replace(/^<spectrum\b[^>]*>/, (t) => t.replace(/\bindex="\d+"/, `index="${idx}"`).replace(/\bdefaultArrayLength="\d+"/, `defaultArrayLength="${n}"`));
     b.push(head.trimEnd());
-    arraysXml(s, o, b);
+    arraysXml(s, o, b, pre);
     b.push('</spectrum>\n');
     return;
   }
@@ -101,7 +110,7 @@ function spectrumXml(s: SpectrumRecord, idx: number, o: MzmlOptions, passthrough
     x.push('</precursorList>');
   }
   b.push(x.join(''));
-  arraysXml(s, o, b);
+  arraysXml(s, o, b, pre);
   b.push('</spectrum>\n');
 }
 
@@ -185,14 +194,28 @@ export async function writeMzml(src: SpectrumSource, opts: Partial<MzmlOptions>,
   const levels = new Set<number>(), centroid = new Set<boolean>();
   const ticT: number[] = [], ticI: number[] = [];
   let i = 0;
+  // Spectra are written in batches so their arrays can be compressed concurrently (encodeArrays).
+  let batch: SpectrumRecord[] = [];
+  const flush = async () => {
+    const jobs = batch.map((s) => arrayJobs(s, o));
+    const enc = await encodeArrays(jobs.flat());
+    let k = 0;
+    for (const [n, s] of batch.entries()) {
+      specOffsets.push([s.nativeId, body.length]);
+      spectrumXml(s, i++, o, passthrough && !!s.sourceXml, body, enc.slice(k, k + jobs[n].length));
+      k += jobs[n].length;
+    }
+    batch = [];
+    ctx.progress(src.count ? Math.min(0.97, i / src.count) : 0.5, `Wrote ${i} spectra`);
+  };
   for await (const s of src.spectra()) {
     if (ctx.signal.aborted) throw new Error('Cancelled.');
-    specOffsets.push([s.nativeId, body.length]);
     levels.add(s.msLevel); centroid.add(s.centroided);
     if (s.msLevel === 1 && s.rtSeconds != null) { ticT.push(s.rtSeconds / 60); ticI.push(s.tic ?? ticOf(s)); }
-    spectrumXml(s, i++, o, passthrough && !!s.sourceXml, body);
-    if (i % 100 === 0) ctx.progress(src.count ? Math.min(0.97, i / src.count) : 0.5, `Wrote ${i} spectra`);
+    batch.push(s);
+    if (batch.length >= 32) await flush();
   }
+  if (batch.length) await flush();
   const chrom = new ByteBuilder();
   const chromOffsets: Array<[string, number]> = [];
   let ci = 0;

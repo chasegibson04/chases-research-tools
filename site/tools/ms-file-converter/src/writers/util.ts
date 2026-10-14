@@ -92,25 +92,39 @@ export const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt
 export type Numpress = 'none' | 'linear' | 'pic' | 'slof';
 export interface ArrayEncoding { bits: 32 | 64; zlib: boolean; numpress: Numpress }
 
+const NUMPRESS_CV = {
+  linear: ['MS:1002312', 'MS-Numpress linear prediction compression', 'MS:1002746', 'MS-Numpress linear prediction compression followed by zlib compression'],
+  pic: ['MS:1002313', 'MS-Numpress positive integer compression', 'MS:1002747', 'MS-Numpress positive integer compression followed by zlib compression'],
+  slof: ['MS:1002314', 'MS-Numpress short logged float compression', 'MS:1002748', 'MS-Numpress short logged float compression followed by zlib compression'],
+} as const;
+/** Bytes of one array before zlib: MS-Numpress or IEEE floats. */
+function rawArrayBytes(values: Float64Array, e: ArrayEncoding): Uint8Array {
+  if (e.numpress !== 'none') return e.numpress === 'linear' ? encodeLinear(values) : e.numpress === 'pic' ? encodePic(values) : encodeSlof(values);
+  if (e.bits === 64) return new Uint8Array(values.buffer.slice(values.byteOffset, values.byteOffset + values.byteLength));
+  return new Uint8Array(Float32Array.from(values).buffer);
+}
+/** mzML cvParams describing an encoding (numpress arrays decode to 64-bit floats). */
+function encodingCvs(e: ArrayEncoding): Array<[string, string]> {
+  if (e.numpress !== 'none') { const c = NUMPRESS_CV[e.numpress]; return [['MS:1000523', '64-bit float'], e.zlib ? [c[2], c[3]] : [c[0], c[1]]]; }
+  return [e.bits === 64 ? ['MS:1000523', '64-bit float'] : ['MS:1000521', '32-bit float'], e.zlib ? ['MS:1000574', 'zlib compression'] : ['MS:1000576', 'no compression']];
+}
+export type EncodedArray = { bytes: Uint8Array; cvs: Array<[string, string]> };
+
 /** Encode one array; returns the bytes before base64 plus the mzML cvParams describing the encoding. */
-export function encodeArray(values: Float64Array, e: ArrayEncoding): { bytes: Uint8Array; cvs: Array<[string, string]> } {
-  let bytes: Uint8Array;
-  const cvs: Array<[string, string]> = [];
-  if (e.numpress !== 'none') {
-    bytes = e.numpress === 'linear' ? encodeLinear(values) : e.numpress === 'pic' ? encodePic(values) : encodeSlof(values);
-    const acc = { linear: ['MS:1002312', 'MS-Numpress linear prediction compression', 'MS:1002746', 'MS-Numpress linear prediction compression followed by zlib compression'],
-      pic: ['MS:1002313', 'MS-Numpress positive integer compression', 'MS:1002747', 'MS-Numpress positive integer compression followed by zlib compression'],
-      slof: ['MS:1002314', 'MS-Numpress short logged float compression', 'MS:1002748', 'MS-Numpress short logged float compression followed by zlib compression'] }[e.numpress];
-    // Numpress arrays decode to 64-bit floats.
-    cvs.push(['MS:1000523', '64-bit float']);
-    if (e.zlib) { bytes = zlibSync(bytes, { level: ZLIB_LEVEL }); cvs.push([acc[2], acc[3]]); } else cvs.push([acc[0], acc[1]]);
-    return { bytes, cvs };
-  }
-  if (e.bits === 64) bytes = new Uint8Array(values.buffer.slice(values.byteOffset, values.byteOffset + values.byteLength));
-  else bytes = new Uint8Array(Float32Array.from(values).buffer);
-  cvs.push(e.bits === 64 ? ['MS:1000523', '64-bit float'] : ['MS:1000521', '32-bit float']);
-  if (e.zlib) { bytes = zlibSync(bytes, { level: ZLIB_LEVEL }); cvs.push(['MS:1000574', 'zlib compression']); } else cvs.push(['MS:1000576', 'no compression']);
-  return { bytes, cvs };
+export function encodeArray(values: Float64Array, e: ArrayEncoding): EncodedArray {
+  const raw = rawArrayBytes(values, e);
+  return { bytes: e.zlib ? zlibSync(raw, { level: ZLIB_LEVEL }) : raw, cvs: encodingCvs(e) };
+}
+
+const nativeDeflate = typeof CompressionStream !== 'undefined';
+const deflate = async (b: Uint8Array) => new Uint8Array(await new Response(new Blob([b as BlobPart]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+/**
+ * Encode many arrays at once. Where the platform has CompressionStream ('deflate' is zlib, RFC 1950, as mzML
+ * requires), the arrays are compressed concurrently by the native zlib, about 3x faster than fflate.
+ */
+export async function encodeArrays(jobs: Array<{ values: Float64Array; e: ArrayEncoding }>): Promise<EncodedArray[]> {
+  if (!nativeDeflate) return jobs.map((j) => encodeArray(j.values, j.e));
+  return Promise.all(jobs.map(async (j) => { const raw = rawArrayBytes(j.values, j.e); return { bytes: j.e.zlib ? await deflate(raw) : raw, cvs: encodingCvs(j.e) }; }));
 }
 
 /** Output of a writer: one or more files (mzML is one; some exports write companions such as imzML + .ibd). */
