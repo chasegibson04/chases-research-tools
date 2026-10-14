@@ -2,7 +2,7 @@
 // side asks for byte ranges, served synchronously with FileReaderSync (available in workers). Outside a worker
 // (unit tests) the file is read into memory once.
 import { rangeSet } from '../filters';
-import { CV, readHead, asciiOf, type CvParam, type InputFormat, type SpectrumRecord, type RunMetadata } from '../model';
+import { CV, readHead, asciiOf, type CvParam, type Precursor, type InputFormat, type SpectrumRecord, type RunMetadata } from '../model';
 
 interface ScanJson {
   scan: number; msLevel: number; polarity: '+' | '-' | ''; profile: boolean; analyzer: string; filter: string | null; rtMin: number;
@@ -75,9 +75,47 @@ function fixFilter(filter: string | null, g: NonNullable<ReturnType<typeof stage
   if (!filter) return filter;
   const part = (r: { type?: string; energy: number }) => `@${FILTER_CODE[r.type!] ?? r.type!.toLowerCase()}${r.energy.toFixed(2)}`;
   const groups = g.stages.map((st) => `${st.mz.toFixed(4)}${part(st)}${st.sup.map(part).join('')}`);
+  // Multiplexed MS2 (several reactions at one MS level) carries the "msx" token.
+  if (g.stages.length > 1 && /\sms2\s/.test(filter) && !/\smsx\s/.test(filter)) filter = filter.replace(/\sms2\s/, ' msx ms2 ');
   // Thermo marks supplemental activation with an "sa" token before the scan type.
   if (g.anySupplemental && !/\ssa\s/.test(filter)) filter = filter.replace(/\s(Full|SIM|SRM|Z)\s/, ' sa $1 ');
   return filter.replace(/(\d+\.\d+@[a-zA-Z]+-?[\d.]+(?:@[a-zA-Z]+-?[\d.]+)*\s*)+/, `${groups.join(' ')} `).replace(/\s+\[/, ' [');
+}
+
+/** SPS ions of a synchronous-precursor-selection MS3 scan, from the trailer ("SPS Masses" + "SPS Masses Continued"). */
+function spsMasses(trailerJson: string): number[] {
+  try {
+    const t = JSON.parse(trailerJson) as Record<string, unknown>;
+    return `${t['SPS Masses'] ?? ''},${t['SPS Masses Continued'] ?? ''}`.split(',').map((x) => Number(x.trim())).filter((x) => x > 0);
+  } catch { return []; }
+}
+const isoOf = (mz: number, width?: number) => ({ isolationTarget: mz, isolationLower: width ? width / 2 : undefined, isolationUpper: width ? width / 2 : undefined });
+
+/**
+ * Precursor list in ProteoWizard's order. MS2: the one precursor (trailer monoisotopic m/z and charge).
+ * Multiplexed MS2 (MSX, several reactions): every multiplexed precursor, last acquired first.
+ * MS3+: the final stage first (each SPS ion when present), then earlier stages; the first stage carries the
+ * trailer's monoisotopic m/z and charge, which describe the MS2 precursor.
+ */
+function precursorsOf(s: ScanJson, pr: ScanJson['precursor'], g: ReturnType<typeof stagesOf>, last: ReturnType<typeof activationOf> | null, sps: number[]): Precursor[] {
+  if (!pr || s.msLevel < 2) return [];
+  const ref = pr.masterScan ? `controllerType=0 controllerNumber=1 scan=${pr.masterScan}` : undefined;
+  const primary: Precursor = {
+    mz: pr.selectedMz ?? pr.targetMz ?? 0, charge: pr.charge ?? undefined, isolationTarget: pr.targetMz ?? undefined,
+    isolationLower: pr.isolationWidth ? pr.isolationWidth / 2 : undefined, isolationUpper: pr.isolationWidth ? pr.isolationWidth / 2 : undefined,
+    activation: last?.cv ?? ACT[pr.activation] ?? [], collisionEnergy: last ? last.ce : pr.energy ?? undefined, spectrumRef: ref,
+  };
+  if (!g || g.stages.length === 1) return [primary];
+  const stage = (st: (typeof g.stages)[number], mz = st.mz): Precursor => { const a = activationOf(st, st.sup); return { mz, ...isoOf(mz, st.isolationWidth), activation: a.cv, collisionEnergy: a.ce, spectrumRef: ref }; };
+  if (s.msLevel === 2) return [...g.stages].reverse().map((st) => stage(st));
+  const fin = g.stages[g.stages.length - 1];
+  const finals = (sps.length ? [...sps].reverse() : [fin.mz]).map((mz) => stage(fin, mz));
+  const earlier = g.stages.slice(0, -1).reverse().map((st, i, arr) => {
+    const p = stage(st);
+    if (i === arr.length - 1) { p.mz = pr.selectedMz && Math.abs(pr.selectedMz - st.mz) < 5 ? pr.selectedMz : st.mz; p.charge = pr.charge ?? undefined; }
+    return p;
+  });
+  return [...finals, ...earlier];
 }
 
 function syncReader(file: Blob, whole: Uint8Array | null): (off: number, n: number) => Uint8Array {
@@ -166,15 +204,7 @@ export function createThermo(opts: { vendorCentroidLevels?: string } = {}): Inpu
             index: i, nativeId: `controllerType=0 controllerNumber=1 scan=${s.scan}`, scan: s.scan, msLevel: s.msLevel, rtSeconds: s.rtMin * 60,
             polarity: s.polarity || undefined, centroided: !s.profile, filter: filter ?? undefined, tic: s.tic, basePeakMz: s.basePeakMz, basePeakIntensity: s.basePeakIntensity,
             lowMz: s.lowMz, highMz: s.highMz, scanWindow: [s.lowMz, s.highMz], injectionTimeMs: s.injectionTimeMs ?? undefined, faimsCv: s.faimsCv ?? undefined,
-            precursors: pr && s.msLevel > 1 ? [{
-              mz: pr.selectedMz ?? pr.targetMz ?? 0, charge: pr.charge ?? undefined, isolationTarget: pr.targetMz ?? undefined,
-              isolationLower: pr.isolationWidth ? pr.isolationWidth / 2 : undefined, isolationUpper: pr.isolationWidth ? pr.isolationWidth / 2 : undefined,
-              activation: last?.cv ?? ACT[pr.activation] ?? [], collisionEnergy: last ? last.ce : pr.energy ?? undefined,
-              spectrumRef: pr.masterScan ? `controllerType=0 controllerNumber=1 scan=${pr.masterScan}` : undefined,
-            },
-            // earlier MSn stages (MS3+), immediate precursor first like ProteoWizard
-            ...(g && g.stages.length > 1 ? g.stages.slice(0, -1).reverse().map((st) => ({ mz: st.mz, isolationTarget: st.mz, isolationLower: st.isolationWidth ? st.isolationWidth / 2 : undefined, isolationUpper: st.isolationWidth ? st.isolationWidth / 2 : undefined, activation: activationOf(st, st.sup).cv, collisionEnergy: activationOf(st, st.sup).ce })) : []),
-            ] : [],
+            precursors: precursorsOf(s, pr, g, last, s.msLevel >= 3 ? spsMasses(raw.trailerJson(i)) : []),
             mz: p.slice(1, 1 + k), intensity: p.slice(1 + k, 1 + 2 * k),
             userParams: [
               ...(ANALYZER[s.analyzer] ? [{ name: 'mass analyzer', value: ANALYZER[s.analyzer].name }] : []),

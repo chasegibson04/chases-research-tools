@@ -114,8 +114,7 @@ describe.runIf(have)('Thermo .raw against ProteoWizard reference mzML', () => {
     const a = await readAll(await bundleOf(path.join(dir, f)));
     expect(a.format).toBe('Thermo RAW');
     const ref = await readAll(await bundleOf(path.join(dir, f.replace(/\.raw$/i, '.mzML'))));
-    // Known OpenTFRaw 3.0.0 gaps (README "Limits"): source-CID ("sid=") scan events in this file are misparsed,
-    // and multiplexed (MSX) / SPS scans report only their first reaction, so only that precursor is compared.
+    // Known OpenTFRaw 3.0.0 gap (README "Limits"): source-CID ("sid=") scan events in this file are misparsed.
     const KNOWN_BAD: Record<string, number[]> = { 'source_cid_test_3scans.raw': [2, 3] };
     const byScan = new Map(a.spectra.map((s) => [s.scan, s]));
     let compared = 0;
@@ -132,6 +131,17 @@ describe.runIf(have)('Thermo .raw against ProteoWizard reference mzML', () => {
       expect(Math.abs(nz(s.intensity) - nz(r.intensity))).toBeLessThanOrEqual(Math.max(2, nz(r.intensity) * 0.02));
     }
     expect(compared).toBeGreaterThan(0);
+  });
+});
+
+describe.runIf(have)('Thermo MSX and SPS precursor lists match ProteoWizard', () => {
+  const dir = path.join(CORPUS, 'vendor_raw/pwiz/Thermo/Reader_Thermo_Test.data');
+  it.each(['FT-HCD-MSX.raw', 'IT-HCD-SPS.raw'])('%s', async (f) => {
+    const a = await readAll(await bundleOf(path.join(dir, f)));
+    const ref = await readAll(await bundleOf(path.join(dir, f.replace(/\.raw$/i, '.mzML'))));
+    const ours = a.spectra[0].precursors.map((p) => p.mz), theirs = ref.spectra[0].precursors.map((p) => p.mz);
+    expect(ours.length).toBe(theirs.length);
+    ours.forEach((m, i) => expect(Math.abs(m - theirs[i])).toBeLessThan(0.01));
   });
 });
 

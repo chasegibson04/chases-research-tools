@@ -4,6 +4,7 @@
 - Fix: Thermo profile m/z of two-reaction events (EThcD, ETciD, IR-ETD on Orbitrap tribrids) used the wrong calibration coefficients; the scan window and calibration are now located from the event's reaction count. All 156 internal Thermo runs now match ThermoRawFileParser point for point.
 - `peakPicking true` / `vendor` uses the centroids stored in Thermo .raw files and Bruker TSF line spectra (msconvert's vendor peak picking); `peakPicking cwt` forces the built-in centroider. Ion-trap profile scans, which store no centroids, fall back to the built-in centroider.
 - Thermo activation: supplemental activation per MSn stage, one supplemental-energy term per stage, filter strings with `sa` and per-stage supplemental steps.
+- Thermo MSX scans list every multiplexed precursor (`msx` filter token); SPS-MS3 scans list their SPS ions; MS3+ precursors in ProteoWizard order.
 - Reads dictionary-encoded zstd arrays (MS:1003782); faster mzXML/MGF reading (block reads) and cvParam parsing.
 
 ## 0.1.0 — 2026-10-14

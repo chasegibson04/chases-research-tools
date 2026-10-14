@@ -60,6 +60,7 @@ Writing vendor formats is not possible. No vendor publishes a writer, and the fo
 - **Thermo .raw.** A small Rust wrapper (`src/runtime/rust`) exposes OpenTFRaw's per-scan metadata and peaks to JavaScript. The WebAssembly side asks for byte ranges, and the worker answers synchronously with `FileReaderSync`, so a multi-GB file is never loaded into memory. Two rules follow ProteoWizard:
   - The isolation target is the scan event's reaction m/z.
   - A trailer "Monoisotopic M/Z" lying more than half the isolation width plus 3/z away from it is not trusted; it is kept as a userParam.
+  - **Precursors** follow ProteoWizard's order: multiplexed (MSX) MS2 lists every multiplexed precursor; MS3+ lists the final stage first (every SPS ion from the trailer's "SPS Masses"), then earlier stages. The trailer's monoisotopic m/z and charge go on the MS2-stage precursor they describe.
   - **Activation** is decoded from the scan event's reaction records: Thermo's activation type per reaction, supplemental steps (EThcD, ETciD, IR-ETD) and their energies. OpenTFRaw 3.0.0 does not decode these, so the crate is vendored with a two-line patch (`src/runtime/rust/vendor/opentfraw/PATCH.md`), and the filter string is rebuilt to match (`@etd50.00@hcd30.00`, `sa`, `@modeC` for the IR laser). ETD reaction time is a userParam, not a collision energy.
   - Profile m/z uses each scan's calibration coefficients; a second patch fixes where OpenTFRaw looks for them in two-reaction (EThcD/ETciD/IR-ETD) events on tribrids.
   - Validated on 156 internal Thermo runs (Orbitrap tribrid; CID, HCD, ETD, EThcD, ETciD, IR-ETD, IRMPD, MS3) against ThermoRawFileParser output. Spectrum counts, retention times and precursor m/z are identical, and every data point matches (70 million profile points; centroided references match the vendor centroids from `peakPicking true`); activation matches except for IRMPD, which ThermoRawFileParser labels only as a generic "dissociation method".
@@ -99,7 +100,6 @@ Licensing: the tool is MIT; the Thermo reader bundles OpenTFRaw (Apache-2.0, `sr
   - Extra downloads load only when needed: the Thermo reader is ~310 KB of WebAssembly, the Bruker reader adds sql.js (~650 KB), and MOBILion files add h5wasm (~1 MB gzipped).
   - Output is assembled as a Blob before saving. Chromium spills large Blobs to disk; other browsers may hold them in memory.
 - **Thermo (OpenTFRaw 3.0.0).**
-  - Multiplexed (MSX) scans and the SPS ions of SPS-MS3 scans are not listed as extra precursors (msconvert lists them). Ordinary MS3 chains are.
   - Scan events with in-source CID (`sid=`) in some files are misread.
   - Profile scans are written without the zero-intensity flank points ProteoWizard adds; the signal is the same.
   - Chromatograms are not read from .raw, so a TIC is computed from the MS1 scans.
