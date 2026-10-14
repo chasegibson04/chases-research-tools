@@ -5,18 +5,21 @@ import type { InputBundle, InputFormat } from '../model';
 import { readHead, asciiOf, findFile } from '../model';
 import { mzmlFormat } from './mzml';
 import { mzxmlFormat, mgfFormat, msTextFormat, mzdataFormat, imzmlFormat, andiFormat } from './open';
-import { thermoFormat } from './thermo';
-import { createBrukerTdf, brukerTsf } from './bruker';
+import { createThermo } from './thermo';
+import { createBrukerTdf, createBrukerTsf, brukerTsf } from './bruker';
 import { agilentD } from './agilent';
 import { mobilionMbi } from './mobilion';
 
 export interface ReaderOptions {
   /** timsTOF: one spectrum per frame / PASEF window instead of per mobility scan (msconvert --combineIonMobilitySpectra). */
   combineIonMobility?: boolean;
+  /** MS levels (range spec) for which a reader should return the vendor's own centroids instead of profile data. */
+  vendorCentroidLevels?: string;
 }
 export const inputFormats = (o: ReaderOptions = {}): InputFormat[] => [
   mzmlFormat, mzxmlFormat, mgfFormat, mzdataFormat, imzmlFormat, msTextFormat, andiFormat,
-  thermoFormat, createBrukerTdf({ combineIonMobility: !!o.combineIonMobility }), brukerTsf, agilentD, mobilionMbi,
+  createThermo({ vendorCentroidLevels: o.vendorCentroidLevels }), createBrukerTdf({ combineIonMobility: !!o.combineIonMobility }),
+  o.vendorCentroidLevels != null ? createBrukerTsf({ spectra: 'centroid' }) : brukerTsf, agilentD, mobilionMbi,
 ];
 export const INPUT_FORMATS = inputFormats();
 

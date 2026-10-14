@@ -253,11 +253,35 @@ export function base64ToBytes(s: string): Uint8Array {
 
 /** Ion-mobility array accessions: mean/raw inverse reduced IM, drift time, generic IM array. */
 const MOBILITY = /MS:1002893|MS:1003006|MS:1003007|MS:1003008|MS:1002477|MS:1003153|MS:1003156|MS:1002816/;
+/**
+ * Dictionary-encoded zstd (MS:1003782), after zstd decompression. Layout (worked out from the OpenMS test file
+ * MzMLFile_zstd.mzML): u64 offset of the index block, u64 dictionary size k, the k unique values byte-shuffled
+ * (all first bytes, then all second bytes…), then one index per element: u8 when k ≤ 256, u16 when k ≤ 65536,
+ * else u32 (the wider index widths are inferred, not seen in test data).
+ */
+function decodeDictionary(raw: Uint8Array, cvXml: string): Float64Array {
+  if (raw.length < 16) return new Float64Array(0);
+  const dv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+  const idxOff = Number(dv.getBigUint64(0, true)), k = Number(dv.getBigUint64(8, true));
+  const kind = cvXml.includes('MS:1000523') ? 'f64' : cvXml.includes('MS:1000521') ? 'f32' : cvXml.includes('MS:1000522') ? 'i64' : 'i32';
+  const w = kind === 'f64' || kind === 'i64' ? 8 : 4;
+  if (16 + k * w > raw.length || idxOff > raw.length) throw new Error('Corrupt dictionary-encoded zstd array.');
+  const vals = new Uint8Array(k * w);
+  for (let b = 0; b < w; b++) for (let i = 0; i < k; i++) vals[i * w + b] = raw[16 + b * k + i];
+  const vd = new DataView(vals.buffer);
+  const dict = new Float64Array(k);
+  for (let i = 0; i < k; i++) dict[i] = kind === 'f64' ? vd.getFloat64(i * 8, true) : kind === 'f32' ? vd.getFloat32(i * 4, true) : kind === 'i64' ? Number(vd.getBigInt64(i * 8, true)) : vd.getInt32(i * 4, true);
+  const iw = k <= 256 ? 1 : k <= 65536 ? 2 : 4;
+  const n = Math.floor((raw.length - idxOff) / iw), out = new Float64Array(n);
+  for (let i = 0; i < n; i++) { const o = idxOff + i * iw; out[i] = dict[iw === 1 ? raw[o] : iw === 2 ? dv.getUint16(o, true) : dv.getUint32(o, true)]; }
+  return out;
+}
+
 export function decodeArray(cvXml: string, b64: string): { kind: 'mz' | 'intensity' | 'mobility' | 'other'; values: Float64Array } {
   const kind = cvXml.includes('MS:1000514') ? 'mz' : cvXml.includes('MS:1000515') ? 'intensity' : MOBILITY.test(cvXml) ? 'mobility' : 'other';
   let bytes = base64ToBytes(b64);
   if (!bytes.length) return { kind, values: new Float64Array(0) };
-  if (/MS:1003782/.test(cvXml)) throw new Error('Dictionary-encoded zstd arrays (MS:1003782) are not supported yet; re-convert with zlib or plain zstd.');
+  if (/MS:1003782/.test(cvXml)) return { kind, values: decodeDictionary(zstdDecompress(bytes), cvXml) };
   if (/MS:100378[01]/.test(cvXml)) {
     bytes = zstdDecompress(bytes);
     // byte-shuffled: all first bytes of each value, then all second bytes, … (element width from the precision)

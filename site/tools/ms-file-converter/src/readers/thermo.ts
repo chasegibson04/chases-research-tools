@@ -1,6 +1,7 @@
 // Thermo .raw via OpenTFRaw compiled to WASM (src/runtime/rust, Apache-2.0). The file stays a Blob: the WASM
 // side asks for byte ranges, served synchronously with FileReaderSync (available in workers). Outside a worker
 // (unit tests) the file is read into memory once.
+import { rangeSet } from '../filters';
 import { CV, readHead, asciiOf, type CvParam, type InputFormat, type SpectrumRecord, type RunMetadata } from '../model';
 
 interface ScanJson {
@@ -101,7 +102,10 @@ function loadThermo() {
   return wasmMod;
 }
 
-export const thermoFormat: InputFormat = {
+/** `vendorCentroidLevels`: return the centroids stored in the file (Thermo's own peak picking) at these MS levels. */
+export function createThermo(opts: { vendorCentroidLevels?: string } = {}): InputFormat {
+  const vendorAt = opts.vendorCentroidLevels != null ? rangeSet(opts.vendorCentroidLevels) : () => false;
+  return {
   id: 'Thermo RAW', label: 'Thermo .raw',
   async detect(input) {
     if (input.files.length !== 1) return false;
@@ -136,7 +140,13 @@ export const thermoFormat: InputFormat = {
         for (let i = 0; i < n; i++) {
           if (ctx.signal.aborted) throw new Error('Cancelled.');
           const s: ScanJson = JSON.parse(raw.scanJson(i));
-          const p: Float64Array = raw.peaks(i, s.profile);
+          // profile unless Thermo's stored centroids were requested for this MS level (msconvert peakPicking vendor)
+          let p: Float64Array;
+          if (s.profile && vendorAt(s.msLevel)) {
+            p = raw.peaks(i, false);
+            // Ion-trap profile scans carry no stored centroids: keep the profile so the peakPicking filter centroids it.
+            if (p[0] > 0) s.profile = false; else p = raw.peaks(i, true);
+          } else p = raw.peaks(i, s.profile);
           const k = p[0];
           const pr = s.precursor;
           // Like ProteoWizard, distrust a trailer monoisotopic m/z that lies well outside the isolation window
@@ -182,3 +192,5 @@ export const thermoFormat: InputFormat = {
     };
   },
 };
+}
+export const thermoFormat = createThermo();

@@ -4,7 +4,7 @@
   "name": "MS File Converter",
   "tagline": "Convert Thermo .raw, timsTOF .d, mzML, mzXML, MGF and more in your browser, msconvert-style, without uploading anything.",
   "description": "An in-browser counterpart to ProteoWizard msconvert. It reads Thermo .raw, Bruker timsTOF .d, Agilent and Mobilion data and the open formats (mzML, mzXML, MGF, mzData, MS1/MS2, imzML, netCDF ANDI-MS), applies msconvert-style filters such as peak picking, MS-level, scan-time and threshold, and writes indexed mzML, mzXML, MGF, MS1/MS2 or CSV. Spectra, precursors, activation, retention times, filter strings and instrument metadata are carried over, and mzML inputs keep their original XML. Files never leave your computer: output goes to a folder you choose or to your downloads.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",

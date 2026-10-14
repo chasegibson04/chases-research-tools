@@ -183,3 +183,21 @@ describe('limits round: scrambling, w ions, side-chain losses, deisotoping, deco
     expect(s.atoms.some((a) => a.residue === 0 && a.role === 'backbone' && a.label === 'O')).toBe(true);
   });
 });
+
+describe('dictionary-encoded zstd arrays (MS:1003782)', () => {
+  it('decodes the OpenMS layout: offset, size, byte-shuffled dictionary, u8 indices', async () => {
+    const { decodeArray } = await import('./mzml');
+    // Minimal zstd frame: magic, single-segment header with a 1-byte content size, one raw (uncompressed) last block.
+    const zstdCompressForTest = (d: Uint8Array) => { const h = (d.length << 3) | 1; return Uint8Array.from([0x28, 0xb5, 0x2f, 0xfd, 0x20, d.length, h & 255, (h >> 8) & 255, (h >> 16) & 255, ...d]); };
+    const dictVals = new Float32Array([10, 20, 30]);
+    const vb = new Uint8Array(dictVals.buffer), k = 3, w = 4, planes = new Uint8Array(k * w);
+    for (let b = 0; b < w; b++) for (let i = 0; i < k; i++) planes[b * k + i] = vb[i * w + b];
+    const idx = Uint8Array.from([0, 1, 0, 2, 1]);
+    const raw = new Uint8Array(16 + planes.length + idx.length);
+    const dv = new DataView(raw.buffer); dv.setBigUint64(0, BigInt(16 + planes.length), true); dv.setBigUint64(8, BigInt(k), true);
+    raw.set(planes, 16); raw.set(idx, 16 + planes.length);
+    const b64 = Buffer.from(zstdCompressForTest(raw)).toString('base64');
+    const out = decodeArray('<cvParam accession="MS:1000521"/><cvParam accession="MS:1003782"/><cvParam accession="MS:1000515"/>', b64);
+    expect(Array.from(out.values)).toEqual([10, 20, 10, 30, 20]);
+  });
+});

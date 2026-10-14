@@ -11,7 +11,8 @@ const pairs = process.env.PAIRS_LIST && fs.existsSync(process.env.PAIRS_LIST)
 const ctx = { progress: () => {}, log: () => {}, signal: new AbortController().signal };
 async function read(p: string) {
   const b = { name: path.basename(p), files: [{ path: path.basename(p), file: await (fs as any).openAsBlob(p) }] };
-  const det = await detectFormat(b);
+  // PAIRS_VENDOR_CENTROID=1: read vendor files with their stored centroids (for centroided references)
+  const det = await detectFormat(b, process.env.PAIRS_VENDOR_CENTROID ? { vendorCentroidLevels: '1-' } : {});
   const src = await det.format!.open(b, ctx);
   const out: SpectrumRecord[] = [];
   for await (const s of src.spectra()) out.push({ ...s, mz: s.mz.length ? s.mz : s.mz, intensity: s.intensity });
@@ -26,7 +27,7 @@ describe.runIf(pairs.length > 0)('vendor vs msconvert', () => {
     const byScan = new Map(r.map((s) => [s.scan, s]));
     const issues: Record<string, number> = {};
     const bump = (k: string) => { issues[k] = (issues[k] ?? 0) + 1; };
-    let maxRt = 0, maxPre = 0, compared = 0;
+    let maxRt = 0, maxPre = 0, compared = 0, refPts = 0, samePts = 0;
     for (const s of a) {
       const q = byScan.get(s.scan);
       if (!q) { bump('missing in ref'); continue; }
@@ -43,9 +44,19 @@ describe.runIf(pairs.length > 0)('vendor vs msconvert', () => {
       } else if (!!s.precursors[0] !== !!q.precursors[0]) bump('precursor presence');
       if (s.centroided !== q.centroided) bump('centroid flag');
       if (Math.abs(nz(s.intensity) - nz(q.intensity)) > Math.max(2, nz(q.intensity) * 0.01)) bump('peak count');
+      // point-level identity (same centroid/profile mode only): every non-zero reference point should exist in ours
+      if (s.centroided === q.centroided) {
+        let j = 0;
+        for (let i = 0; i < q.mz.length; i++) {
+          if (q.intensity[i] <= 0) continue;
+          refPts++;
+          while (j < s.mz.length && s.mz[j] < q.mz[i] * (1 - 1e-7)) j++;
+          if (j < s.mz.length && Math.abs(s.mz[j] - q.mz[i]) <= q.mz[i] * 1e-7 && Math.abs(s.intensity[j] - q.intensity[i]) <= Math.max(1e-3, q.intensity[i] * 1e-5)) samePts++;
+        }
+      }
       if (q.filter && (s.filter ?? '') !== q.filter) { bump('filter string'); if (!issues.example) (issues as any).example = `${s.filter} ≠ ${q.filter}`; }
     }
-    const line = `PAIR ${path.basename(vendor)} | ours ${a.length} ref ${r.length} | compared ${compared} | maxΔRT ${maxRt.toExponential(1)} s | maxΔprec ${maxPre.toExponential(1)} | ${JSON.stringify(issues)}`;
+    const line = `PAIR ${path.basename(vendor)} | ours ${a.length} ref ${r.length} | compared ${compared} | maxΔRT ${maxRt.toExponential(1)} s | maxΔprec ${maxPre.toExponential(1)} | points ${refPts ? ((100 * samePts) / refPts).toFixed(3) : '-'}% of ${refPts} | ${JSON.stringify(issues)}`;
     console.log(line);
     expect(a.length).toBe(r.length);
   }, 600_000);

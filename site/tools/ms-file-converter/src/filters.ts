@@ -17,7 +17,7 @@ export type Filter =
   | { type: 'activation'; method: 'HCD' | 'CID' | 'ETD' | 'EThcD' | 'ECD' | 'UVPD' | 'IRMPD'; keep: boolean }
   | { type: 'analyzer'; analyzer: 'FTMS' | 'ITMS' | 'TOF' | 'Quad' }
   | { type: 'stripIT' }
-  | { type: 'peakPicking'; msLevels: string; minRel: number }
+  | { type: 'peakPicking'; msLevels: string; minRel: number; /** prefer the vendor's own centroids where the reader has them (msconvert `peakPicking true` / `vendor`) */ vendor: boolean }
   | { type: 'zeroSamples'; mode: 'removeExtra' | 'removeAll' }
   | { type: 'mzWindow'; lo: number; hi: number }
   | { type: 'threshold'; mode: 'count' | 'absolute' | 'bpi-relative' | 'tic-cutoff'; value: number; orientation: 'most-intense' | 'least-intense'; msLevels: string }
@@ -228,7 +228,7 @@ export const FILTER_HELP: Array<{ example: string; text: string }> = [
   { example: 'activation HCD', text: 'keep MSn of one activation: HCD CID ETD EThcD ECD UVPD IRMPD (prefix ! to drop)' },
   { example: 'analyzer FTMS', text: 'keep one analyzer: FTMS ITMS TOF Quad' },
   { example: 'stripIT', text: 'drop ion-trap MS1 scans' },
-  { example: 'peakPicking true 1-', text: 'centroid profile spectra at these MS levels (local maxima, Gaussian apex)' },
+  { example: 'peakPicking true 1-', text: 'centroid profile spectra at these MS levels: vendor centroids when the file has them (Thermo, Bruker TSF), else local maxima with a Gaussian apex (use "peakPicking cwt 1-" to force that)' },
   { example: 'zeroSamples removeExtra', text: 'removeExtra keeps one zero beside each peak; removeAll drops all zeros' },
   { example: 'mzWindow [100,2000]', text: 'keep peaks in an m/z window' },
   { example: 'threshold count 150 most-intense', text: 'count | absolute | bpi-relative | tic-cutoff, value, most-intense | least-intense [msLevels]' },
@@ -267,7 +267,9 @@ export function parseFilters(text: string): Filter[] {
       case 'stripit': out.push({ type: 'stripIT' }); break;
       case 'peakpicking': {
         const levels = o.msLevel ?? p.find((x) => /^\d|-/.test(x)) ?? '1-';
-        out.push({ type: 'peakPicking', msLevels: levels, minRel: Number(o.minRel ?? 0) }); rangeSet(levels); break;
+        // msconvert: `peakPicking true|vendor [msLevel=…]` uses vendor centroids; `cwt`/`local` forces our centroider.
+        const vendor = !p.some((x) => /^(cwt|local|false)$/i.test(x));
+        out.push({ type: 'peakPicking', msLevels: levels, minRel: Number(o.minRel ?? 0), vendor }); rangeSet(levels); break;
       }
       case 'zerosamples': out.push({ type: 'zeroSamples', mode: /all/i.test(p[0] ?? '') ? 'removeAll' : 'removeExtra' }); break;
       case 'mzwindow': { const [a, b] = interval(p.join(''), 'mzWindow'); out.push({ type: 'mzWindow', lo: a, hi: b }); break; }

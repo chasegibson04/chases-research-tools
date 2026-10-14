@@ -135,6 +135,26 @@ describe.runIf(have)('Thermo .raw against ProteoWizard reference mzML', () => {
   });
 });
 
+describe.runIf(have)('Thermo vendor centroids (peakPicking true) against ProteoWizard -centroid references', () => {
+  const dir = path.join(CORPUS, 'vendor_raw/pwiz/Thermo/Reader_Thermo_Test.data');
+  const raws = have ? fs.readdirSync(dir).filter((f) => /\.raw$/i.test(f) && f !== 'source_cid_test_3scans.raw') : [];
+  it.each(raws)('%s', async (f) => {
+    const b = await bundleOf(path.join(dir, f));
+    const det = await detectFormat(b, { vendorCentroidLevels: '1-' });
+    const src = await det.format!.open(b, ctx);
+    const ours: SpectrumRecord[] = []; for await (const s of src.spectra()) ours.push(s);
+    const ref = await readAll(await bundleOf(path.join(dir, f.replace(/\.raw$/i, '-centroid.mzML'))));
+    for (const r of ref.spectra) {
+      const s = ours.find((x) => x.scan === r.scan)!;
+      // ion-trap profile scans have no stored centroids; they stay profile and our centroider handles them
+      if (!s.centroided && /^ITMS/.test(s.filter ?? '')) continue;
+      expect(s.centroided).toBe(true);
+      expect(s.mz.length).toBe(r.mz.length);
+      for (let k = 0; k < r.mz.length; k++) expect(Math.abs(s.mz[k] - r.mz[k])).toBeLessThan(r.mz[k] * 1e-6);
+    }
+  });
+});
+
 describe.runIf(have)('corpus: every readable file converts to mzML and back', () => {
   const files: string[] = [];
   const walk = (d: string) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (!/\.d$|\.raw$/i.test(e.name)) walk(p); } else files.push(p); } };

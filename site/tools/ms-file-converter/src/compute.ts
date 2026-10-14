@@ -114,7 +114,10 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   const out: Output = { sourceFormat: '', inputName: bundle.name, spectraCount: 0, chromatogramCount: 0, msLevels: {}, rtRange: null, files: [], log, preview: [] };
 
   ctx.progress(0, 'Detecting format');
-  const det = await detectFormat(bundle, { combineIonMobility: !!input.combineIonMobility });
+  const filters = input.filters ?? parseFilters(input.filterText ?? '');
+  // Vendor peak picking is done by the reader (stored centroids); our centroider then skips those spectra.
+  const vendorPick = filters.find((f): f is Extract<Filter, { type: 'peakPicking' }> => f.type === 'peakPicking' && f.vendor);
+  const det = await detectFormat(bundle, { combineIonMobility: !!input.combineIonMobility, vendorCentroidLevels: vendorPick?.msLevels });
   if (!det.format) {
     if (det.unsupported) { out.unsupported = det.unsupported; throw new Error(`${det.unsupported.label}: ${det.unsupported.reason}`); }
     throw new Error(`Unrecognised input "${bundle.name}". Supported: ${OUTPUT_FORMATS.length ? 'mzML, mzXML, MGF, mzData, MS1/MS2, imzML, netCDF (ANDI), Thermo .raw and vendor folders listed on the page' : ''}.`);
@@ -131,7 +134,6 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   try {
     out.instrument = src0.meta.instrument?.name ?? src0.meta.instrument?.model?.name;
     out.startTimeStamp = src0.meta.startTimeStamp;
-    const filters = input.filters ?? parseFilters(input.filterText ?? '');
     // Formats that hold only some MS levels get that as an implicit last filter, so counts reflect what is written.
     const implicit: Filter[] = fmt.id === 'MGF' && !input.includeMs1 ? [{ type: 'msLevel', levels: '2-' }] : fmt.id === 'MS2' ? [{ type: 'msLevel', levels: '2-' }] : fmt.id === 'MS1' ? [{ type: 'msLevel', levels: '1' }] : [];
     const src = tally(applyFilters(src0, [...filters, ...implicit], say), out);

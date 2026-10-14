@@ -32,7 +32,7 @@ Examples:
 
 | Format | Read | Write | Notes |
 |---|---|---|---|
-| mzML (plain, indexed, `.gz`; zlib, MS-Numpress, 32/64-bit) | yes | yes | mzML → mzML keeps every original cvParam/userParam and header block ("Keep original mzML metadata") |
+| mzML (plain, indexed, `.gz`; zlib, zstd incl. byte-shuffled and dictionary-encoded, MS-Numpress, 32/64-bit) | yes | yes | mzML → mzML keeps every original cvParam/userParam and header block ("Keep original mzML metadata") |
 | mzXML 2.x/3.x | yes | yes (3.2, indexed, SHA-1) | |
 | MGF | yes | yes | msconvert titleMaker fields |
 | MS1 / MS2 | yes | yes | |
@@ -61,14 +61,15 @@ Writing vendor formats is not possible. No vendor publishes a writer, and the fo
   - The isolation target is the scan event's reaction m/z.
   - A trailer "Monoisotopic M/Z" lying more than half the isolation width plus 3/z away from it is not trusted; it is kept as a userParam.
   - **Activation** is decoded from the scan event's reaction records: Thermo's activation type per reaction, supplemental steps (EThcD, ETciD, IR-ETD) and their energies. OpenTFRaw 3.0.0 does not decode these, so the crate is vendored with a two-line patch (`src/runtime/rust/vendor/opentfraw/PATCH.md`), and the filter string is rebuilt to match (`@etd50.00@hcd30.00`, `sa`, `@modeC` for the IR laser). ETD reaction time is a userParam, not a collision energy.
-  - Validated on 156 internal Thermo runs (Orbitrap tribrid; CID, HCD, ETD, EThcD, ETciD, IR-ETD, IRMPD, MS3) against ThermoRawFileParser output. Spectrum counts, retention times and precursor m/z are identical; activation matches except for IRMPD, which ThermoRawFileParser labels only as a generic "dissociation method".
+  - Profile m/z uses each scan's calibration coefficients; a second patch fixes where OpenTFRaw looks for them in two-reaction (EThcD/ETciD/IR-ETD) events on tribrids.
+  - Validated on 156 internal Thermo runs (Orbitrap tribrid; CID, HCD, ETD, EThcD, ETciD, IR-ETD, IRMPD, MS3) against ThermoRawFileParser output. Spectrum counts, retention times and precursor m/z are identical, and every data point matches (70 million profile points; centroided references match the vendor centroids from `peakPicking true`); activation matches except for IRMPD, which ThermoRawFileParser labels only as a generic "dissociation method".
 - **Bruker TDF/TSF.**
   - The reader is ported from timsrust (MIT). The SQLite metadata is read with sql.js; frames are read one at a time and decompressed with zstd or LZF.
   - m/z and 1/K0 use the instrument's calibration tables. The formulas, including temperature drift, were fitted against ProteoWizard output; see `src/readers/bruker/calibration.ts`.
   - On the ProteoWizard test data, peak counts and intensities match exactly, and m/z is within 0.07 ppm.
 - **Filters.** These implement msconvert's semantics where the two overlap:
   - msLevel, scanNumber, index, scanTime, polarity, activation, analyzer, stripIT;
-  - peakPicking: local maxima with a Gaussian apex (msconvert's "vendor" picking is not available);
+  - peakPicking: like msconvert, `peakPicking true` (or `vendor`) uses the instrument's own centroids when the file stores them (Thermo .raw centroid streams; Bruker TSF line spectra); elsewhere, or with `peakPicking cwt`, a local-maximum centroider with Gaussian apex refinement;
   - zeroSamples, mzWindow, threshold (count / absolute / bpi-relative / tic-cutoff), mzShift, metadataFixer;
   - chargeStatePredictor: precursor isotope spacing in the preceding MS1, then msconvert's rule that ≥ 90% of fragment intensity below the precursor means 1+;
   - MS2Deisotope, scanSumming, sortByScanTime, limit.
@@ -101,7 +102,6 @@ Licensing: the tool is MIT; the Thermo reader bundles OpenTFRaw (Apache-2.0, `sr
   - Multiplexed (MSX) scans and the SPS ions of SPS-MS3 scans are not listed as extra precursors (msconvert lists them). Ordinary MS3 chains are.
   - Scan events with in-source CID (`sid=`) in some files are misread.
   - Profile scans are written without the zero-intensity flank points ProteoWizard adds; the signal is the same.
-  - No vendor peak picking; use the peakPicking filter.
   - Chromatograms are not read from .raw, so a TIC is computed from the MS1 scans.
 - **Bruker.**
   - The `analysis.tdf` database is read into memory; frames are not.

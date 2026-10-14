@@ -340,13 +340,18 @@ impl ScanEvent {
         // at body[body_size-88] = body[120] for a 208-byte body.  All other v66
         // instruments use one of the legacy candidate offsets.
         let tribrid_fc = body_size.saturating_sub(88);
+        // PATCH (MS File Converter): dependent bodies start with a reaction count n followed by n 56-byte reaction
+        // records, a u32, then the scan window; so the window sits at 8 + 56·n. Tried first when n is plausible.
+        // For n = 1 this is 64, the existing first legacy candidate, so one-reaction files are unaffected.
+        let n_rx = crate::bytes::read_u32_le(&body, 0).unwrap_or(0) as usize;
+        let rx_fc = if (1..=8).contains(&n_rx) { 8 + 56 * n_rx } else { usize::MAX };
         let tribrid_candidates;
         let legacy_candidates;
         let candidates: &[usize] = if is_tribrid_dep {
-            tribrid_candidates = [tribrid_fc, 8usize, 64, 128];
+            tribrid_candidates = [rx_fc, tribrid_fc, 8usize, 64, 128];
             &tribrid_candidates
         } else {
-            legacy_candidates = [64usize, 8, 128, body_size.saturating_sub(80)];
+            legacy_candidates = [rx_fc, 64usize, 8, 128, body_size.saturating_sub(80)];
             &legacy_candidates
         };
         let fc_match = candidates.iter().copied().find_map(|off| {
@@ -386,6 +391,10 @@ impl ScanEvent {
         // bodies have different tails and must keep their existing offsets.
         let np_off = match fc_offset {
             Some(64) => 80,
+            // PATCH (MS File Converter): in tribrid dependent events the calibration block directly follows the
+            // scan window, whose position moves with the number of 56-byte reaction records (EThcD, ETciD and
+            // IR-ETD events carry two). `body_size - 64` only coincides with it for one reaction.
+            Some(off) if is_tribrid_dep || off == rx_fc => off + 16,
             Some(8)
                 if body_size == 96
                     && preamble.bytes.get(6).copied().unwrap_or(0) <= 1

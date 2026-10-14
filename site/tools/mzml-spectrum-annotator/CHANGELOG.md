@@ -11,7 +11,7 @@
 - Fix: files whose spectrum index attributes are not 0..n−1 (e.g. OpenMS FAIMS test data) crashed on load; scan groups now use positions.
 - The default group prefers groups that contain peaks, so files with empty MS2 spectra open on their MS1 data.
 - Very sparse "profile" spectra keep their points when centroiding finds no interior maxima.
-- Reads zstd and byte-shuffled zstd compressed arrays (MS:1003780/1003781); dictionary-encoded zstd gives a clear message.
+- Reads zstd, byte-shuffled zstd and dictionary-encoded zstd arrays (MS:1003780/1003781/1003782).
 - Help text points to the new MS File Converter for vendor files.
 
 ## 0.1.0 — 2026-10-14
