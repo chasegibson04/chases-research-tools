@@ -4,7 +4,7 @@
   "name": "mzML Spectrum Viewer & MS/MS Annotator",
   "tagline": "Open mzML or MGF files in your browser, average scans, measure peak gaps, and annotate fragments of linear or cyclic peptides.",
   "description": "Load an mzML or MGF file directly from your computer (nothing is uploaded), browse scans, average the scans of a precursor, and annotate the MS/MS spectrum against a linear or head-to-tail cyclic peptide. Measure the distance between two peaks to get residue, dipeptide and neutral-loss suggestions, accept or override every assignment, and export the annotated spectrum, structure and peak table.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",
@@ -69,8 +69,8 @@
       "name": "file",
       "label": "Spectrum file (mzML or MGF)",
       "type": "file",
-      "help": "mzML (plain or indexed; zlib, MS-Numpress, 32/64-bit) or MGF. The file is read inside your browser and never uploaded. Vendor files (Thermo .raw, Bruker/Agilent .d, MOBILion .mbi) can be converted to mzML in the browser with the MS File Converter tool, or with msconvert --mzML --zlib.",
-      "accept": ".mzML,.mzml,.mgf,.MGF",
+      "help": "mzML (plain or indexed; zlib, zstd, MS-Numpress, 32/64-bit), mzXML or MGF, optionally gzipped (.mzML.gz). The file is read inside your browser and never uploaded. Vendor files (Thermo .raw, Bruker/Agilent .d, MOBILion .mbi) can be converted to mzML in the browser with the MS File Converter tool, or with msconvert --mzML --zlib.",
+      "accept": ".mzML,.mzml,.mzXML,.mzxml,.mgf,.MGF,.gz",
       "maxSizeMB": 2048
     },
     {

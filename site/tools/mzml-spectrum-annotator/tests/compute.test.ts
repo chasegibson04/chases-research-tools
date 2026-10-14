@@ -187,3 +187,10 @@ describe('mzXML', () => {
     expect(Array.from(sp.intensity)).toEqual([10, 20]);
   });
 });
+
+describe('cancellation', () => {
+  it('stops loading a file when the signal is aborted', async () => {
+    const ac = new AbortController(); ac.abort();
+    await expect(run({ op: 'load', file: await openAsBlob(DEMO), fileName: 'demo.mzML' } as Input, { ...ctx, signal: ac.signal })).rejects.toThrow(/Cancel/);
+  });
+});

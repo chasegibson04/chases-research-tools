@@ -30,7 +30,7 @@ A **static site** built with **Astro 7** and deployed to **Cloudflare Workers (s
 ## Directory contract
 
 - `site/tools/<slug>/` is the unit of distribution. A tool imports only its own folder, npm packages, and the shared tool code: `@/lib/ms/*` (ADR-009), `@/lib/runtime/*`, `@/lib/types`, `@/lib/export`, `@/components/tool/*`, `@/components/ms/*` and `@/styles/*`. Never another tool's folder and never site chrome (`@/layouts`, `@/data`, pages). `npm run validate` walks every tool's import graph (`scripts/lib/tool-graph.mjs`) and fails on a violation.
-- `npm run export-tool -- <slug>` writes `exports/<slug>/`: the tool folder, exactly the shared files its graph reaches, its public assets and a minimal Vite + Preact host, ready for `npm install && npm run dev`. This is how someone takes one tool to use or adapt locally; the export's own unit tests run there too.
+- `npm run export-tool -- <slug>` writes `exports/<slug>/`: the tool folder, exactly the shared files its graph reaches, its public assets and a minimal Vite + Preact host, ready for `npm install && npm run dev`. This is how someone takes one tool to use or adapt locally; the export's own unit tests run there too. Tool-specific e2e flows live in `tools/<slug>/tests/e2e.spec.ts` (Playwright runs them with `site/tests/e2e`) so they travel with the tool (ADR-011).
 - `site/src/` is the site framework. Tools consume it; they never modify it (open a PR against the shared component instead).
 - `docs/` is the knowledge base. `CHANGELOG.agent.log` is the work log.
 

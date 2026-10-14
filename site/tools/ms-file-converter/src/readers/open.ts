@@ -1,6 +1,6 @@
 // Readers for the open formats other than mzML: mzXML, MGF, MS1/MS2/CMS1-style text, mzData, imzML (+ .ibd),
 // and netCDF ANDI-MS (.cdf, the common GC-MS export). All stream or read by byte range.
-import { indexSpectra, readSpectrum, openSource, base64ToBytes, type SpectrumMeta } from '@/lib/ms/mzml';
+import { indexSpectra, parseSpectrumText, openSource, base64ToBytes, type SpectrumMeta } from '@/lib/ms/mzml';
 import { unzlibSync } from 'fflate';
 import { CV, findFile, readHead, asciiOf, type InputFormat, type InputBundle, type SpectrumSource, type SpectrumRecord, type RunMetadata, type ReaderContext, type CvParam } from '../model';
 import { cvParams } from './mzml';
@@ -38,11 +38,20 @@ function indexedFormat(id: 'mzXML' | 'MGF', label: string, test: (head: string) 
       return {
         meta, count: spectra.length,
         async *spectra() {
-          for (let i = 0; i < spectra.length; i++) {
-            if (ctx.signal.aborted) throw new Error('Cancelled.');
-            const sp = await readSpectrum(file, spectra[i], info);
-            yield fromMeta(spectra[i], sp.mz, sp.intensity, i);
-            if (i % 50 === 0) ctx.progress(0.3 + 0.7 * (i / spectra.length));
+          // Read neighbouring spectra in one block (≤ 32 MB) instead of one slice per spectrum.
+          const dec = new TextDecoder('latin1');
+          let k = 0;
+          while (k < spectra.length) {
+            let j = k; const bs = spectra[k].start; let be = spectra[k].end;
+            while (j + 1 < spectra.length && spectra[j + 1].start >= be && spectra[j + 1].start - be < 65536 && spectra[j + 1].end - bs < 32e6) { j++; be = spectra[j].end; }
+            const text = dec.decode(await file.slice(bs, be).arrayBuffer());
+            for (let q = k; q <= j; q++) {
+              if (ctx.signal.aborted) throw new Error('Cancelled.');
+              const sp = parseSpectrumText(text.slice(spectra[q].start - bs, spectra[q].end - bs), info);
+              yield fromMeta(spectra[q], sp.mz, sp.intensity, q);
+            }
+            ctx.progress(0.3 + 0.7 * ((j + 1) / spectra.length));
+            k = j + 1;
           }
         },
       };

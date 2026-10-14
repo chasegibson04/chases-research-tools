@@ -1,6 +1,9 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
-  testDir: './tests/e2e',
+  // Site-wide protocol in tests/e2e; tool-specific flows travel with their tool in tools/<slug>/tests/e2e.spec.ts.
+  testDir: '.',
+  testMatch: ['tests/e2e/**/*.spec.ts', 'tools/*/tests/*.spec.ts'],
+  testIgnore: ['tools/_template/**'],
   timeout: 60_000,
   retries: 0,
   use: { baseURL: 'http://localhost:4321', trace: 'retain-on-failure' },

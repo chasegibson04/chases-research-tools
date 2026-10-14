@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { SpectrumMeta } from '@/lib/ms/mzml';
+import { screenPalette } from '@/components/ms/palette';
 
 interface Props {
   spectra: SpectrumMeta[];
@@ -37,23 +38,22 @@ export function ScanChart({ spectra, active, msLevel, onPick, height = 120, xic 
     const dpr = window.devicePixelRatio || 1;
     c.width = W * dpr; c.height = height * dpr;
     const ctx = c.getContext('2d')!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const css = getComputedStyle(document.documentElement);
-    const col = (n: string, f: string) => css.getPropertyValue(n).trim() || f;
+    const pal = screenPalette();
     ctx.clearRect(0, 0, W, height);
-    ctx.strokeStyle = col('--fg-muted', '#666'); ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.muted; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(L, height - B + 0.5); ctx.lineTo(W - R, height - B + 0.5); ctx.stroke();
-    ctx.fillStyle = col('--fg-muted', '#666'); ctx.font = `10px ${col('--font-sans', 'sans-serif')}`; ctx.textAlign = 'center';
+    ctx.fillStyle = pal.muted; ctx.font = `10px ${pal.font}`; ctx.textAlign = 'center';
     for (let k = 0; k <= 5; k++) { const v = x0 + ((x1 - x0) * k) / 5; ctx.fillText(useRt ? v.toFixed(2) : String(Math.round(v)), X(v), height - 8); }
     ctx.textAlign = 'left'; ctx.fillText(useRt ? 'RT (min)' : 'scan order', W - R - 52, height - B - 4);
     shown.forEach((s, i) => {
       const px = Math.round(X(xs[i])) + 0.5, h = (ys[i] / yMax) * (height - T - B);
-      ctx.strokeStyle = active.has(s.index) ? col('--accent', '#8b2635') : s.msLevel === 1 ? col('--fg-faint', '#aaa') : col('--ion-b', '#0072b2');
+      ctx.strokeStyle = active.has(s.index) ? pal.accent : s.msLevel === 1 ? pal.faint : pal.ion.b;
       ctx.globalAlpha = active.has(s.index) ? 1 : 0.55;
       ctx.beginPath(); ctx.moveTo(px, height - B); ctx.lineTo(px, height - B - Math.max(1, h)); ctx.stroke();
     });
     ctx.globalAlpha = 1;
     // XIC overlays, each scaled to its own maximum
-    const xicCols = [col('--ion-y', '#d55e00'), col('--ion-a', '#009e73'), col('--ion-x', '#cc79a7'), col('--ion-z', '#e69f00')];
+    const xicCols = [pal.ion.y, pal.ion.a, pal.ion.x, pal.ion.z];
     (xic ?? []).forEach((tr, ti) => {
       const pts = shown.map((s, i) => [X(xs[i]), tr.values.get(s.index) ?? 0] as [number, number]);
       const mx = Math.max(1e-9, ...pts.map((p) => p[1]));
@@ -62,7 +62,7 @@ export function ScanChart({ spectra, active, msLevel, onPick, height = 120, xic 
       ctx.stroke();
       ctx.fillStyle = xicCols[ti % xicCols.length]; ctx.textAlign = 'left'; ctx.fillText(`XIC ${tr.label}`, L + 6 + ti * 110, T + 10);
     });
-    if (drag) { ctx.fillStyle = col('--accent-soft', 'rgba(0,0,0,.1)'); ctx.fillRect(Math.min(...drag), T, Math.abs(drag[1] - drag[0]), height - T - B); }
+    if (drag) { ctx.fillStyle = pal.band; ctx.fillRect(Math.min(...drag), T, Math.abs(drag[1] - drag[0]), height - T - B); }
   }, [spectra, active, msLevel, W, drag, xic]);
 
   const local = (e: MouseEvent) => e.clientX - cv.current!.getBoundingClientRect().left;

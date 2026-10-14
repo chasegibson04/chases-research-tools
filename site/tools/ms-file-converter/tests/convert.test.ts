@@ -1,5 +1,5 @@
 // Round-trip and reference tests for the converter. Synthetic tests always run; corpus tests run when the public
-// test corpus is present locally (set MS_CORPUS to its folder; default D:/cyclic_seq_frag_public/_test_corpus).
+// test corpus is present locally (set MS_CORPUS to its folder; skipped when unset).
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,8 +9,8 @@ import { applyFilters, rangeSet } from '../src/filters';
 import { Sha1, base64Bytes } from '../src/writers/util';
 import type { InputBundle, SpectrumRecord, SpectrumSource } from '../src/model';
 
-const CORPUS = process.env.MS_CORPUS ?? 'D:/cyclic_seq_frag_public/_test_corpus';
-const have = fs.existsSync(CORPUS);
+const CORPUS = process.env.MS_CORPUS ?? '';
+const have = !!CORPUS && fs.existsSync(CORPUS);
 const ctx = { progress: () => {}, log: () => {}, signal: new AbortController().signal };
 const blobOf = (p: string) => (fs as any).openAsBlob(p) as Promise<Blob>;
 const bundleOf = async (p: string): Promise<InputBundle> => ({ name: path.basename(p), files: [{ path: path.basename(p), file: await blobOf(p) }] });

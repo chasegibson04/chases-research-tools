@@ -41,9 +41,9 @@
       "Rust (WebAssembly)"
     ],
     "wasm": {
-      "source": "src/runtime/rust (wasm-pack build --target web --release); wraps OpenTFRaw 3.0.0 (Apache-2.0) for Thermo .raw"
+      "source": "src/runtime/rust (wasm-pack build --target web --release); wraps OpenTFRaw 3.0.0 (Apache-2.0, vendored + patched in src/runtime/rust/vendor/opentfraw) for Thermo .raw. Worst-case extra download: ~420 KB (page + Thermo WASM); Bruker adds sql.js (~650 KB WASM), MOBILion .mbi adds h5wasm (~1 MB gzipped), each loaded only for that format."
     },
-    "bundleSizeKB": 420
+    "bundleSizeKB": 1100
   },
   "compute": {
     "location": "client",
@@ -310,7 +310,8 @@
     "authors": [
       {
         "family": "Gibson",
-        "given": "Chase"
+        "given": "Chase",
+        "orcid": "0009-0004-9871-8121"
       }
     ],
     "year": 2026,
@@ -366,7 +367,7 @@
     "sourceOrigin": "New; Thermo reading via OpenTFRaw (Apache-2.0), Bruker TDF/TSF ported from timsrust (MIT)"
   },
   "links": {
-    "repo": null,
+    "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/ms-file-converter",
     "release": null,
     "paper": null,
     "docs": null

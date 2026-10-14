@@ -9,7 +9,7 @@ import { brukerTdf, brukerTsf, createBrukerTdf, createBrukerTsf } from '../src/r
 import { lzfDecompress, unshuffleU32, decodeCompression2 } from '../src/readers/bruker/binary';
 import { MzConverter, ImConverter } from '../src/readers/bruker/calibration';
 
-const DATA = process.env.BRUKER_TEST_DATA ?? 'D:/cyclic_seq_frag_public/_test_corpus/vendor_raw/pwiz/Bruker/Reader_Bruker_Test.data';
+const DATA = process.env.BRUKER_TEST_DATA ?? (process.env.MS_CORPUS ? `${process.env.MS_CORPUS}/vendor_raw/pwiz/Bruker/Reader_Bruker_Test.data` : '');
 const ctx: ReaderContext = { progress: () => {}, log: () => {}, signal: new AbortController().signal };
 
 async function bundle(dir: string): Promise<InputBundle> {
@@ -109,7 +109,7 @@ describe('bruker binary helpers', () => {
   });
 });
 
-describe.skipIf(!existsSync(DATA))('Bruker readers vs ProteoWizard reference mzML', () => {
+describe.skipIf(!DATA || !existsSync(DATA))('Bruker readers vs ProteoWizard reference mzML', () => {
   afterAll(() => {
     if (!table.length) return;
     const cols = Object.keys(table[0]) as (keyof Row)[];

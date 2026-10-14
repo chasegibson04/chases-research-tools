@@ -43,8 +43,8 @@ Schema: `site/tools/tool.schema.json` (JSON Schema 2020-12). Validator: `npm run
 | `citation` | {authors[], year, title, doi, version?, preferredFormat?, alsoCite[]} | ✓ | See CITATIONS.md. |
 | `seo` | {title ≤65, metaDescription 70–160, ogImage, schemaType, faq[]} | ✓ | schemaType: WebApplication (default) / SoftwareApplication / SoftwareSourceCode (showcase). |
 | `ads.allow` | bool | ✓ | false disables ad slots on this page. |
-| `maintenance` | {created, updated, author, maintainers[], sourceOrigin, changelog} | ✓ | ISO dates. |
-| `links` | {repo, release, paper, docs, demoVideo} | ✓ (nullable) | Shown in the sidebar. |
+| `maintenance` | {created, updated, author, maintainers[]?, sourceOrigin?, changelog?} | ✓ | `created`, `updated`, `author` required; ISO dates. `sourceOrigin` = original project path/repo (provenance). |
+| `links` | {repo?, release?, paper?, docs?, demoVideo?} | ✓ (each string or null) | Shown in the sidebar. |
 | `showcase` | {install, platforms[], figures[{src,caption,alt}], releaseUrl} | if showcase | Figures live in `site/public/tools/<id>/`. |
 | `accessibility` | {notes, keyboardOperable} | – | |
 | `privacy` | {sendsData: false, storesLocal} | ✓ | `sendsData` is constant false. |

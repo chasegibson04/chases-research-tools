@@ -38,6 +38,7 @@ Fill every field per `docs/TOOL_MANIFEST_SPEC.md`. Points agents commonly get wr
 - Return plain JSON-serializable data (numbers, strings, arrays, objects). Typed arrays are fine (structured clone).
 - Python: `import { runPython } from '@/lib/runtime/pyodide'` and keep the Python source in `src/runtime/main.py` imported as a string (`?raw`). R: `runR` from `@/lib/runtime/webr`. WASM: artifacts in `src/runtime/` (see RUNTIMES.md).
 - Keep constants (masses, tables) in a separate `src/constants.ts` with a source comment for each table.
+- **Allowed imports** (enforced by `npm run validate` via `scripts/lib/tool-graph.mjs`; see `docs/ARCHITECTURE.md`): the tool's own folder, npm packages, `@/lib/ms/*` (ADR-009), `@/lib/runtime/*`, `@/lib/types`, `@/lib/export`, `@/components/tool/*`, `@/components/ms/*`, `@/styles/*`. Never another tool's folder or site chrome (`@/layouts`, `@/data`, pages). Mass-spec tools reuse `@/lib/ms` and `@/components/ms` instead of copying them.
 
 ## Phase 4 — UI (`src/index.tsx`)
 - Use `ToolShell` for layout, `ParamField` (via the shell) for manifest inputs, `FigurePanel` for plots, `ExportMenu` for CSV/TSV/JSON/TXT. Tool-specific widgets go in `extraInputs` or the results area.
@@ -50,7 +51,7 @@ Fill every field per `docs/TOOL_MANIFEST_SPEC.md`. Points agents commonly get wr
 - `README.md`: the five required sections (Overview, How to use, Method, Limitations, References). Write it for a scientist who found the page via Google. Include equations and constants. Mention where the original implementation came from.
 - `CITATION.cff`, `CHANGELOG.md`: fill in; add `alsoCite` for underlying methods.
 - `tests/compute.test.ts`: golden example(s), input validation, at least one property/invariant test. For Python/R tools, unit-test the TypeScript wrapper's input validation, and cover the numerical path in e2e (the runtime only exists in a browser).
-- Optional `tests/e2e.spec.ts` for tool-specific interactions (file upload, multi-step flows).
+- Optional `tests/e2e.spec.ts` for tool-specific interactions (file upload, toggles, exports, multi-step flows). It lives in the tool folder so it travels with the tool; Playwright runs it together with the site-wide protocol in `site/tests/e2e/` (`site/playwright.config.ts`). Tests that need the public MS test corpus read its folder from `MS_CORPUS` and skip when it is unset.
 
 ## Phase 6 — Verify (all must pass; see TESTING_PROTOCOL.md)
 ```bash
@@ -68,6 +69,12 @@ npm run build
 ```bash
 npm --prefix site run test:e2e
 ```
+(runs `site/tests/e2e/*.spec.ts` and every `site/tools/<slug>/tests/e2e.spec.ts`)
+```bash
+npm run export-tool -- <slug>
+```
+Then in `exports/<slug>/`: `npm install`, `npm test`, `npm run build` (vite build) must all pass; this proves the tool is self-contained (TESTING_PROTOCOL.md, standalone export).
+
 Then open `npm run dev` → `/tools/<slug>/` and manually confirm: loads instantly, each example runs, tooltips show, exports download, figure zooms and exports PNG/SVG, no console errors, looks right at 1366×768 and on a 390 px wide viewport.
 
 ## Phase 7 — Ship
@@ -77,4 +84,4 @@ Then open `npm run dev` → `/tools/<slug>/` and manually confirm: loads instant
 4. In the final message to the owner: the URL path, what was ported vs. simplified, limits chosen, anything left as TODO, and suggested `related` links.
 
 ## Checklist (copy into your changelog "done" entry)
-`[ ] manifest valid  [ ] help on every input  [ ] ≥1 golden example  [ ] unit tests  [ ] e2e green  [ ] README 5 sections  [ ] CITATION.cff  [ ] limits set honestly  [ ] worker+progress+cancel  [ ] exports work  [ ] figure export PNG/SVG  [ ] no console errors  [ ] fits viewport  [ ] changelog entries  [ ] pushed`
+`[ ] manifest valid  [ ] help on every input  [ ] ≥1 golden example  [ ] unit tests  [ ] e2e green  [ ] imports allowed + export-tool builds  [ ] README 5 sections  [ ] CITATION.cff  [ ] limits set honestly  [ ] worker+progress+cancel  [ ] exports work  [ ] figure export PNG/SVG  [ ] no console errors  [ ] fits viewport  [ ] changelog entries  [ ] pushed`

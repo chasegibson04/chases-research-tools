@@ -158,7 +158,7 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
           <label class="small muted">Or load a spectrum file (text peak list, MGF or mzML; read locally, never uploaded)</label>
           {obsFile
             ? <div class="ts-bar"><span class="tag mono">{obsFile.name} ({(obsFile.size / 1e6).toFixed(1)} MB)</span><button type="button" class="btn-sm" onClick={() => { setObsFile(null); if (ran.current) doRun(values, null); }}>Remove</button></div>
-            : <input type="file" accept=".txt,.csv,.tsv,.xy,.mgf,.mzML,.mzml" onChange={(e) => { const f = (e.target as HTMLInputElement).files?.[0] ?? null; setObsFile(f); if (f && ran.current) doRun(values, f); }} />}
+            : <input type="file" accept=".txt,.csv,.tsv,.xy,.mgf,.mzML,.mzml,.mzXML,.mzxml,.gz" onChange={(e) => { const f = (e.target as HTMLInputElement).files?.[0] ?? null; setObsFile(f); if (f && ran.current) doRun(values, f); }} />}
         </div>
       </>}>
       {out && (

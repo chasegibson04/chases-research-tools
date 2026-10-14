@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this tool, please cite it as below."
 title: "Peptide Fragment Ion Predictor"
 type: software
-version: 0.1.1
+version: 0.2.0
 date-released: 2026-10-14
 authors:
   - family-names: Gibson

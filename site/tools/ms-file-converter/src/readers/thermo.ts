@@ -36,12 +36,14 @@ const isElectron = (t?: string) => t === 'ETD' || t === 'ECD' || t === 'NETD';
 function stagesOf(s: ScanJson) {
   const rx = s.reactions.filter((r) => r.type);
   if (!rx.length || s.msLevel < 2) return null;
-  // Supplemental steps are flagged per record; they belong to the stage before them. Only the last stage's
-  // supplemental activation is reported (earlier stages are written without it).
-  const stages = rx.filter((r) => !r.supplemental);
-  if (!stages.length) return null;
-  const lastIdx = rx.lastIndexOf(stages[stages.length - 1]);
-  return { stages, supplemental: rx.slice(lastIdx + 1).filter((r) => r.supplemental) };
+  // Supplemental steps are flagged per record and belong to the stage before them.
+  const stages: Array<ScanJson['reactions'][number] & { sup: ScanJson['reactions'] }> = [];
+  for (const r of rx) {
+    if (!r.supplemental || !stages.length) stages.push({ ...r, sup: [] });
+    else stages[stages.length - 1].sup.push(r);
+  }
+  const last = stages[stages.length - 1];
+  return { stages, supplemental: last.sup, anySupplemental: stages.some((st) => st.sup.length > 0) };
 }
 function activationOf(st: { type?: string; energy: number }, sup: Array<{ type?: string; energy: number }>): { cv: CvParam[]; ce?: number; user: Array<{ name: string; value: string }> } {
   const cv: CvParam[] = [];
@@ -50,20 +52,30 @@ function activationOf(st: { type?: string; energy: number }, sup: Array<{ type?:
   if (st.type?.startsWith('Mode')) user.push({ name: 'Thermo activation type', value: st.type });
   let ce: number | undefined;
   if (isElectron(st.type)) user.push({ name: 'ETD reaction time (ms)', value: String(st.energy) }); else ce = st.energy;
+  // mzML has one supplemental-energy term: the first supplemental step that has a CV term gets it (HCD of
+  // IR-EThcD); other supplemental steps are described as userParams with their energy.
+  let energyWritten = false;
   for (const x of sup) {
-    if (SUPPLEMENTAL[x.type!]) cv.push(SUPPLEMENTAL[x.type!]);
-    else user.push({ name: 'supplemental activation', value: x.type === 'ModeC' || x.type === 'MPD' ? 'infrared multiphoton dissociation' : x.type! });
-    cv.push({ accession: 'MS:1002680', name: 'supplemental collision energy', value: String(x.energy), unitAccession: 'UO:0000266', unitName: 'electronvolt' });
+    const term = SUPPLEMENTAL[x.type!];
+    if (term && !energyWritten) {
+      cv.push(term, { accession: 'MS:1002680', name: 'supplemental collision energy', value: String(x.energy), unitAccession: 'UO:0000266', unitName: 'electronvolt' });
+      energyWritten = true;
+    } else {
+      const name = x.type === 'ModeC' || x.type === 'MPD' ? 'infrared multiphoton dissociation' : term?.name ?? x.type!;
+      user.push({ name: 'supplemental activation', value: `${name} (${x.energy})` });
+    }
   }
+  // IR-only supplemental (IR-ETD): keep the energy as the supplemental energy term, like other converters.
+  if (!energyWritten && sup.length) cv.push({ accession: 'MS:1002680', name: 'supplemental collision energy', value: String(sup[0].energy), unitAccession: 'UO:0000266', unitName: 'electronvolt' });
   return { cv, ce, user };
 }
 /** Rewrite the "mz@act energy" part of a filter string from the decoded reactions (OpenTFRaw guesses it). */
 function fixFilter(filter: string | null, g: NonNullable<ReturnType<typeof stagesOf>>): string | null {
   if (!filter) return filter;
   const part = (r: { type?: string; energy: number }) => `@${FILTER_CODE[r.type!] ?? r.type!.toLowerCase()}${r.energy.toFixed(2)}`;
-  const groups = g.stages.map((st, i) => `${st.mz.toFixed(4)}${part(st)}${i === g.stages.length - 1 ? g.supplemental.map(part).join('') : ''}`);
+  const groups = g.stages.map((st) => `${st.mz.toFixed(4)}${part(st)}${st.sup.map(part).join('')}`);
   // Thermo marks supplemental activation with an "sa" token before the scan type.
-  if (g.supplemental.length && !/\ssa\s/.test(filter)) filter = filter.replace(/\s(Full|SIM|SRM|Z)\s/, ' sa $1 ');
+  if (g.anySupplemental && !/\ssa\s/.test(filter)) filter = filter.replace(/\s(Full|SIM|SRM|Z)\s/, ' sa $1 ');
   return filter.replace(/(\d+\.\d+@[a-zA-Z]+-?[\d.]+(?:@[a-zA-Z]+-?[\d.]+)*\s*)+/, `${groups.join(' ')} `).replace(/\s+\[/, ' [');
 }
 
@@ -151,7 +163,7 @@ export const thermoFormat: InputFormat = {
               spectrumRef: pr.masterScan ? `controllerType=0 controllerNumber=1 scan=${pr.masterScan}` : undefined,
             },
             // earlier MSn stages (MS3+), immediate precursor first like ProteoWizard
-            ...(g && g.stages.length > 1 ? g.stages.slice(0, -1).reverse().map((st) => ({ mz: st.mz, isolationTarget: st.mz, isolationLower: st.isolationWidth ? st.isolationWidth / 2 : undefined, isolationUpper: st.isolationWidth ? st.isolationWidth / 2 : undefined, activation: activationOf(st, []).cv, collisionEnergy: activationOf(st, []).ce })) : []),
+            ...(g && g.stages.length > 1 ? g.stages.slice(0, -1).reverse().map((st) => ({ mz: st.mz, isolationTarget: st.mz, isolationLower: st.isolationWidth ? st.isolationWidth / 2 : undefined, isolationUpper: st.isolationWidth ? st.isolationWidth / 2 : undefined, activation: activationOf(st, st.sup).cv, collisionEnergy: activationOf(st, st.sup).ce })) : []),
             ] : [],
             mz: p.slice(1, 1 + k), intensity: p.slice(1 + k, 1 + 2 * k),
             userParams: [

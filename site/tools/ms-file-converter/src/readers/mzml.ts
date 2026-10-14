@@ -8,10 +8,13 @@ const utf8 = (latin1: string) => new TextDecoder('utf-8').decode(Uint8Array.from
 
 /** All cvParams directly inside an XML fragment. */
 export function cvParams(xml: string): CvParam[] {
-  return [...xml.matchAll(/<cvParam\b([^>]*?)\/?>/g)].map((m) => {
-    const a = (k: string) => new RegExp(`\\b${k}="([^"]*)"`).exec(m[1])?.[1];
-    return { accession: a('accession') ?? '', name: a('name') ?? '', value: a('value') || undefined, unitAccession: a('unitAccession'), unitName: a('unitName') };
-  });
+  const out: CvParam[] = [];
+  for (const m of xml.matchAll(/<cvParam\b([^>]*?)\/?>/g)) {
+    const a: Record<string, string> = {};
+    for (const x of m[1].matchAll(/(\w+)="([^"]*)"/g)) a[x[1]] = x[2];
+    out.push({ accession: a.accession ?? '', name: a.name ?? '', value: a.value || undefined, unitAccession: a.unitAccession, unitName: a.unitName });
+  }
+  return out;
 }
 const block = (head: string, tag: string) => new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}>`).exec(head)?.[0];
 
@@ -77,7 +80,8 @@ function toRecord(entry: Entry, text: string, groups: Record<string, string>, in
   const intensity = arrays.find((a) => a.cv.accession === 'MS:1000515')?.values ?? new Float64Array(0);
   const precursors: Precursor[] = [...entry.header.matchAll(/<precursor\b[\s\S]*?<\/precursor>/g)].map((m) => {
     const p = m[0];
-    const v = (acc: string) => { const c = cvParams(p).find((x) => x.accession === acc); return c?.value != null ? Number(c.value) : undefined; };
+    const params = cvParams(p);
+    const v = (acc: string) => { const c = params.find((x) => x.accession === acc); return c?.value != null ? Number(c.value) : undefined; };
     const act = /<activation>([\s\S]*?)<\/activation>/.exec(p)?.[1] ?? '';
     return {
       mz: v('MS:1000744') ?? v('MS:1000827') ?? 0, charge: v('MS:1000041'), intensity: v('MS:1000042'),

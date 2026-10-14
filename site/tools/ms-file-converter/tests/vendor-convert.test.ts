@@ -1,5 +1,5 @@
 // Vendor folder → mzML → re-read, through the full compute path (detect, open, write, index). Runs when the
-// ProteoWizard vendor test data is present (MS_CORPUS, default D:/cyclic_seq_frag_public/_test_corpus).
+// ProteoWizard vendor test data is present (MS_CORPUS; skipped when unset).
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,7 +7,7 @@ import run from '../src/compute';
 import { detectFormat } from '../src/readers';
 import type { InputBundle } from '../src/model';
 
-const CORPUS = process.env.MS_CORPUS ?? 'D:/cyclic_seq_frag_public/_test_corpus';
+const CORPUS = process.env.MS_CORPUS ?? '';
 const PWIZ = path.join(CORPUS, 'vendor_raw/pwiz');
 const ctx = { progress: () => {}, log: () => {}, signal: new AbortController().signal };
 
@@ -20,14 +20,14 @@ async function folderBundle(dir: string): Promise<InputBundle> {
 }
 const vendorDirs = (sub: string) => {
   const d = path.join(PWIZ, sub);
-  if (!fs.existsSync(d)) return [];
+  if (!CORPUS || !fs.existsSync(d)) return [];
   return fs.readdirSync(d, { recursive: true, withFileTypes: true } as any)
     .filter((e: any) => e.isDirectory() && /\.d$/i.test(e.name))
     .map((e: any) => path.join(e.parentPath ?? e.path, e.name))
     .filter((p: string) => !/\.d[\\/]/i.test(path.relative(d, p)));
 };
 
-describe.each([['Bruker'], ['Agilent']])('%s .d → mzML', (vendor) => {
+describe.runIf(!!CORPUS).each([['Bruker'], ['Agilent']])('%s .d → mzML', (vendor) => {
   const dirs = vendorDirs(vendor);
   it.runIf(dirs.length > 0).each(dirs.map((d) => [path.basename(d), d]))('%s', async (_n, dir) => {
     const b = await folderBundle(dir as string);

@@ -78,17 +78,24 @@ Writing vendor formats is not possible. No vendor publishes a writer, and the fo
 `tests/convert.test.ts`:
 - Round-trips the synthetic demo through every writer and re-reads it.
 - Checks SHA-1 vectors, base64 and index offsets.
-- With the public test corpus present (`MS_CORPUS`), it also:
+- With the public test corpus present (set `MS_CORPUS` to its folder; these tests skip otherwise), it also:
   - converts every corpus mzML/mzXML/MGF/mzData/MS2/imzML file to mzML and back, with identical spectrum and peak counts;
   - compares each Thermo test `.raw` with ProteoWizard's reference mzML: MS level, retention time, precursor, charge and non-zero peak count.
 
-`tests/bruker.test.ts`, `tests/agilent.test.ts` and `tests/mobilion.test.ts` compare against ProteoWizard's reference mzML. Peak counts and intensities match exactly; m/z is within 0.07 ppm, the float32 precision of the references. `tests/vendor-convert.test.ts` runs every vendor test folder through the full convert path. `tests/e2e` converts a Thermo `.raw` and a timsTOF `.d` through the page in Chromium.
+`tests/bruker.test.ts`, `tests/agilent.test.ts` and `tests/mobilion.test.ts` compare against ProteoWizard's reference mzML. Peak counts and intensities match exactly; m/z is within 0.07 ppm, the float32 precision of the references. `tests/vendor-convert.test.ts` runs every vendor test folder through the full convert path. `tests/e2e.spec.ts` converts a Thermo `.raw` and a timsTOF `.d` through the page in Chromium, and checks saving into a chosen folder.
+
+Opt-in checks on your own data (never committed): `BACKTEST_LIST` (+ `BACKTEST_OUT`) runs every listed file through mzML and MGF (`tests/backtest.test.ts`); `PAIRS_LIST` compares vendor files with reference mzML of the same runs (`tests/pairs.test.ts`).
+
+Command line: the same conversion code runs outside the browser with `npx vite-node --config vitest.config.ts tools/ms-file-converter/scripts/convert-cli.ts -- <input> <outDir> [format] ["filter;filter"]` (from `site/`).
+
+Licensing: the tool is MIT; the Thermo reader bundles OpenTFRaw (Apache-2.0, `src/runtime/rust/vendor/opentfraw/LICENSE`).
 
 ## Limitations
 
 - **Size and speed.**
   - Inputs are limited to 2 GB each, and a run to one hour per input.
-  - Conversion is single-threaded and slower than native msconvert (roughly 1–3 minutes per GB).
+  - Conversion is single-threaded and slower than native msconvert. Measured on a desktop: a 23 MB Thermo .raw converts to mzML in about 8 s and a 27 MB mzML in about 11 s, so plan for roughly 5–8 minutes per GB.
+  - Extra downloads load only when needed: the Thermo reader is ~310 KB of WebAssembly, the Bruker reader adds sql.js (~650 KB), and MOBILion files add h5wasm (~1 MB gzipped).
   - Output is assembled as a Blob before saving. Chromium spills large Blobs to disk; other browsers may hold them in memory.
 - **Thermo (OpenTFRaw 3.0.0).**
   - Multiplexed (MSX) scans and the SPS ions of SPS-MS3 scans are not listed as extra precursors (msconvert lists them). Ordinary MS3 chains are.

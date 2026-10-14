@@ -1,6 +1,13 @@
 # Changelog — mzML Spectrum Viewer & MS/MS Annotator
 
-## 0.1.1 — 2026-10-14
+## 0.2.0 — 2026-10-14
+- Reads mzXML and gzipped files (.mzML.gz, .mgf.gz), ion-mobility arrays (1/K0, drift time) with an optional mobility window, and groups scans by FAIMS compensation voltage.
+- Deisotoping (on by default): fragment assignments must agree with the charge their ¹³C envelope shows.
+- Chance-match estimate from decoy-shifted ion lists, shown next to the match count.
+- Optional b-ion scrambling and residue-specific side-chain losses, from the shared fragment engine.
+- Extracted-ion chromatograms over the scan strip; pin a spectrum as a reference for a mirror comparison with cosine similarity.
+- Plot layer toggles (series, losses, isotopes, unassigned, labels); peak table can follow the plot zoom; "Set as reference peak" adds a neutral-mass difference column with the residue that explains each gap.
+- Click an ion or cleavage to isolate and zoom the spectrum; structure panel always shown; collapsible scan list and Reset.
 - Fix: files whose spectrum index attributes are not 0..n−1 (e.g. OpenMS FAIMS test data) crashed on load; scan groups now use positions.
 - The default group prefers groups that contain peaks, so files with empty MS2 spectra open on their MS1 data.
 - Very sparse "profile" spectra keep their points when centroiding finds no interior maxima.

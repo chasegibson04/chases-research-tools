@@ -1,6 +1,12 @@
 # Changelog — Peptide Fragment Ion Predictor
 
-## 0.1.1 — 2026-10-14
+## 0.2.0 — 2026-10-14
+- b-ion sequence scrambling (optional): macrocyclic b ions that re-close and re-open elsewhere, flagged bₖˢ (type b-scr).
+- Residue-specific side-chain losses (optional): Thr −C₂H₄O, Ser −CH₂O, Asp/Glu −CO₂, Arg −CH₅N₃/−CH₂N₂, Met −CH₄S, dimethylamide −C₂H₇N.
+- w satellite ions for Leu, Ile (wa/wb) and Val.
+- Plot layer toggles: show or hide each ion series, losses, ¹³C isotopes, unassigned peaks and labels; the table follows the toggles.
+- Click a cleavage or an ion label to isolate and zoom the spectrum to it; the list table can follow the plot zoom ("in view only").
+- Observed-spectrum file upload accepts mzML (averaged over its largest MS2 group), mzXML and gzipped files instead of failing.
 - Uploaded spectrum files use the shared reader fixes (scan grouping by position, sparse-profile fallback, zstd arrays).
 
 ## 0.1.0 — 2026-10-14

@@ -11,7 +11,8 @@ import { tofToMz, parseDefaultMassCal } from '../src/readers/agilent/calibration
 import { decodeRle, decodeProfile } from '../src/readers/agilent/decode';
 import type { InputBundle, ReaderContext, SpectrumRecord, ChromatogramRecord } from '../src/model';
 
-const DIR = 'D:/cyclic_seq_frag_public/_test_corpus/vendor_raw/pwiz/Agilent/Reader_Agilent_Test.data';
+// Public test corpus folder (README there); tests skip when MS_CORPUS is unset.
+const DIR = process.env.MS_CORPUS ? `${process.env.MS_CORPUS}/vendor_raw/pwiz/Agilent/Reader_Agilent_Test.data` : '';
 
 async function bundleOf(dir: string): Promise<InputBundle> {
   const files: InputBundle['files'] = [];
@@ -142,7 +143,7 @@ describe('Agilent helpers', () => {
   });
 });
 
-describe.skipIf(!existsSync(DIR))('Agilent .d vs ProteoWizard', () => {
+describe.skipIf(!DIR || !existsSync(DIR))('Agilent .d vs ProteoWizard', () => {
   const rows: Cmp[] = [];
   const cases: Array<[string, string?]> = [
     ['Neg_MS_002_1scan.d'], ['TOFsulfasMS4GHzDualMode+DADSpectra+UVSignal272-NoProfile.d'], ['GFb_4Scan_TimeSegs_1530_100ng.d'],

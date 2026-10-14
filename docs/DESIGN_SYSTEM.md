@@ -27,7 +27,7 @@ Set `theme` in `src/config/site.ts`. A user-facing light/dark toggle is a planne
 Header 52 px → breadcrumb + H1 + tagline (≤ 90 px) → `.tool-frame` sized to `calc(100vh - header - 120px)` so the entire tool is visible on arrival → ad slot (fixed height) → two columns: documentation (left) and citation/metadata (right) → related tools → footer with donate button. On mobile the input column stacks above results.
 
 ## Accessibility
-Focus rings on everything, `aria-live` results region, help tooltips focusable, contrast ≥ 4.5:1 for text in all three themes (checked by eye now; axe automation planned), reduced-motion safe.
+Focus rings on everything, `aria-live` results region, help tooltips focusable, contrast ≥ 4.5:1 for text in all five themes (graphite, paper, spectra, michigan, wisconsin) (checked by eye now; axe automation planned), reduced-motion safe.
 
 ## Adding a component
 Put it in `src/components/` (Astro, static) or `src/components/tool/` (Preact, interactive). Use tokens only. Document it in this file if tools are expected to use it.

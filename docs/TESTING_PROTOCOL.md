@@ -3,7 +3,7 @@
 A tool is publishable only when every layer below is green. CI runs all of them on every push and PR.
 
 ## Layer 1 — Static validation (`npm run validate`)
-JSON Schema conformance; folder/id match; category/subcategory exist; related ids exist; README has the five sections; CITATION.cff and CHANGELOG.md exist; examples exist with `input` (+ warning if no `expected`); every interactive tool has `src/index.tsx`, `src/compute.ts`, and ≥1 `tests/*.test.ts`; every `help` ≥ 15 chars; showcase figures exist; site config consistency.
+JSON Schema conformance; folder/id match; category/subcategory exist; related ids exist; README has the five sections; CITATION.cff and CHANGELOG.md exist; examples exist with `input` (+ warning if no `expected`); every interactive tool has `src/index.tsx`, `src/compute.ts`, and ≥1 `tests/*.test.ts`; every `help` ≥ 15 chars; showcase figures exist; site config consistency; **tool import rules** (each interactive tool's import graph, walked by `scripts/lib/tool-graph.mjs`, reaches only its own folder, npm packages, `@/lib/ms/*`, `@/lib/runtime/*`, `@/lib/types`, `@/lib/export`, `@/components/tool/*`, `@/components/ms/*`, `@/styles/*`; see ARCHITECTURE.md).
 
 ## Layer 2 — Types (`npm run check`)
 `astro check` (TypeScript strict). Tool code must typecheck; `any` is allowed only at JSON boundaries.
@@ -19,12 +19,26 @@ Per tool, in `tests/*.test.ts`:
 Astro build must succeed; validator runs first. Check the build output for the tool chunk size; if a tool adds > 300 KB gzipped (excluding language runtimes), note it in `runtime.bundleSizeKB` and justify in the changelog.
 
 ## Layer 5 — End-to-end (`npm --prefix site run test:e2e`, Playwright)
+Playwright (`site/playwright.config.ts`) runs two sets of specs against the built site:
+- `site/tests/e2e/*.spec.ts`: the site-wide generic protocol (`tools.spec.ts` for every tool, `site.spec.ts` for site pages);
+- `site/tools/<slug>/tests/e2e.spec.ts`: tool-specific interaction tests, kept in the tool folder so they travel with the tool (`_template` is ignored).
+
 `site/tests/e2e/tools.spec.ts` runs automatically for **every** tool:
 - page loads, H1 contains name, citation box visible, JSON-LD present, **zero console errors or page errors**;
 - a `(?)` help element exists for every non-advanced input;
 - each example loads via the dropdown, Run completes with `data-state="done"` within 3× `expectedRuntimeSeconds` + 15 s;
 - every `expected` key with a matching `[data-output]` element matches (0.1 % + 0.0005 tolerance for numbers).
-Add `tools/<slug>/tests/e2e.spec.ts` for tool-specific flows (uploads, toggles, figure export click produces a download).
+Add `tools/<slug>/tests/e2e.spec.ts` for tool-specific flows (uploads, toggles, figure export click produces a download); do not put tool-specific specs in `site/tests/e2e/`.
+
+## Layer 5b — Standalone export (`npm run export-tool -- <slug>`)
+Every tool must run outside the site. Export it and build the copy:
+```bash
+npm run export-tool -- <slug>
+```
+Then in `exports/<slug>/` (git-ignored): `npm install`, `npm test` (the tool's unit tests under Vitest), `npm run build` (vite build). All three must pass. The export refuses to run if the tool breaks the import rules.
+
+## Test data (`MS_CORPUS`)
+Tests that need the public mass-spectrometry test corpus (vendor raw files, reference mzML) read its folder from the `MS_CORPUS` environment variable and **skip** when it is unset, so CI and fresh clones stay green without it. Set it locally to run them, e.g. PowerShell `$env:MS_CORPUS="D:/path/to/corpus"; npm run test` (bash: `MS_CORPUS=/path/to/corpus npm run test`). Never commit corpus files or internal lab data to the repo.
 
 ## Layer 6 — Manual pass (required before `stable`)
 At 1366×768 and 390×844: whole tool visible without page scroll (or intended `aspect`), tooltips readable, figure zoom/pan/hover work, PNG and SVG export open correctly in an image viewer and Illustrator/Inkscape, CSV opens in Excel with correct columns, keyboard-only operation possible, no text overflow, both light and dark themes look right (`/design/themes/`).

@@ -24,3 +24,11 @@ describe('ms-file-converter examples', () => {
     await expect(run({ file, fileName: 'x.mzML', outputFormat: 'mzML', filterText: 'frobnicate 3' } as any, ctx)).rejects.toThrow(/unknown filter/);
   });
 });
+
+describe('cancellation', () => {
+  it('stops a conversion when the signal is aborted', async () => {
+    const ac = new AbortController(); ac.abort();
+    const file = await (fs as any).openAsBlob(path.join(pub, 'tools/ms-file-converter/demo-synthetic.mzML'));
+    await expect(run({ file, fileName: 'demo.mzML', outputFormat: 'mzML' } as any, { ...ctx, signal: ac.signal })).rejects.toThrow(/Cancel/);
+  });
+});

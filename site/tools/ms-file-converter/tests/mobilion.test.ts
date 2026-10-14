@@ -7,7 +7,8 @@ import { indexSpectra, readSpectrum } from '@/lib/ms/mzml';
 import { mobilionMbi, padGates, mbiIndexToMz } from '../src/readers/mobilion';
 import type { ReaderContext, SpectrumRecord } from '../src/model';
 
-const DIR = 'D:/cyclic_seq_frag_public/_test_corpus/vendor_raw/pwiz/Mobilion/Reader_Mobilion_Test.data';
+// Public test corpus folder (README there); tests skip when MS_CORPUS is unset.
+const DIR = process.env.MS_CORPUS ? `${process.env.MS_CORPUS}/vendor_raw/pwiz/Mobilion/Reader_Mobilion_Test.data` : '';
 const ctx = (): ReaderContext => ({ progress: () => {}, signal: new AbortController().signal, log: () => {} });
 
 describe('Mobilion helpers', () => {
@@ -22,7 +23,7 @@ describe('Mobilion helpers', () => {
   });
 });
 
-describe.skipIf(!existsSync(DIR))('Mobilion .mbi vs ProteoWizard', () => {
+describe.skipIf(!DIR || !existsSync(DIR))('Mobilion .mbi vs ProteoWizard', () => {
   for (const name of ['ExampleTuneMix_binned5', '2024-02-16-16.02.20-CCS Calibration_02']) {
     it(name, async () => {
       const file = await openAsBlob(join(DIR, name + '.mbi'));

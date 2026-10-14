@@ -1,7 +1,7 @@
 // OPTIONAL tool-specific e2e. The generic protocol in site/tests/e2e/tools.spec.ts already covers load, help tooltips,
 // every example, and golden outputs. Add flows here that the generic test cannot know about (uploads, toggles, exports).
-// Playwright only discovers files under site/tests/e2e by default; to enable this file, add its path to
-// playwright.config.ts `testDir`/`testMatch` or move it to site/tests/e2e/<slug>.spec.ts.
+// Playwright runs tools/<slug>/tests/*.spec.ts automatically (site/playwright.config.ts), so these tests travel with
+// the tool, including in `npm run export-tool`.
 import { test, expect } from '@playwright/test';
 
 test.skip('__SLUG__: figure PNG export triggers a download', async ({ page }) => {
