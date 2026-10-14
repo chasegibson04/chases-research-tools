@@ -71,36 +71,57 @@ export function decodeSlof(d: Uint8Array): Float64Array {
   return out;
 }
 
-// ---- encoders (used only by tests to round-trip the decoders) ---------------------------------
+// ---- encoders (used by the MS File Converter's mzML writer and by the round-trip tests) ----------
+/** Half-byte truncation of one 32-bit integer (appends half-bytes to `out`). */
 function encodeInt(x: number, out: number[]) {
-  // returns half-bytes
   const v = x >>> 0;
-  let l: number;
-  const nibbles = (y: number) => Array.from({ length: 8 }, (_, i) => (y >>> (4 * i)) & 0xf);
-  const nb = nibbles(v);
-  if ((v & 0xf0000000) === 0) {
-    l = 8; for (let i = 7; i >= 0; i--) { if (nb[i] !== 0) { l = 7 - i; break; } }
+  const nb = Array.from({ length: 8 }, (_, i) => (v >>> (4 * i)) & 0xf); // nb[7] is the most significant
+  const top = nb[7];
+  if (top === 0) {
+    let l = 0; while (l < 8 && nb[7 - l] === 0) l++;
     out.push(l); for (let i = 0; i < 8 - l; i++) out.push(nb[i]);
-  } else {
-    l = 0; for (let i = 7; i >= 0; i--) { if (nb[i] === 0xf) l++; else break; }
+  } else if (top === 0xf) {
+    let l = 0; while (l < 8 && nb[7 - l] === 0xf) l++;
     l = Math.min(l, 7);
     out.push(l + 8); for (let i = 0; i < 8 - l; i++) out.push(nb[i]);
+  } else {
+    out.push(0); for (let i = 0; i < 8; i++) out.push(nb[i]);
   }
 }
-const packNibbles = (n: number[]) => { const b: number[] = []; for (let i = 0; i < n.length; i += 2) b.push((n[i] << 4) | (n[i + 1] ?? 0)); return b; };
-const fpBytes = (fp: number) => { const dv = new DataView(new ArrayBuffer(8)); dv.setFloat64(0, fp, false); return Array.from(new Uint8Array(dv.buffer)); };
+const packNibbles = (n: number[]) => { const b = new Uint8Array((n.length + 1) >> 1); for (let i = 0; i < n.length; i += 2) b[i >> 1] = (n[i] << 4) | (n[i + 1] ?? 0); return b; };
+const fpBytes = (fp: number) => { const dv = new DataView(new ArrayBuffer(8)); dv.setFloat64(0, fp, false); return new Uint8Array(dv.buffer); };
+const cat = (...a: Uint8Array[]) => { const o = new Uint8Array(a.reduce((s, x) => s + x.length, 0)); let k = 0; for (const x of a) { o.set(x, k); k += x.length; } return o; };
 
-export function encodeLinearForTest(x: number[], fp: number): Uint8Array {
-  const ints = x.map((v) => Math.round(v * fp));
+/** Largest fixed point that keeps every linear-prediction residual inside a 32-bit integer (reference algorithm). */
+export function optimalLinearFixedPoint(x: ArrayLike<number>): number {
+  if (x.length === 0) return 0;
+  if (x.length === 1) return Math.floor(0xffffffff / x[0]);
+  let max = Math.max(x[0], x[1]);
+  for (let i = 2; i < x.length; i++) { const e = x[i - 1] + (x[i - 1] - x[i - 2]); max = Math.max(max, Math.ceil(Math.abs(x[i] - e) + 1)); }
+  return Math.floor(0x7fffffff / max);
+}
+/** Fixed point for a target absolute error per value (e.g. 2e-9 m/z, msconvert's default for m/z). */
+export const linearFixedPointForError = (absError: number) => 0.5 / absError;
+export function encodeLinear(x: ArrayLike<number>, fixedPoint?: number): Uint8Array {
+  const fp = Math.min(fixedPoint ?? optimalLinearFixedPoint(x), optimalLinearFixedPoint(x) || Infinity);
+  const ints = Array.from(x, (v) => Math.floor(v * fp + 0.5));
   const head = new DataView(new ArrayBuffer(8));
-  head.setUint32(0, ints[0], true); head.setUint32(4, ints[1], true);
+  if (ints.length > 0) head.setUint32(0, ints[0] >>> 0, true);
+  if (ints.length > 1) head.setUint32(4, ints[1] >>> 0, true);
   const nib: number[] = [];
   for (let i = 2; i < ints.length; i++) encodeInt(ints[i] - (2 * ints[i - 1] - ints[i - 2]), nib);
-  return Uint8Array.from([...fpBytes(fp), ...new Uint8Array(head.buffer), ...packNibbles(nib)]);
+  return cat(fpBytes(fp), new Uint8Array(head.buffer, 0, Math.min(ints.length, 2) * 4), packNibbles(nib));
 }
-export function encodePicForTest(x: number[]): Uint8Array { const nib: number[] = []; for (const v of x) encodeInt(Math.round(v), nib); return Uint8Array.from(packNibbles(nib)); }
-export function encodeSlofForTest(x: number[], fp: number): Uint8Array {
-  const b = [...fpBytes(fp)];
-  for (const v of x) { const s = Math.round(Math.log(v + 1) * fp); b.push(s & 0xff, (s >> 8) & 0xff); }
-  return Uint8Array.from(b);
+/** Positive integer compression: values are rounded to integers. */
+export function encodePic(x: ArrayLike<number>): Uint8Array { const nib: number[] = []; for (let i = 0; i < x.length; i++) encodeInt(Math.floor(x[i] + 0.5), nib); return packNibbles(nib); }
+export function optimalSlofFixedPoint(x: ArrayLike<number>): number {
+  let max = 1; for (let i = 0; i < x.length; i++) max = Math.max(max, Math.log(x[i] + 1));
+  return Math.floor(0xffff / max);
+}
+/** Short logged float: 2 bytes per value, ~relative error 1/fp. */
+export function encodeSlof(x: ArrayLike<number>, fixedPoint?: number): Uint8Array {
+  const fp = fixedPoint ?? optimalSlofFixedPoint(x);
+  const b = new Uint8Array(8 + 2 * x.length); b.set(fpBytes(fp));
+  for (let i = 0; i < x.length; i++) { const s = Math.min(0xffff, Math.floor(Math.log(x[i] + 1) * fp + 0.5)); b[8 + 2 * i] = s & 0xff; b[9 + 2 * i] = s >> 8; }
+  return b;
 }

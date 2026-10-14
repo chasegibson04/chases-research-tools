@@ -29,7 +29,8 @@ A **static site** built with **Astro 7** and deployed to **Cloudflare Workers (s
 
 ## Directory contract
 
-- `site/tools/<slug>/` is the unit of distribution. It must be self-contained (its `src/compute.ts` imports only from its own folder, `@/lib/runtime/*`, or the shared mass-spectrometry library `@/lib/ms/*` per ADR-009), so users can download just that folder (plus `site/src/lib/ms/` for MS tools).
+- `site/tools/<slug>/` is the unit of distribution. A tool imports only its own folder, npm packages, and the shared tool code: `@/lib/ms/*` (ADR-009), `@/lib/runtime/*`, `@/lib/types`, `@/lib/export`, `@/components/tool/*`, `@/components/ms/*` and `@/styles/*`. Never another tool's folder and never site chrome (`@/layouts`, `@/data`, pages). `npm run validate` walks every tool's import graph (`scripts/lib/tool-graph.mjs`) and fails on a violation.
+- `npm run export-tool -- <slug>` writes `exports/<slug>/`: the tool folder, exactly the shared files its graph reaches, its public assets and a minimal Vite + Preact host, ready for `npm install && npm run dev`. This is how someone takes one tool to use or adapt locally; the export's own unit tests run there too.
 - `site/src/` is the site framework. Tools consume it; they never modify it (open a PR against the shared component instead).
 - `docs/` is the knowledge base. `CHANGELOG.agent.log` is the work log.
 

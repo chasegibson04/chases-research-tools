@@ -1,0 +1,6 @@
+{
+  "label": "MS2 only, top-20 peaks → mzXML",
+  "description": "Keeps MS2 scans, keeps the 20 most intense peaks of each, and writes indexed, zlib-compressed mzXML 3.2 with a SHA-1 checksum: the filters \"msLevel 2\" and \"threshold count 20 most-intense\".",
+  "input": { "url": "/tools/ms-file-converter/demo-synthetic.mzML", "fileName": "demo-synthetic.mzML", "outputFormat": "mzXML", "mzBits": "64", "intensityBits": "32", "zlib": true, "gzip": false, "filterText": "msLevel 2\nthreshold count 20 most-intense", "mzNumpress": "none", "intensityNumpress": "none", "indexed": true, "passthrough": true, "titleTemplate": "", "includeMs1": false, "overwrite": false },
+  "expected": { "spectraCount": 24, "outputFile": "demo-synthetic.mzXML" }
+}

@@ -19,3 +19,6 @@ desktop.ini
 *.box*
 .vscode/
 .idea/
+
+# standalone tool exports (npm run export-tool)
+exports/

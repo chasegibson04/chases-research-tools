@@ -1,0 +1,379 @@
+{
+  "$schema": "../tool.schema.json",
+  "id": "ms-file-converter",
+  "name": "MS File Converter",
+  "tagline": "Convert Thermo .raw, timsTOF .d, mzML, mzXML, MGF and more in your browser, msconvert-style, without uploading anything.",
+  "description": "An in-browser counterpart to ProteoWizard msconvert. It reads Thermo .raw, Bruker timsTOF .d, Agilent and Mobilion data and the open formats (mzML, mzXML, MGF, mzData, MS1/MS2, imzML, netCDF ANDI-MS), applies msconvert-style filters such as peak picking, MS-level, scan-time and threshold, and writes indexed mzML, mzXML, MGF, MS1/MS2 or CSV. Spectra, precursors, activation, retention times, filter strings and instrument metadata are carried over, and mzML inputs keep their original XML. Files never leave your computer: output goes to a folder you choose or to your downloads.",
+  "version": "0.1.0",
+  "status": "beta",
+  "kind": "interactive",
+  "category": "mass-spectrometry",
+  "subcategories": [
+    "proteomics",
+    "metabolomics"
+  ],
+  "tags": [
+    "msconvert",
+    "mzml",
+    "file-conversion",
+    "thermo-raw",
+    "timstof",
+    "mgf",
+    "mzxml"
+  ],
+  "keywords": [
+    "msconvert online",
+    "convert raw to mzml",
+    "thermo raw to mzml browser",
+    "bruker d to mzml",
+    "mzml to mgf",
+    "mzxml converter",
+    "proteowizard alternative"
+  ],
+  "related": [
+    "mzml-spectrum-annotator",
+    "peptide-fragment-ion-predictor"
+  ],
+  "runtime": {
+    "engine": "wasm",
+    "languages": [
+      "TypeScript",
+      "Rust (WebAssembly)"
+    ],
+    "wasm": {
+      "source": "src/runtime/rust (wasm-pack build --target web --release); wraps OpenTFRaw 3.0.0 (Apache-2.0) for Thermo .raw"
+    },
+    "bundleSizeKB": 420
+  },
+  "compute": {
+    "location": "client",
+    "worker": true,
+    "maxRuntimeSeconds": 3600,
+    "maxMemoryMB": 2048,
+    "maxInputSizeMB": 2048,
+    "threads": 1,
+    "warnOnMobile": true,
+    "longRunning": true
+  },
+  "layout": {
+    "aspect": "fill",
+    "inputsPosition": "left",
+    "inputsWidthPx": 360,
+    "panels": [
+      "inputs",
+      "custom",
+      "table",
+      "log"
+    ],
+    "fullWidth": true
+  },
+  "inputs": [
+    {
+      "name": "files",
+      "label": "Input files or vendor folders",
+      "type": "file",
+      "help": "Add one or more files (mzML, mzML.gz, mzXML, MGF, mzData, MS1/MS2, imzML + .ibd, .cdf, Thermo .raw) or a vendor folder (Bruker .d, Agilent .d). Each input becomes one output. Nothing is uploaded; files are read inside this browser tab.",
+      "maxSizeMB": 2048
+    },
+    {
+      "name": "outputFormat",
+      "label": "Output format",
+      "type": "select",
+      "help": "Open formats can be written; vendor formats are listed for reference but cannot be written by any open software. mzML is the PSI standard read by MZmine, MS-DIAL, OpenMS, Skyline and search engines.",
+      "default": "mzML",
+      "options": [
+        {
+          "value": "mzML",
+          "label": "mzML"
+        },
+        {
+          "value": "mzXML",
+          "label": "mzXML"
+        },
+        {
+          "value": "MGF",
+          "label": "MGF"
+        },
+        {
+          "value": "MS2",
+          "label": "MS2"
+        },
+        {
+          "value": "MS1",
+          "label": "MS1"
+        },
+        {
+          "value": "CSV",
+          "label": "CSV"
+        }
+      ]
+    },
+    {
+      "name": "mzBits",
+      "label": "m/z precision",
+      "type": "select",
+      "help": "64-bit keeps m/z exactly as acquired (msconvert default for m/z). 32-bit halves the size but rounds m/z to about 7 significant digits (≈0.0001 at m/z 1000).",
+      "default": "64",
+      "options": [
+        {
+          "value": "64",
+          "label": "64-bit"
+        },
+        {
+          "value": "32",
+          "label": "32-bit"
+        }
+      ]
+    },
+    {
+      "name": "intensityBits",
+      "label": "Intensity precision",
+      "type": "select",
+      "help": "32-bit is plenty for intensities (msconvert default); choose 64-bit only if a downstream tool needs it.",
+      "default": "32",
+      "options": [
+        {
+          "value": "32",
+          "label": "32-bit"
+        },
+        {
+          "value": "64",
+          "label": "64-bit"
+        }
+      ]
+    },
+    {
+      "name": "zlib",
+      "label": "zlib compression",
+      "type": "boolean",
+      "help": "Compress binary arrays with zlib (msconvert --zlib). Lossless; usually 2–4× smaller. Every common reader supports it.",
+      "default": true
+    },
+    {
+      "name": "gzip",
+      "label": "gzip the whole file",
+      "type": "boolean",
+      "help": "Write file.mzML.gz (msconvert --gzip). Smaller, but some tools (MS-DIAL) cannot open gzipped mzML; leave off for MS-DIAL.",
+      "default": false
+    },
+    {
+      "name": "combineIonMobility",
+      "label": "timsTOF: combine ion mobility",
+      "type": "boolean",
+      "help": "Bruker TDF only. Off (msconvert default): one spectrum per mobility scan, with its 1/K0, which MZmine's ion-mobility workflows expect; a full run gives millions of spectra. On (msconvert --combineIonMobilitySpectra): one spectrum per MS1 frame and per PASEF/DIA window, with a per-peak 1/K0 array; much smaller.",
+      "default": false
+    },
+    {
+      "name": "filterText",
+      "label": "Filters (msconvert syntax)",
+      "type": "textarea",
+      "help": "One filter per line, applied top to bottom, e.g. \"peakPicking true 1-\", \"msLevel 2-\", \"scanTime [300,900]\", \"threshold count 150 most-intense\". Use the Add filter list below for every supported filter. Leave empty to convert everything unchanged.",
+      "default": ""
+    },
+    {
+      "name": "mzNumpress",
+      "label": "m/z numpress",
+      "type": "select",
+      "help": "MS-Numpress linear prediction (msconvert --numpressLinear): lossy, with a relative error of about 2e-9 on m/z; much smaller files. Readers must support MS-Numpress (OpenMS, pwiz, MZmine 3 do; check yours).",
+      "default": "none",
+      "advanced": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "off"
+        },
+        {
+          "value": "linear",
+          "label": "linear"
+        }
+      ]
+    },
+    {
+      "name": "intensityNumpress",
+      "label": "Intensity numpress",
+      "type": "select",
+      "help": "pic rounds intensities to integers (msconvert --numpressPic); slof keeps about 4 significant digits (--numpressSlof). Both are lossy.",
+      "default": "none",
+      "advanced": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "off"
+        },
+        {
+          "value": "pic",
+          "label": "pic"
+        },
+        {
+          "value": "slof",
+          "label": "slof"
+        }
+      ]
+    },
+    {
+      "name": "indexed",
+      "label": "Indexed mzML / mzXML",
+      "type": "boolean",
+      "help": "Append the offset index and SHA-1 checksum (msconvert default). Lets readers jump to a spectrum without scanning the file. Turn off only for tools that reject indexed files.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "passthrough",
+      "label": "Keep original mzML metadata",
+      "type": "boolean",
+      "help": "For mzML inputs, copy each spectrum's original XML (every cvParam and userParam) and the header blocks, re-encoding only the binary arrays. Filters that change a spectrum regenerate its metadata.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "titleTemplate",
+      "label": "MGF TITLE template",
+      "type": "text",
+      "help": "msconvert titleMaker syntax. Fields: <RunId> <Index> <Id> <SourcePath> <ScanNumber> <ActivationType> <IsolationMz> <SelectedIonMz> <ChargeState> <SpectrumType> <ScanStartTimeInSeconds> <ScanStartTimeInMinutes> <BasePeakMz> <BasePeakIntensity> <TotalIonCurrent> <MsLevel>.",
+      "default": "<RunId>.<ScanNumber>.<ScanNumber>.<ChargeState> File:\"<SourcePath>\", NativeID:\"<Id>\"",
+      "advanced": true
+    },
+    {
+      "name": "includeMs1",
+      "label": "MGF: include MS1",
+      "type": "boolean",
+      "help": "MGF normally holds MSn spectra only (msconvert writes MS2+). Tick to also write MS1 scans as entries without PEPMASS.",
+      "default": false,
+      "advanced": true
+    },
+    {
+      "name": "overwrite",
+      "label": "Overwrite existing files",
+      "type": "boolean",
+      "help": "When saving to a chosen folder, replace files with the same name. Off by default so nothing is lost by accident.",
+      "default": false,
+      "advanced": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "files",
+      "label": "Converted files",
+      "type": "file",
+      "help": "Saved to the chosen folder, or offered as downloads."
+    },
+    {
+      "name": "queue",
+      "label": "Conversion queue",
+      "type": "table",
+      "help": "Every input with its detected format, spectrum count, output name, size and location.",
+      "exportFormats": [
+        "csv",
+        "json"
+      ]
+    },
+    {
+      "name": "preview",
+      "label": "Spectrum preview",
+      "type": "table",
+      "help": "The first 200 spectra written: level, retention time, precursor, charge, peaks.",
+      "exportFormats": [
+        "csv"
+      ]
+    },
+    {
+      "name": "log",
+      "label": "Log",
+      "type": "text"
+    }
+  ],
+  "figures": {
+    "enabled": false,
+    "library": "none",
+    "exportable": false
+  },
+  "exports": [
+    "csv",
+    "json"
+  ],
+  "examples": [
+    {
+      "file": "demo-to-mgf.json",
+      "label": "Synthetic mzML → MGF",
+      "description": "Converts the bundled synthetic mzML (2 MS1 + 24 HCD MS2) to MGF.",
+      "expectedRuntimeSeconds": 3
+    },
+    {
+      "file": "demo-ms2-centroid-mzxml.json",
+      "label": "MS2 only, top-20 peaks → mzXML",
+      "description": "Applies msLevel and threshold filters and writes indexed mzXML.",
+      "expectedRuntimeSeconds": 3
+    }
+  ],
+  "citation": {
+    "authors": [
+      {
+        "family": "Gibson",
+        "given": "Chase"
+      }
+    ],
+    "year": 2026,
+    "title": "MS File Converter",
+    "doi": null,
+    "preferredFormat": "apa",
+    "alsoCite": [
+      {
+        "text": "Chambers MC, et al. A cross-platform toolkit for mass spectrometry and proteomics. Nat Biotechnol 30, 918–920 (2012). (ProteoWizard msconvert, whose options and output this tool follows)",
+        "doi": "10.1038/nbt.2377"
+      },
+      {
+        "text": "OpenTFRaw: an open Rust reader for Thermo RAW files (Apache-2.0).",
+        "url": "https://github.com/Sigilweaver/OpenTFRaw"
+      },
+      {
+        "text": "timsrust: a Rust reader for Bruker timsTOF data (MIT), from which the TDF/TSF reader is ported.",
+        "url": "https://github.com/MannLabs/timsrust"
+      },
+      {
+        "text": "Teleman J, et al. Numerical compression schemes for proteomics mass spectrometry data. Mol Cell Proteomics 13, 1537–1542 (2014).",
+        "doi": "10.1074/mcp.O114.037879"
+      }
+    ]
+  },
+  "seo": {
+    "title": "MS File Converter: msconvert in your browser",
+    "metaDescription": "Free in-browser msconvert alternative: convert Thermo RAW, timsTOF .d, mzML, mzXML and MGF with peak picking and filters. Nothing is uploaded.",
+    "ogImage": null,
+    "schemaType": "WebApplication",
+    "faq": [
+      {
+        "q": "Are my files uploaded?",
+        "a": "No. Conversion runs in a Web Worker inside your browser tab; the site has no server that could receive them. Output is written to a folder you choose or downloaded."
+      },
+      {
+        "q": "Can it write Thermo .raw or Bruker .d?",
+        "a": "No. Vendor formats are closed and no open software can write them; they are listed in the format menu for reference. Convert to mzML, which MZmine, MS-DIAL, OpenMS and Skyline read."
+      },
+      {
+        "q": "How does it compare with msconvert?",
+        "a": "Spectra, precursors, charges, activation and collision energy, retention times, filter strings and instrument metadata match ProteoWizard's output on the ProteoWizard test files; vendor-specific peak picking is replaced by a local-maximum centroider."
+      }
+    ]
+  },
+  "ads": {
+    "allow": true
+  },
+  "maintenance": {
+    "created": "2026-10-14",
+    "updated": "2026-10-14",
+    "author": "Chase Gibson",
+    "sourceOrigin": "New; Thermo reading via OpenTFRaw (Apache-2.0), Bruker TDF/TSF ported from timsrust (MIT)"
+  },
+  "links": {
+    "repo": null,
+    "release": null,
+    "paper": null,
+    "docs": null
+  },
+  "privacy": {
+    "sendsData": false,
+    "storesLocal": false
+  },
+  "license": "MIT"
+}

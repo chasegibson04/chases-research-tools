@@ -1,5 +1,6 @@
 // Interaction tests for the mass-spectrometry tools (linking between structure, table and spectrum).
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 
 test.describe('peptide-fragment-ion-predictor interactions', () => {
   test.beforeEach(async ({ page }) => {
@@ -81,4 +82,34 @@ test('annotator: XIC and reference mirror comparison', async ({ page }) => {
   await page.getByRole('button', { name: /MS2 523\.77/ }).click();
   await expect(page.locator('.ms-card').filter({ hasText: 'Reference:' }).first()).toContainText('cosine', { timeout: 30_000 });
   expect(errors).toEqual([]);
+});
+
+// Converter with real vendor data in a real browser worker (FileReaderSync path for Thermo, sql.js WASM for
+// Bruker). Runs only when the public test corpus is present locally.
+const CORPUS = process.env.MS_CORPUS ?? 'D:/cyclic_seq_frag_public/_test_corpus';
+const THERMO = `${CORPUS}/vendor_raw/thermo_mzdata_small/small.RAW`;
+const BRUKER = `${CORPUS}/vendor_raw/pwiz/Bruker/Reader_Bruker_Test.data/Hela_QC_PASEF_Slot1-first-6-frames.d`;
+test.describe('ms-file-converter with vendor files', () => {
+  test.skip(!fs.existsSync(THERMO) || !fs.existsSync(BRUKER), 'test corpus not present');
+  test('Thermo .raw and a timsTOF .d folder convert to mzML in the queue', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto('/tools/ms-file-converter/');
+    await page.locator('[data-testid="conv-files"]').setInputFiles(THERMO);
+    await page.locator('[data-testid="conv-folder"]').setInputFiles(BRUKER);
+    await expect(page.locator('.conv-queue[data-output="queue"] tbody tr')).toHaveCount(2);
+    await page.locator('#in-combineIonMobility').check();
+    const downloads: string[] = [];
+    page.on('download', (d) => downloads.push(d.suggestedFilename()));
+    await page.locator('[data-action="run"]').click();
+    await expect(page.locator('.ts-status[data-state="done"]')).toBeVisible({ timeout: 120_000 });
+    const rows = page.locator('.conv-queue[data-output="queue"] tbody tr');
+    await expect(rows.nth(0)).toContainText('Thermo .raw');
+    await expect(rows.nth(0)).toContainText('48');
+    await expect(rows.nth(0)).toContainText('small.mzML');
+    await expect(rows.nth(1)).toContainText('Bruker timsTOF .d (TDF)');
+    await expect(rows.nth(1)).toContainText('Hela_QC_PASEF_Slot1-first-6-frames.mzML');
+    await expect.poll(() => downloads.length).toBe(2);
+    expect(errors).toEqual([]);
+  });
 });

@@ -294,7 +294,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
       onChange={(k, v) => setValues({ ...values, [k]: v })} onLoadExample={(ex) => setValues({ ...defaults, ...ex.input })} onRun={onRun} onCancel={() => { handle.current?.cancel(); setState('idle'); }}
       extraInputs={<>
         <IonTypePicker cyclic={cyclicInput} value={(values.ionTypes ?? []) as IonType[]} preset={preset} onChange={(v) => setValues({ ...values, ionTypes: v })} help={manifest.inputs.find((i) => i.name === 'ionTypes')!.help} />
-        <p class="small faint" style={{ margin: 0 }}>Files are read locally and never uploaded. Thermo .raw: convert with <code>ThermoRawFileParser -i x.raw -f 2</code> or <code>msconvert --mzML --zlib</code>.</p>
+        <p class="small faint" style={{ margin: 0 }}>Files are read locally and never uploaded. Vendor files (.raw, .d): convert them first with the <a href="/tools/ms-file-converter/">MS File Converter</a> or <code>msconvert --mzML --zlib</code>.</p>
       </>}>
       {loaded && spectrum && (
         <div class="ms-tool">

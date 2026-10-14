@@ -1,0 +1,20 @@
+/* MS File Converter: queue, drop zone and preview. Tokens only (docs/DESIGN_SYSTEM.md). */
+.conv { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.conv-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.conv-row h3 { margin: 0; }
+.conv-drop { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-3); border: 1px dashed var(--line-strong); border-radius: var(--radius-md); background: var(--bg-sunken); transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+.conv-drop.is-drag { border-color: var(--accent); background: var(--accent-soft); }
+.conv-reasons { margin: var(--space-1) 0 0; padding-left: 1.1rem; color: var(--fg-muted); }
+.conv-reasons li { margin-bottom: 0.2rem; }
+.conv-empty p { margin: 0 0 var(--space-2); max-width: 70ch; }
+.conv-tablewrap { max-height: 360px; }
+.conv-tall { max-height: 480px; }
+.conv-queue { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.conv-queue th { position: sticky; top: 0; background: var(--bg-elev); text-align: left; font-weight: 600; }
+.conv-queue td, .conv-queue th { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.conv-queue tbody tr { cursor: pointer; }
+.conv-queue tr.is-sel td { background: var(--accent-soft); }
+.conv-queue td.mono { font-size: var(--fs-xs); word-break: break-all; }
+.conv-prog { min-width: 10rem; }
+.conv-prog .ts-progress { margin: 0.2rem 0; }
+.conv-log pre { max-height: 240px; overflow: auto; white-space: pre-wrap; background: var(--bg-sunken); padding: var(--space-2); border-radius: var(--radius-sm); }

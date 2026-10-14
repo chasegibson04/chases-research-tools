@@ -21,6 +21,8 @@ interface Props<I> {
   errors?: Partial<Record<keyof I & string, string>>;
   children?: ComponentChildren; // results area
   extraInputs?: ComponentChildren; // tool-specific custom inputs
+  /** Custom inputs shown before the manifest inputs (e.g. a file queue that everything else depends on). */
+  leadInputs?: ComponentChildren;
   /** Compact summary shown in the sticky result header next to the status (key numbers of the current result). */
   header?: ComponentChildren;
 }
@@ -37,6 +39,7 @@ export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
     <div class="ts" data-tool={p.manifest.id}>
       <aside class="ts-inputs" aria-label="Inputs">
         <ExampleLoader examples={p.examples} onLoad={p.onLoadExample} />
+        {p.leadInputs}
         {basic.map((spec) => <ParamField spec={spec} value={p.values[spec.name]} error={p.errors?.[spec.name]} onChange={(v) => p.onChange(spec.name, v)} />)}
         {p.extraInputs}
         {adv.length > 0 && (

@@ -10,6 +10,7 @@
     "test": "npm --prefix site run test",
     "log": "node scripts/log.mjs",
     "new-tool": "node scripts/new-tool.mjs",
+    "export-tool": "node scripts/export-tool.mjs",
     "validate": "node scripts/validate-tools.mjs",
     "check:changelog": "node scripts/check-changelog.mjs",
     "deploy": "npx wrangler deploy",

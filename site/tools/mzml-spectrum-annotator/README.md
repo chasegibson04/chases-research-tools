@@ -4,7 +4,7 @@ Opens **mzML and MGF files directly in your browser** (the file is read in slice
 
 ## How to use
 
-1. Convert vendor files first (no browser can read Thermo .raw): `ThermoRawFileParser -i run.raw -f 2` (indexed mzML) or `msconvert run.raw --mzML --zlib`. Profile and centroid data both work.
+1. Convert vendor files to mzML first: in the browser with the [MS File Converter](/tools/ms-file-converter/) (Thermo .raw, Bruker/Agilent .d, MOBILion .mbi), or with `msconvert run.raw --mzML --zlib` or `ThermoRawFileParser -i run.raw -f 2`. Profile and centroid data both work.
 2. Choose the mzML or MGF file. Optionally enter the peptide sequence (same notation as the fragment predictor: `cyclo(V(Orn)LfPV(Orn)LfP)`, `[MeL]`, `(Orn)`, lowercase = D-residue, `M[Oxidation]`).
 3. Press **Run**. The tool indexes the file, picks the precursor group with the most MS2 scans, averages it and annotates it. The summary shows the charge used: by default the charge inferred from the precursor's isotope spacing in the MS2 scans (Thermo converters often write a wrong charge; the file's value is shown when it differs).
 4. Choose other scans: the buttons average a whole precursor group; in the scan strip click one scan or drag across a range to average it.

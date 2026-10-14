@@ -1,0 +1,6 @@
+{
+  "label": "Synthetic mzML → MGF",
+  "description": "Converts the bundled synthetic mzML (2 MS1 and 24 HCD MS2 scans of gramicidin S and angiotensin II, written like ThermoRawFileParser output; not real data) to MGF with msconvert's default TITLE. MGF holds MSn spectra only, so 24 entries are written.",
+  "input": { "url": "/tools/ms-file-converter/demo-synthetic.mzML", "fileName": "demo-synthetic.mzML", "outputFormat": "MGF", "mzBits": "64", "intensityBits": "32", "zlib": true, "gzip": false, "filterText": "", "mzNumpress": "none", "intensityNumpress": "none", "indexed": true, "passthrough": true, "titleTemplate": "<RunId>.<ScanNumber>.<ScanNumber>.<ChargeState> File:\"<SourcePath>\", NativeID:\"<Id>\"", "includeMs1": false, "overwrite": false },
+  "expected": { "sourceFormat": "mzML", "spectraCount": 24, "outputFile": "demo-synthetic.mgf" }
+}

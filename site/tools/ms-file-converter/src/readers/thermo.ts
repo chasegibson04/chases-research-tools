@@ -1,0 +1,172 @@
+// Thermo .raw via OpenTFRaw compiled to WASM (src/runtime/rust, Apache-2.0). The file stays a Blob: the WASM
+// side asks for byte ranges, served synchronously with FileReaderSync (available in workers). Outside a worker
+// (unit tests) the file is read into memory once.
+import { CV, readHead, asciiOf, type CvParam, type InputFormat, type SpectrumRecord, type RunMetadata } from '../model';
+
+interface ScanJson {
+  scan: number; msLevel: number; polarity: '+' | '-' | ''; profile: boolean; analyzer: string; filter: string | null; rtMin: number;
+  tic: number; basePeakMz: number; basePeakIntensity: number; lowMz: number; highMz: number; injectionTimeMs: number | null; faimsCv: number | null;
+  isDia: boolean; resolution: number | null; reactions: Array<{ mz: number; energy: number; isolationWidth?: number; energyValid?: boolean; type?: string; supplemental?: boolean }>;
+  precursor: null | { targetMz: number | null; selectedMz: number | null; isolationWidth: number | null; charge: number | null; energy: number | null; energyIsNce: boolean; masterScan: number | null; activation: string };
+}
+
+const ACT: Record<string, CvParam[]> = { HCD: [CV.hcd], CID: [CV.cid], ETD: [CV.etd], EThcD: [CV.etd, { accession: 'MS:1002678', name: 'supplemental beam-type collision-induced dissociation' }] };
+const ANALYZER: Record<string, CvParam> = {
+  FTMS: { accession: 'MS:1000484', name: 'orbitrap' }, ITMS: { accession: 'MS:1000264', name: 'ion trap' },
+  TQMS: { accession: 'MS:1000081', name: 'quadrupole' }, SQMS: { accession: 'MS:1000081', name: 'quadrupole' },
+  TOFMS: { accession: 'MS:1000084', name: 'time-of-flight' }, Sector: { accession: 'MS:1000080', name: 'magnetic sector' },
+};
+
+/** Primary-activation cvParams per Thermo ActivationType (the IR laser of Orbitrap tribrids is "mode C"). */
+const PRIMARY: Record<string, CvParam> = {
+  CID: CV.cid, HCD: CV.hcd, ETD: CV.etd, ECD: CV.ecd, MPD: CV.irmpd, ModeC: CV.irmpd, UVPD: CV.uvpd,
+  PQD: { accession: 'MS:1000599', name: 'pulsed q dissociation' }, NETD: { accession: 'MS:1003247', name: 'negative electron transfer dissociation' },
+};
+const SUPPLEMENTAL: Record<string, CvParam> = {
+  HCD: { accession: 'MS:1002678', name: 'supplemental beam-type collision-induced dissociation' },
+  CID: { accession: 'MS:1002679', name: 'supplemental collision-induced dissociation' },
+};
+const FILTER_CODE: Record<string, string> = { CID: 'cid', HCD: 'hcd', ETD: 'etd', ECD: 'ecd', MPD: 'mpd', PQD: 'pqd', UVPD: 'uvpd', NETD: 'netd', PTR: 'ptr', SA: 'sa', ModeA: 'modeA', ModeB: 'modeB', ModeC: 'modeC', ModeD: 'modeD' };
+const isElectron = (t?: string) => t === 'ETD' || t === 'ECD' || t === 'NETD';
+
+/**
+ * Stages and supplemental steps from the decoded reaction records (one non-supplemental record per MSn stage;
+ * supplemental records such as the HCD of EThcD follow their stage).
+ */
+function stagesOf(s: ScanJson) {
+  const rx = s.reactions.filter((r) => r.type);
+  if (!rx.length || s.msLevel < 2) return null;
+  // Supplemental steps are flagged per record; they belong to the stage before them. Only the last stage's
+  // supplemental activation is reported (earlier stages are written without it).
+  const stages = rx.filter((r) => !r.supplemental);
+  if (!stages.length) return null;
+  const lastIdx = rx.lastIndexOf(stages[stages.length - 1]);
+  return { stages, supplemental: rx.slice(lastIdx + 1).filter((r) => r.supplemental) };
+}
+function activationOf(st: { type?: string; energy: number }, sup: Array<{ type?: string; energy: number }>): { cv: CvParam[]; ce?: number; user: Array<{ name: string; value: string }> } {
+  const cv: CvParam[] = [];
+  const user: Array<{ name: string; value: string }> = [];
+  if (PRIMARY[st.type!]) cv.push(PRIMARY[st.type!]); else user.push({ name: 'Thermo activation type', value: st.type! });
+  if (st.type?.startsWith('Mode')) user.push({ name: 'Thermo activation type', value: st.type });
+  let ce: number | undefined;
+  if (isElectron(st.type)) user.push({ name: 'ETD reaction time (ms)', value: String(st.energy) }); else ce = st.energy;
+  for (const x of sup) {
+    if (SUPPLEMENTAL[x.type!]) cv.push(SUPPLEMENTAL[x.type!]);
+    else user.push({ name: 'supplemental activation', value: x.type === 'ModeC' || x.type === 'MPD' ? 'infrared multiphoton dissociation' : x.type! });
+    cv.push({ accession: 'MS:1002680', name: 'supplemental collision energy', value: String(x.energy), unitAccession: 'UO:0000266', unitName: 'electronvolt' });
+  }
+  return { cv, ce, user };
+}
+/** Rewrite the "mz@act energy" part of a filter string from the decoded reactions (OpenTFRaw guesses it). */
+function fixFilter(filter: string | null, g: NonNullable<ReturnType<typeof stagesOf>>): string | null {
+  if (!filter) return filter;
+  const part = (r: { type?: string; energy: number }) => `@${FILTER_CODE[r.type!] ?? r.type!.toLowerCase()}${r.energy.toFixed(2)}`;
+  const groups = g.stages.map((st, i) => `${st.mz.toFixed(4)}${part(st)}${i === g.stages.length - 1 ? g.supplemental.map(part).join('') : ''}`);
+  // Thermo marks supplemental activation with an "sa" token before the scan type.
+  if (g.supplemental.length && !/\ssa\s/.test(filter)) filter = filter.replace(/\s(Full|SIM|SRM|Z)\s/, ' sa $1 ');
+  return filter.replace(/(\d+\.\d+@[a-zA-Z]+-?[\d.]+(?:@[a-zA-Z]+-?[\d.]+)*\s*)+/, `${groups.join(' ')} `).replace(/\s+\[/, ' [');
+}
+
+function syncReader(file: Blob, whole: Uint8Array | null): (off: number, n: number) => Uint8Array {
+  if (whole) return (off, n) => whole.subarray(off, off + n);
+  const frs = new (globalThis as any).FileReaderSync();
+  return (off, n) => new Uint8Array(frs.readAsArrayBuffer(file.slice(off, off + n)));
+}
+
+let wasmMod: Promise<any> | null = null;
+/** Instantiate the WASM once per worker. In Node (unit tests) the .wasm is read from disk instead of fetched. */
+function loadThermo() {
+  wasmMod ??= (async () => {
+    const mod = await import('../runtime/pkg/thermo_raw_wasm.js');
+    const url = new URL('../runtime/pkg/thermo_raw_wasm_bg.wasm', import.meta.url);
+    if (url.protocol === 'file:') {
+      const fsName = 'node:fs/promises';
+      const fs = await import(/* @vite-ignore */ fsName);
+      await mod.default({ module_or_path: await fs.readFile(url) });
+    } else await mod.default({ module_or_path: url });
+    return mod;
+  })();
+  return wasmMod;
+}
+
+export const thermoFormat: InputFormat = {
+  id: 'Thermo RAW', label: 'Thermo .raw',
+  async detect(input) {
+    if (input.files.length !== 1) return false;
+    const h = await readHead(input.files[0].file, 64);
+    // Header: UTF-16LE "Finnigan" after a 2-byte magic (0xA101).
+    return h[0] === 0x01 && h[1] === 0xa1 && asciiOf(h.filter((_, i) => i >= 2 && i % 2 === 0).slice(0, 8)) === 'Finnigan';
+  },
+  async open(input, ctx) {
+    const file = input.files[0].file;
+    ctx.progress(0, 'Loading Thermo reader');
+    const wasm = await loadThermo();
+    const whole = typeof (globalThis as any).FileReaderSync === 'function' ? null : new Uint8Array(await file.arrayBuffer());
+    const raw = new wasm.ThermoRaw(syncReader(file, whole), file.size);
+    const m = JSON.parse(raw.metaJson());
+    const n: number = raw.scanCount();
+    const meta: RunMetadata = {
+      sourceFormat: 'Thermo RAW',
+      sourceFiles: [{ id: 'RAW1', name: input.name, nativeIdFormat: { accession: 'MS:1000768', name: 'Thermo nativeID format' }, fileFormat: { accession: 'MS:1000563', name: 'Thermo RAW format' } }],
+      instrument: { name: m.instrumentModel ?? m.deviceFamily, model: { accession: 'MS:1000483', name: 'Thermo Fisher Scientific instrument model' } },
+      software: [{ id: 'Xcalibur', name: 'Xcalibur', version: '', cv: { accession: 'MS:1000532', name: 'Xcalibur' } }, { id: 'OpenTFRaw', name: 'OpenTFRaw', version: '3.0.0' }],
+      startTimeStamp: m.startTimeStamp ?? undefined,
+      sampleName: m.sampleId || undefined,
+      extra: Object.fromEntries(Object.entries({
+        'raw file version': m.version, 'instrument method': m.instMethod || m.methodName, 'processing method': m.procMethod, vial: m.vial, comment: m.sampleComment,
+        'instrument method text': m.methodText,
+      }).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)])),
+    };
+    return {
+      meta, count: n,
+      close() { raw.free(); },
+      async *spectra() {
+        for (let i = 0; i < n; i++) {
+          if (ctx.signal.aborted) throw new Error('Cancelled.');
+          const s: ScanJson = JSON.parse(raw.scanJson(i));
+          const p: Float64Array = raw.peaks(i, s.profile);
+          const k = p[0];
+          const pr = s.precursor;
+          // Like ProteoWizard, distrust a trailer monoisotopic m/z that lies well outside the isolation window
+          // (instrument mis-assignment); fall back to the isolation target and keep the trailer value as a userParam.
+          let trailerMono: number | null = null;
+          // The scan event's reaction m/z is the isolation centre (the filter-string value).
+          const rx = s.reactions[s.reactions.length - 1]?.mz;
+          if (pr && rx && rx > 0 && Math.abs(rx - (pr.targetMz ?? rx)) > 1e-4) pr.targetMz = rx;
+          if (pr?.selectedMz != null && pr.targetMz != null && pr.selectedMz !== pr.targetMz) {
+            const allowed = (pr.isolationWidth ?? 2) / 2 + 3 / Math.max(1, pr.charge ?? 1);
+            if (Math.abs(pr.selectedMz - pr.targetMz) > allowed) { trailerMono = pr.selectedMz; pr.selectedMz = pr.targetMz; }
+          }
+          const g = stagesOf(s);
+          const last = g ? activationOf(g.stages[g.stages.length - 1], g.supplemental) : null;
+          const filter = g ? fixFilter(s.filter, g) : s.filter;
+          const rec: SpectrumRecord = {
+            index: i, nativeId: `controllerType=0 controllerNumber=1 scan=${s.scan}`, scan: s.scan, msLevel: s.msLevel, rtSeconds: s.rtMin * 60,
+            polarity: s.polarity || undefined, centroided: !s.profile, filter: filter ?? undefined, tic: s.tic, basePeakMz: s.basePeakMz, basePeakIntensity: s.basePeakIntensity,
+            lowMz: s.lowMz, highMz: s.highMz, scanWindow: [s.lowMz, s.highMz], injectionTimeMs: s.injectionTimeMs ?? undefined, faimsCv: s.faimsCv ?? undefined,
+            precursors: pr && s.msLevel > 1 ? [{
+              mz: pr.selectedMz ?? pr.targetMz ?? 0, charge: pr.charge ?? undefined, isolationTarget: pr.targetMz ?? undefined,
+              isolationLower: pr.isolationWidth ? pr.isolationWidth / 2 : undefined, isolationUpper: pr.isolationWidth ? pr.isolationWidth / 2 : undefined,
+              activation: last?.cv ?? ACT[pr.activation] ?? [], collisionEnergy: last ? last.ce : pr.energy ?? undefined,
+              spectrumRef: pr.masterScan ? `controllerType=0 controllerNumber=1 scan=${pr.masterScan}` : undefined,
+            },
+            // earlier MSn stages (MS3+), immediate precursor first like ProteoWizard
+            ...(g && g.stages.length > 1 ? g.stages.slice(0, -1).reverse().map((st) => ({ mz: st.mz, isolationTarget: st.mz, isolationLower: st.isolationWidth ? st.isolationWidth / 2 : undefined, isolationUpper: st.isolationWidth ? st.isolationWidth / 2 : undefined, activation: activationOf(st, []).cv, collisionEnergy: activationOf(st, []).ce })) : []),
+            ] : [],
+            mz: p.slice(1, 1 + k), intensity: p.slice(1 + k, 1 + 2 * k),
+            userParams: [
+              ...(ANALYZER[s.analyzer] ? [{ name: 'mass analyzer', value: ANALYZER[s.analyzer].name }] : []),
+              ...(last?.user ?? []),
+              ...(s.resolution ? [{ name: 'FT resolution', value: String(s.resolution) }] : []),
+              ...(pr?.energyIsNce ? [{ name: 'normalized collision energy', value: String(pr.energy) }] : []),
+              ...(s.isDia ? [{ name: 'data independent acquisition', value: 'true' }] : []),
+              ...(trailerMono != null ? [{ name: '[Thermo Trailer Extra]Monoisotopic M/Z:', value: String(trailerMono) }] : []),
+            ],
+          };
+          yield rec;
+          if (i % 50 === 0) ctx.progress(i / n, `Scan ${i + 1}/${n}`);
+        }
+      },
+    };
+  },
+};

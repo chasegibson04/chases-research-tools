@@ -5,6 +5,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { toolGraph } from './lib/tool-graph.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const site = join(root, 'site');
@@ -55,6 +56,8 @@ for (const id of ids) {
   } else if (m.kind === 'showcase') {
     for (const f of m.showcase?.figures ?? []) if (!existsSync(join(site, 'public', 'tools', id, f.src))) e(`showcase figure missing: site/public/tools/${id}/${f.src}`);
   }
+  // Self-containment (AGENTS.md rule 4): a tool imports only its own folder, the shared tool/MS libraries and npm packages.
+  if (m.kind === 'interactive') for (const v of toolGraph(site, id).violations) e(`imports: ${v}`);
   if (m.status === 'stable' && !(m.seo?.faq?.length)) warn.push(`[${id}] stable tool has no seo.faq entries`);
   if (/CHANGEME/.test(readFileSync(manifestPath, 'utf8'))) warn.push(`[${id}] tool.json still contains CHANGEME placeholders`);
 }

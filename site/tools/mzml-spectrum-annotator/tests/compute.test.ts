@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import run, { groupScans, annotate, type Input, type Output } from '../src/compute';
 import { activationFromFilter, indexSpectra, readSpectrum, decodeArray } from '@/lib/ms/mzml';
 import { averageSpectra, centroid } from '@/lib/ms/average';
-import { decodeLinear, decodePic, decodeSlof, encodeLinearForTest, encodePicForTest, encodeSlofForTest } from '@/lib/ms/numpress';
+import { decodeLinear, decodePic, decodeSlof, encodeLinear, encodePic, encodeSlof } from '@/lib/ms/numpress';
 import { parseSequence } from '@/lib/ms/sequence';
 import { generateFragments } from '@/lib/ms/fragments';
 import { predictSpectrum } from '@/lib/ms/predict';
@@ -106,12 +106,12 @@ describe('filter strings and activation', () => {
 describe('binary decoding', () => {
   it('MS-Numpress linear / pic / slof round-trip', () => {
     const mz = [100.12345, 100.2, 150.5, 300.000001, 999.9999, 1001.5];
-    const lin = decodeLinear(encodeLinearForTest(mz, 1e5));
+    const lin = decodeLinear(encodeLinear(mz, 1e5));
     mz.forEach((v, i) => expect(lin[i]).toBeCloseTo(v, 4));
     const ints = [0, 1, 15, 1234, 99999, 7];
-    expect(Array.from(decodePic(encodePicForTest(ints)))).toEqual(ints);
+    expect(Array.from(decodePic(encodePic(ints)))).toEqual(ints);
     const it = [10, 2500.5, 1e6];
-    const sl = decodeSlof(encodeSlofForTest(it, 2000));
+    const sl = decodeSlof(encodeSlof(it, 2000));
     it.forEach((v, i) => expect(Math.abs(sl[i] - v) / v).toBeLessThan(5e-4));
   });
   it('decodes 32-bit uncompressed arrays', () => {

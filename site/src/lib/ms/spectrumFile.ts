@@ -12,7 +12,8 @@ let lastSawMobility = false;
 
 export function groupScans(spectra: SpectrumMeta[]): ScanGroup[] {
   const map = new Map<string, ScanGroup>();
-  for (const s of spectra) {
+  // indices are positions in `spectra` (a file's own index attributes need not be 0..n-1)
+  spectra.forEach((s, pos) => {
     const cvTag = s.faimsCv != null ? `|CV${s.faimsCv}` : '';
     const key = (s.msLevel === 1 ? 'MS1' : `MS${s.msLevel}|${s.precursorMz?.toFixed(2)}|${s.activation}|${s.energy ?? ''}`) + cvTag;
     let g = map.get(key);
@@ -21,11 +22,11 @@ export function groupScans(spectra: SpectrumMeta[]): ScanGroup[] {
       g = { key, msLevel: s.msLevel, precursorMz: s.precursorMz, activation: s.activation, energy: s.energy, charge: s.charge, indices: [], label: lbl, nonEmpty: 0 };
       map.set(key, g);
     }
-    g.indices.push(s.index);
+    g.indices.push(pos);
     if (s.points > 0) g.nonEmpty++;
-  }
-  // MSn groups first, then by the number of scans that contain peaks (some files hold many empty scans).
-  return [...map.values()].sort((a, b) => (b.msLevel > 1 ? 1 : 0) - (a.msLevel > 1 ? 1 : 0) || (b.nonEmpty > 0 ? 1 : 0) - (a.nonEmpty > 0 ? 1 : 0) || b.nonEmpty - a.nonEmpty || b.indices.length - a.indices.length);
+  });
+  // Groups with peaks first, then MSn before MS1, then by the number of scans that contain peaks (some files hold many empty scans).
+  return [...map.values()].sort((a, b) => (b.nonEmpty > 0 ? 1 : 0) - (a.nonEmpty > 0 ? 1 : 0) || (b.msLevel > 1 ? 1 : 0) - (a.msLevel > 1 ? 1 : 0) || b.nonEmpty - a.nonEmpty || b.indices.length - a.indices.length);
 }
 
 /** Read several spectra, merging nearby byte ranges into one read (consecutive direct-infusion scans). */
@@ -44,7 +45,8 @@ async function readMany(file: Blob, ranges: AverageOptions['ranges'], info: Aver
       let s = parseSpectrumText(text.slice(r.start - blockStart, r.end - blockStart), info);
       if (s.mobility) sawMobility = true;
       if (mobilityWindow && s.mobility) s = filterMobility(s, mobilityWindow[0], mobilityWindow[1]);
-      if (looksProfile(s, r.centroided)) s = centroid(s);
+      // very sparse "profile" spectra (a handful of points) have no interior maxima; keep their points
+      if (looksProfile(s, r.centroided)) { const c = centroid(s); if (c.mz.length || !s.mz.length) s = c; }
       out[r.i] = s;
     }
     ctx.progress(0.35 + 0.45 * ((j + 1) / order.length), `Reading spectra ${j + 1}/${order.length}`);

@@ -4,7 +4,9 @@ Node-only (`.mjs`), cross-platform, zero shell dependencies. Run from the repo r
 
 | Script | Command | Purpose |
 |---|---|---|
-| validate-tools.mjs | `npm run validate` | JSON Schema + structural checks for every `site/tools/<id>/`; runs before every build |
+| validate-tools.mjs | `npm run validate` | JSON Schema + structural checks for every `site/tools/<id>/`, including the import rules (`lib/tool-graph.mjs`); runs before every build |
+| export-tool.mjs | `npm run export-tool -- <id> [outDir]` | Writes a standalone, runnable copy of one tool (its folder + exactly the shared files it imports + a Vite host page) to `exports/<id>/` |
+| lib/tool-graph.mjs | (library) | Import graph of a tool: shared files, npm packages, and rule violations |
 | check-changelog.mjs | `npm run check:changelog` | Fails if CHANGELOG.agent.log lost content or has malformed entries (CI) |
 | log.mjs | `npm run log -- "<scope>" "<msg>"` | Appends a timestamped changelog entry (`AGENT_NAME` env var labels the agent) |
 | new-tool.mjs | `npm run new-tool -- <slug> "<Name>"` | Copies `site/tools/_template` → `site/tools/<slug>` with placeholders filled |

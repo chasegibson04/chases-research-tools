@@ -4,6 +4,7 @@
 //   readSpectrum(): decodes the binary arrays of one spectrum from its byte range (base64 → zlib → Numpress → floats).
 // Accession numbers are from the PSI-MS controlled vocabulary (psi-ms.obo 4.2.x).
 import { unzlibSync } from 'fflate';
+import { decompress as zstdDecompress } from 'fzstd';
 import { decodeLinear, decodePic, decodeSlof } from './numpress';
 
 export type Source = Blob;
@@ -256,7 +257,16 @@ export function decodeArray(cvXml: string, b64: string): { kind: 'mz' | 'intensi
   const kind = cvXml.includes('MS:1000514') ? 'mz' : cvXml.includes('MS:1000515') ? 'intensity' : MOBILITY.test(cvXml) ? 'mobility' : 'other';
   let bytes = base64ToBytes(b64);
   if (!bytes.length) return { kind, values: new Float64Array(0) };
-  if (/MS:100378[0-5]/.test(cvXml)) throw new Error('zstd-compressed arrays are not supported in the browser yet; re-convert with zlib.');
+  if (/MS:1003782/.test(cvXml)) throw new Error('Dictionary-encoded zstd arrays (MS:1003782) are not supported yet; re-convert with zlib or plain zstd.');
+  if (/MS:100378[01]/.test(cvXml)) {
+    bytes = zstdDecompress(bytes);
+    // byte-shuffled: all first bytes of each value, then all second bytes, … (element width from the precision)
+    if (cvXml.includes('MS:1003781')) {
+      const w = /MS:1000523|MS:1000522/.test(cvXml) ? 8 : 4, n = Math.floor(bytes.length / w), out = new Uint8Array(n * w);
+      for (let b = 0; b < w; b++) for (let i = 0; i < n; i++) out[i * w + b] = bytes[b * n + i];
+      bytes = out;
+    }
+  }
   const zlib = /MS:1000574|MS:100274[678]|MS:100308[89]|MS:1003090/.test(cvXml);
   if (zlib) bytes = unzlibSync(bytes);
   if (/MS:1002312|MS:1002746/.test(cvXml)) return { kind, values: decodeLinear(bytes) };

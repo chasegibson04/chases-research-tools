@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this tool, please cite it as below."
+title: "MS File Converter"
+type: software
+version: 0.1.0
+date-released: 2026-10-14
+authors:
+  - family-names: Gibson
+    given-names: Chase
+    orcid: "https://orcid.org/0009-0004-9871-8121"
+url: "https://chases-research-tools.chase-gibson04.workers.dev/tools/ms-file-converter/"
+license: MIT
