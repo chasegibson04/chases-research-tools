@@ -2,7 +2,7 @@
 
 Free, open-source scientific tools that run entirely in the browser, published at a single static site. Every tool is importable from this repository, citable, and computed on the user's machine (never on a server).
 
-**Live site:** _not deployed yet — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)_
+**Live site:** https://chases-research-tools.chase-gibson04.workers.dev
 **License:** MIT · **Author:** Chase Gibson (University of Wisconsin–Madison)
 
 ## For AI agents and contributors: start here
@@ -31,7 +31,6 @@ The canonical prompt that triggers an import is simply:
 ├── docs/                     # All project documentation (see docs/README.md; PROMPTS.md = copy-paste prompts)
 ├── scripts/                  # Node-only maintenance scripts (Windows + macOS; see scripts/README.md)
 ├── .github/                  # CI, optional deploy workflow, issue/PR templates, dependabot
-├── HANDOFF-windows.txt       # One-off handoff prompt for the Windows migration (delete after)
 ├── SECURITY.md · CODE_OF_CONDUCT.md · CONTRIBUTING.md · .env.example
 └── site/                     # The entire website (Astro)
     ├── astro.config.mjs
@@ -74,4 +73,4 @@ Each tool is a folder `site/tools/<slug>/` containing a `tool.json` manifest (ca
 
 ## Status
 
-Scaffold complete (2026-10-13). Not yet deployed, no domain purchased, monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.
+Launched 2026-10-13 on Cloudflare Workers (workers.dev URL, paper theme). No custom domain yet; monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.
