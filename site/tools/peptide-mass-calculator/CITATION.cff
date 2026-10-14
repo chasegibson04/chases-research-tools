@@ -7,5 +7,6 @@ date-released: 2026-10-13
 authors:
   - family-names: Gibson
     given-names: Chase
-url: "https://CHANGEME.example/tools/peptide-mass-calculator/"
+    orcid: "https://orcid.org/0009-0004-9871-8121"
+url: "https://chases-research-tools.chase-gibson04.workers.dev/tools/peptide-mass-calculator/"
 license: MIT

@@ -13,11 +13,11 @@ export const SITE = {
   author: {
     name: 'Chase Gibson',
     affiliation: 'University of Wisconsin–Madison',
-    orcid: '', // e.g. 0000-0000-0000-0000
+    orcid: '0009-0004-9871-8121',
     email: '', // public contact address (consider a dedicated alias)
-    github: 'CHANGEME',
+    github: 'chasegibson04',
   },
-  repo: 'https://github.com/CHANGEME/chases-research-tools',
+  repo: 'https://github.com/chasegibson04/chases-research-tools',
   theme: 'paper' as 'graphite' | 'paper' | 'spectra',
   nav: [
     { label: 'Tools', href: '/tools/' },
@@ -30,7 +30,7 @@ export const SITE = {
     { label: 'Privacy', href: '/privacy/' },
     { label: 'Terms', href: '/terms/' },
     { label: 'Cite this site', href: '/about/#cite' },
-    { label: 'Source on GitHub', href: 'https://github.com/CHANGEME/chases-research-tools' },
+    { label: 'Source on GitHub', href: 'https://github.com/chasegibson04/chases-research-tools' },
   ],
   launchedYear: 2026,
 } as const;

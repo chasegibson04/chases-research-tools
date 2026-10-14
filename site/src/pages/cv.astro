@@ -1,30 +1,161 @@
 ---
 // CV page: same header/footer, its own stylesheet + data file. No ads here. docs/CV_PAGE_GUIDE.md
+// Timeline entries with bullets render as <details> dropdowns; skills link to the entries that mention them.
 import Base from '@/layouts/Base.astro';
 import cv from '@/data/cv.json';
 import '@/styles/cv.css';
+
+type Entry = { title: string; org?: string; location?: string; dates?: string; current?: boolean; tags?: string[]; bullets?: string[] };
+type Section = { id: string; title: string; type: string; items: any[] };
+const sections = cv.sections as Section[];
+
 const jsonLd = [{ '@context': 'https://schema.org', '@type': 'Person', name: cv.name, jobTitle: cv.role, url: Astro.url.href, sameAs: cv.links.filter((l) => l.href.startsWith('http')).map((l) => l.href) }];
+
+// Give every timeline entry a stable id and searchable text so skill chips can point at them.
+const entryId = (s: Section, i: number) => `${s.id}-${i + 1}`;
+const entryText = (e: Entry) => [e.title, e.org, ...(e.tags ?? []), ...(e.bullets ?? [])].join(' ').toLowerCase();
+const entries = sections.filter((s) => s.type === 'timeline').flatMap((s) => (s.items as Entry[]).map((e, i) => ({ id: entryId(s, i), text: entryText(e) })));
+const esc = (t: string) => t.toLowerCase().replace(/\s*\(.*\)$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const matchesFor = (skill: string) => {
+  const re = new RegExp(`(^|[^a-z0-9])${esc(skill)}([^a-z0-9]|$)`);
+  return entries.filter((e) => re.test(e.text)).map((e) => e.id);
+};
+
+const count = (id: string) => sections.find((s) => s.id === id)?.items.length ?? 0;
+const stats = [
+  { n: count('research'), label: 'research positions' },
+  { n: count('presentations'), label: 'presentations' },
+  { n: count('projects'), label: 'projects' },
+].filter((s) => s.n > 0);
 ---
 <Base title={`${cv.name} · CV`} description={`Curriculum vitae of ${cv.name}: ${cv.role}.`} jsonLd={jsonLd} class="cv">
   <div class="container">
     <section class="cv-hero">
-      <img src={cv.headshot} alt={`Portrait of ${cv.name}`} width="140" height="140" onerror="this.style.visibility='hidden'" />
-      <div>
+      <div class="cv-portrait"><img src={cv.headshot} alt={`Portrait of ${cv.name}`} width="168" height="168" onerror="this.style.visibility='hidden'" /></div>
+      <div class="cv-intro">
+        <p class="cv-kicker">Curriculum vitae</p>
         <h1>{cv.name}</h1>
         <p class="role">{cv.role}</p>
-        <p class="muted" style="margin-top:var(--space-2)">{cv.summary}</p>
-        <div class="cv-links">{cv.links.map((l) => <a href={l.href}>{l.label}</a>)}<a href="#" onclick="window.print();return false;">Print / PDF</a></div>
+        <p class="cv-summary">{cv.summary}</p>
+        <div class="cv-links">
+          {cv.links.map((l) => <a class="cv-pill" href={l.href} rel="me noopener">{l.label}</a>)}
+          {cv.location && <span class="cv-pill cv-pill-plain">{cv.location}</span>}
+        </div>
+        {stats.length > 0 && (
+          <dl class="cv-stats">{stats.map((s) => <div><dt>{s.label}</dt><dd>{s.n}</dd></div>)}</dl>
+        )}
       </div>
     </section>
-    {cv.sections.map((s) => (
+
+    <nav class="cv-toc" aria-label="CV sections">
+      <div class="cv-toc-links">{sections.map((s) => <a href={`#${s.id}`}>{s.title}</a>)}</div>
+      <div class="cv-toc-actions">
+        <button type="button" class="btn-sm" data-cv-toggle-all aria-pressed="false">Expand all</button>
+        <button type="button" class="btn-sm" onclick="window.print()">Print / PDF</button>
+      </div>
+    </nav>
+
+    {sections.map((s) => (
       <section class="cv-section" id={s.id}>
         <h2>{s.title}</h2>
-        <div class:list={{ 'cv-timeline': s.type === 'timeline' }}>
-          {s.type === 'publications'
-            ? (s.items as any[]).map((p) => <p class="cv-pub"><span class="authors">{p.authors}</span> {p.title}. <em>{p.venue}</em> ({p.year}){p.doi && <> · <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></>}</p>)
-            : (s.items as any[]).map((it) => <div class="cv-item"><div class="title">{it.title}</div>{(it.org || it.dates) && <div class="meta">{[it.org, it.dates].filter(Boolean).join(' · ')}</div>}{it.bullets && <ul>{it.bullets.map((b: string) => <li>{b}</li>)}</ul>}</div>)}
-        </div>
+        {s.type === 'timeline' && (
+          <ol class="cv-timeline">
+            {(s.items as Entry[]).map((e, i) => {
+              const head = (
+                <>
+                  <span class:list={['cv-dot', { 'is-current': e.current }]} aria-hidden="true" />
+                  <span class="cv-head">
+                    <span class="cv-title">{e.title}{e.current && <span class="cv-now">Now</span>}</span>
+                    {(e.org || e.location) && <span class="cv-org">{[e.org, e.location].filter(Boolean).join(' · ')}</span>}
+                    {e.tags && <span class="cv-tags">{e.tags.map((t) => <span class="cv-tag">{t}</span>)}</span>}
+                  </span>
+                  {e.dates && <span class="cv-dates">{e.dates}</span>}
+                </>
+              );
+              return (
+                <li class="cv-entry" id={entryId(s, i)}>
+                  {e.bullets?.length ? (
+                    <details>
+                      <summary>{head}<svg class="cv-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+                      <ul class="cv-body">{e.bullets.map((b) => <li>{b}</li>)}</ul>
+                    </details>
+                  ) : (
+                    <div class="cv-static">{head}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        {s.type === 'publications' && (
+          <div>{s.items.map((p) => <p class="cv-pub"><span class="authors">{p.authors}</span> {p.title}. <em>{p.venue}</em> ({p.year}){p.doi && <> · <a href={`https://doi.org/${p.doi}`}>doi:{p.doi}</a></>}</p>)}</div>
+        )}
+        {s.type === 'list' && (
+          <div class="cv-skills">
+            <p class="cv-hint" data-cv-hint>Select a skill to highlight where it was used.</p>
+            {s.items.map((g) => (
+              <div class="cv-skill-group">
+                <h3>{g.title}</h3>
+                <div class="cv-chips">
+                  {(g.bullets as string[]).map((b) => {
+                    const ids = matchesFor(b);
+                    return ids.length
+                      ? <button type="button" class="cv-chip" data-skill={b} data-targets={ids.join(' ')} aria-pressed="false">{b}<span class="cv-chip-n">{ids.length}</span></button>
+                      : <span class="cv-chip is-plain">{b}</span>;
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     ))}
   </div>
+
+  <script>
+    // Progressive enhancement only: without JS every dropdown still works natively.
+    const all = () => [...document.querySelectorAll<HTMLDetailsElement>('.cv-entry details')];
+    const toggle = document.querySelector<HTMLButtonElement>('[data-cv-toggle-all]');
+    const syncToggle = () => {
+      if (!toggle) return;
+      const open = all().every((d) => d.open);
+      toggle.textContent = open ? 'Collapse all' : 'Expand all';
+      toggle.setAttribute('aria-pressed', String(open));
+    };
+    toggle?.addEventListener('click', () => { const open = !all().every((d) => d.open); all().forEach((d) => (d.open = open)); syncToggle(); });
+    all().forEach((d) => d.addEventListener('toggle', syncToggle));
+
+    // Skill chips: highlight (and open) the entries whose text mentions the skill.
+    const chips = [...document.querySelectorAll<HTMLButtonElement>('.cv-chip[data-targets]')];
+    const hint = document.querySelector<HTMLElement>('[data-cv-hint]');
+    const hintDefault = hint?.textContent ?? '';
+    const clear = () => {
+      document.body.classList.remove('cv-filtering');
+      document.querySelectorAll('.cv-entry.is-match').forEach((e) => e.classList.remove('is-match'));
+      chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      if (hint) hint.textContent = hintDefault;
+    };
+    chips.forEach((chip) => chip.addEventListener('click', () => {
+      const wasOn = chip.getAttribute('aria-pressed') === 'true';
+      clear();
+      if (wasOn) return;
+      const ids = (chip.dataset.targets ?? '').split(' ');
+      chip.setAttribute('aria-pressed', 'true');
+      document.body.classList.add('cv-filtering');
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        el?.classList.add('is-match');
+        const d = el?.querySelector('details');
+        if (d) d.open = true;
+      });
+      if (hint) hint.textContent = `${chip.dataset.skill}: highlighted in ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'} above. Select it again to clear.`;
+      document.getElementById(ids[0])?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    }));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') clear(); });
+
+    // Print everything expanded, then restore.
+    let before: boolean[] = [];
+    addEventListener('beforeprint', () => { before = all().map((d) => d.open); all().forEach((d) => (d.open = true)); });
+    addEventListener('afterprint', () => { all().forEach((d, i) => (d.open = before[i] ?? false)); syncToggle(); });
+  </script>
 </Base>

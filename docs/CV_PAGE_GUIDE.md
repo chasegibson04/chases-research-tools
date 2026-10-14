@@ -17,11 +17,17 @@ When the owner provides a CV document:
 6. Log the update in `CHANGELOG.agent.log` with scope `cv`. Do not touch anything outside the four files above.
 
 ## Data model (`cv.json`)
-`name`, `role`, `summary`, `headshot`, `links[{label, href}]`, `sections[]` where each section is `{ id, title, type, items[] }` and `type` is:
-- `timeline` → items `{ title, org, dates, bullets[] }` (education, positions, awards)
+`name`, `role`, `location`, `summary`, `headshot`, `links[{label, href}]`, `sections[]` where each section is `{ id, title, type, items[] }` and `type` is:
+- `timeline` → items `{ title, org?, location?, dates?, current?, tags?[], bullets?[] }` (education, positions, presentations, projects, awards). Items with `bullets` render as a `<details>` dropdown (the bullets are the expanded detail); items without bullets render as a plain row. `tags` (2–5 short labels taken from the item's own text) show on the collapsed row; `current: true` adds the accent dot and a "Now" label.
 - `publications` → items `{ authors, title, venue, year, doi }`
-- `list` → items `{ title, bullets[] }` (skills, teaching, service)
+- `list` → items `{ title, bullets[] }`, rendered as skill chips grouped by `title`. At build time each chip is matched (whole-word, case-insensitive) against every timeline entry; chips with matches become buttons that highlight and open those entries, and the rest render as plain dashed chips.
 Add a new section type only by extending `cv.astro`'s rendering switch and documenting it here.
 
-## Interactive ideas (planned, keep optional and light)
-Filter publications by year/type, expandable abstracts, an "export as PDF" that is just `window.print()` (already present), a small timeline visual. Nothing that needs a framework; progressively enhanced only.
+## Interactivity (implemented; progressive enhancement, no framework)
+Dropdown per entry (native `<details>`), Expand all / Collapse all, sticky section nav, skill-chip highlighting (Esc clears), Print / PDF via `window.print()` with every entry expanded for print. Without JS everything still reads and opens.
+
+## Privacy
+The public page intentionally omits the phone number and personal email from the owner's .docx. Add an email link only once the owner picks a public alias.
+
+## Ideas (not yet built)
+Filter publications by year/type, expandable abstracts once publications exist, Google Scholar link once a profile exists.
