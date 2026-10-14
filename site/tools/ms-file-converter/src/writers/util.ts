@@ -46,16 +46,16 @@ export class Sha1 {
   }
   private block(d: Uint8Array, o: number) {
     const w = this.w;
-    for (let t = 0; t < 16; t++) w[t] = (d[o + 4 * t] << 24) | (d[o + 4 * t + 1] << 16) | (d[o + 4 * t + 2] << 8) | d[o + 4 * t + 3];
+    for (let t = 0; t < 16; t++) { const q = o + 4 * t; w[t] = (d[q] << 24) | (d[q + 1] << 16) | (d[q + 2] << 8) | d[q + 3]; }
     for (let t = 16; t < 80; t++) { const x = w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16]; w[t] = (x << 1) | (x >>> 31); }
-    let [a, b, c, dd, e] = this.h;
-    for (let t = 0; t < 80; t++) {
-      const f = t < 20 ? (b & c) | (~b & dd) : t < 40 ? b ^ c ^ dd : t < 60 ? (b & c) | (b & dd) | (c & dd) : b ^ c ^ dd;
-      const k = t < 20 ? 0x5a827999 : t < 40 ? 0x6ed9eba1 : t < 60 ? 0x8f1bbcdc : 0xca62c1d6;
-      const tmp = (((a << 5) | (a >>> 27)) + f + e + k + w[t]) >>> 0;
-      e = dd; dd = c; c = (b << 30) | (b >>> 2); b = a; a = tmp;
-    }
-    this.h[0] += a; this.h[1] += b; this.h[2] += c; this.h[3] += dd; this.h[4] += e;
+    const h = this.h;
+    let a = h[0] | 0, b = h[1] | 0, c = h[2] | 0, dd = h[3] | 0, e = h[4] | 0, tmp = 0;
+    // four 20-round stages without per-round branching (hot path for the mzML <fileChecksum>)
+    for (let t = 0; t < 20; t++) { tmp = (((a << 5) | (a >>> 27)) + ((b & c) | (~b & dd)) + e + 0x5a827999 + w[t]) | 0; e = dd; dd = c; c = (b << 30) | (b >>> 2); b = a; a = tmp; }
+    for (let t = 20; t < 40; t++) { tmp = (((a << 5) | (a >>> 27)) + (b ^ c ^ dd) + e + 0x6ed9eba1 + w[t]) | 0; e = dd; dd = c; c = (b << 30) | (b >>> 2); b = a; a = tmp; }
+    for (let t = 40; t < 60; t++) { tmp = (((a << 5) | (a >>> 27)) + ((b & c) | (b & dd) | (c & dd)) + e + 0x8f1bbcdc + w[t]) | 0; e = dd; dd = c; c = (b << 30) | (b >>> 2); b = a; a = tmp; }
+    for (let t = 60; t < 80; t++) { tmp = (((a << 5) | (a >>> 27)) + (b ^ c ^ dd) + e + 0xca62c1d6 + w[t]) | 0; e = dd; dd = c; c = (b << 30) | (b >>> 2); b = a; a = tmp; }
+    h[0] += a; h[1] += b; h[2] += c; h[3] += dd; h[4] += e;
   }
   hex(): string {
     const len = this.total * 8;
