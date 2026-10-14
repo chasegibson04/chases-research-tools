@@ -13,57 +13,69 @@
   ],
   "sections": [
     { "id": "education", "title": "Education", "type": "timeline", "items": [
-      { "title": "Ph.D. in Pharmaceutical Sciences", "org": "University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Jul 2026 – present", "current": true },
-      { "title": "B.S.E. in Biomedical Engineering; Minor in Biophysics", "org": "University of Michigan", "location": "Ann Arbor, MI", "dates": "Aug 2022 – Dec 2025" }
+      { "title": "Ph.D. in Pharmaceutical Sciences", "org": "University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Jul 2026 – present", "current": true,
+        "bullets": ["Started early through the Forward Fellows program; rotations in mass spectrometry (Li Lab), natural products (Bugni Lab) and MS/multi-omics (Coon Lab)"] },
+      { "title": "B.S.E. in Biomedical Engineering; Minor in Biophysics", "org": "University of Michigan", "location": "Ann Arbor, MI", "dates": "Aug 2022 – Dec 2025",
+        "bullets": ["Relevant coursework: Biochemistry, Structural Biology, Quantitative Cell Biology, Biophysics, Organic Chemistry, Physiology, Biomedical Instrumentation Design, Bioreactor Design, Biomechanics"] }
     ]},
     { "id": "research", "title": "Research experience", "type": "timeline", "items": [
       { "title": "Mass Spectrometry / Multi-omics Rotation", "org": "The Coon Lab · University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Oct 2026 – Nov 2026", "current": true,
         "tags": ["Cyclic peptides", "Orbitrap Astral", "Machine learning"],
         "bullets": [
           "Conducting an investigation into high-throughput/high-scan-rate cyclic peptide MS sequencing, machine-learning fragmentation pattern methods development, and cyclic peptide MS fragmentation method selection",
-          "Training with HRMS instrumentation (Thermo Fisher Orbitrap Astral, Apex, and Ascend) and diverse sampling/structural methodologies including direct injection, LC, GC, and cryo-EM workflows"
+          "Training with HRMS instrumentation (Thermo Fisher Orbitrap Astral, Apex, and Ascend) and diverse sampling/structural methodologies including direct injection, LC, GC, and cryo-EM workflows",
+          "Benchmarking HCD, CID, ETD, EThcD, ETciD, IRMPD and IR-ETD fragmentation of cyclic and stapled peptides with software-independent, decoy-controlled sequence-evidence scoring"
         ]},
       { "title": "Natural Products / Metabolomics Rotation", "org": "The Bugni Lab · University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Sep 2026 – Oct 2026",
         "tags": ["Natural products", "LC-MS/MS", "NMR"],
         "bullets": [
-          "Trained in natural products discovery and metabolomics methods including LC-MS/MS, HPLC, NMR-based structure elucidation, molecular networking, and statistical analysis"
+          "Trained in natural products discovery and metabolomics methods including LC-MS/MS, HPLC, NMR-based structure elucidation, molecular networking, and statistical analysis",
+          "Contributed to bioassay development and identified a novel bacterial strain for follow-up based on its metabolomic profile"
         ]},
       { "title": "Mass Spectrometry Rotation", "org": "The Li Lab · University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Jul 2026 – Sep 2026",
         "tags": ["Lipidomics", "LC-QTOF", "nanoLC"],
         "bullets": [
           "Developed LC-QTOF workflows for Alzheimer’s serum lipidomics and metabolomics on an Agilent 1290 Infinity II & 6560 IM-QTOF platform including sample preparation, acquisition methods, and downstream data analysis",
-          "Investigated persistent nanoflow LC column-packing failures via slurry concentration, pressure/time parameters, and experimental methodology experiments, resulting in an improved packing protocol"
+          "Investigated persistent nanoflow LC column-packing failures via slurry concentration, pressure/time parameters, and experimental methodology experiments, resulting in an improved packing protocol and SOP that I trained other lab members on"
         ]},
       { "title": "Research Assistant", "org": "Cernak Lab · University of Michigan", "location": "Ann Arbor, MI", "dates": "Aug 2024 – Aug 2026",
         "tags": ["Metabolomics", "LC-MS/MS", "GC-MS", "NMR", "Software"],
         "bullets": [
-          "Led a two-year untargeted LC-MS/MS, GC-MS, and NMR metabolomics investigation of chemical HWA-resistance traits in threatened hemlock trees, also integrated metabolomics with transcriptomic and genomic datasets",
+          "Led a two-year untargeted LC-MS/MS, GC-MS, and NMR metabolomics investigation (120 GB+ of data) of chemical HWA-resistance traits in threatened hemlock trees, integrating metabolomics with transcriptomic and genomic datasets in collaboration with the University of Connecticut",
           "Built data-processing, QC, annotation, and statistical workflows using MS-DIAL, MZmine, SIRIUS, GNPS2, MS-FINDER, and related mass-spectrometry tools, including statistical analysis methods development (PCA, PLS-DA, Autoencoder, ML models, etc.)",
-          "Created a software suite (Pharnum) for high-throughput direct-to-biology and medicinal-chemistry research",
+          "Created the lab’s original chemical-enumeration platform (Pharnum) for high-throughput direct-to-biology (D2B) experimentation: large-library enumeration of core medicinal scaffolds, in silico ADME and docking screens, integration with automated robotics, and machine-learning models that use experimental results to guide each new round",
+          "Trained my successor to take over the hemlock metabolomics project and the enumeration platform, and built an SOP database for the whole lab",
           "Contributed to conservation chemistry, computational chemistry, and literature/citation-mapping projects"
         ]},
       { "title": "Research Assistant", "org": "Nikolovska-Coleska Lab · University of Michigan", "location": "Ann Arbor, MI", "dates": "May 2024 – Aug 2024",
         "tags": ["Leukemia", "Small molecules", "Cell culture"],
         "bullets": [
-          "Experienced in small molecule inhibitor research for MLL leukemia using FP-assays, cell cultures, MTT/Bradford assays, Western blotting, and SDS-PAGE",
-          "Developed computational models of anti-apoptotic protein-protein interactions to guide experimental design and small molecule discovery"
+          "Tested novel small-molecule inhibitors of the anti-apoptotic protein Bfl-1 for MLL leukemia using FP assays (competitive, saturation, kinetic, titration), cell culture and new cell-stock generation, MTT/Bradford assays, Western blotting, and SDS-PAGE",
+          "Assisted in testing clinical blood samples for MLL leukemia",
+          "Developed data-driven models (MATLAB, DataWarrior) of anti-apoptotic protein–protein interactions that predicted a high binding-affinity structure prior to synthesis"
         ]},
       { "title": "Research Assistant", "org": "Rosania Lab · University of Michigan", "location": "Ann Arbor, MI", "dates": "Jan 2024 – May 2024",
         "tags": ["MATLAB", "Pharmacokinetics", "Tuberculosis"],
         "bullets": [
-          "Built quantitative MATLAB models of clofazimine tissue accumulation for drug-resistant tuberculosis drug repurposing research"
+          "Built quantitative MATLAB models of clofazimine tissue accumulation for repurposing leprosy treatments against drug-resistant tuberculosis"
         ]}
     ]},
     { "id": "presentations", "title": "Selected presentations", "type": "timeline", "items": [
       { "title": "“Leveraging Omics to Conserve an Imperiled Conifer”", "org": "Plant and Animal Genome Conference (PAG 33)", "location": "San Diego, CA", "dates": "Jan 2026",
         "bullets": ["Presented collaborative hemlock metabolomics, genomics, and transcriptomics research with the University of Connecticut"] },
       { "title": "“Chemistry for Conifers: An Untargeted LC-MS/MS Metabolomics Workflow for Hemlock Conservation”", "org": "Merck–Michigan Symposium", "location": "Ann Arbor, MI", "dates": "Aug 2025",
-        "bullets": ["Presented untargeted LC-MS/MS, GC-MS, and NMR metabolomics research for threatened hemlock trees"] },
+        "bullets": ["First-author poster: untargeted LC-MS/MS, GC-MS, and NMR metabolomics research for threatened hemlock trees, with the Cernak Lab (Michigan) and Wegrzyn Lab (UConn)"] },
       { "title": "“Metabolomic Maps of the Mind: LC-MS/MS Workflow, Case Study, and Applications in Neuroscience”", "org": "Michigan Neuroscience Workshop", "location": "Ann Arbor, MI", "dates": "Jul 2025",
-        "bullets": ["Presented an untargeted metabolomics workflow and Alzheimer’s disease biomarker-discovery case study"] },
+        "bullets": ["First-author poster: an untargeted metabolomics workflow and Alzheimer’s disease biomarker-discovery case study, with part of the EEG seizure-prediction work"] },
       { "title": "“mmWave Radar Based Night-Time Seizure Monitoring Device for Epileptic Patient SUDEP-risk Mitigation”", "org": "Senior Medical Device Design Course", "dates": "Nov 2025" }
     ]},
+    { "id": "manuscripts", "title": "Manuscripts in preparation", "type": "timeline", "items": [
+      { "title": "“An Optimized Untargeted Metabolomics Workflow: Data Management to Structure Elucidation”", "org": "First author · Cernak Lab, University of Michigan", "dates": "In preparation" },
+      { "title": "“Publication Citation Mapping for Endangered Species Medicinal Repurposing Efforts”", "org": "Co-author (computational chemistry, ML/AI models) · Cernak Lab, University of Michigan", "dates": "In preparation" }
+    ]},
     { "id": "projects", "title": "Computational & engineering projects", "type": "timeline", "items": [
+      { "title": "Chase’s Research Tools (this website)", "current": true, "tags": ["Mass spectrometry", "Software", "WebAssembly"],
+        "bullets": ["Open, browser-based mass-spectrometry tools that run entirely on the user’s computer: a linear and cyclic peptide fragment-ion predictor, an mzML spectrum viewer and MS/MS annotator, and an MS file converter that reads Thermo, Bruker, Agilent and MOBILion data (validated point for point against ProteoWizard and ThermoRawFileParser output)"] },
       { "title": "MassSpec Studio", "current": true, "tags": ["Metabolomics", "Lipidomics", "Software"],
         "bullets": ["Developing a modular software environment for QC, preprocessing, statistical analysis, machine learning, and FBMN workflows in metabolomics and lipidomics"] },
       { "title": "Independent Alzheimer’s Disease Metabolomics Analysis", "tags": ["ADNI", "Biomarkers"],
@@ -71,14 +83,15 @@
       { "title": "Preictal Seizure Prediction Wearable", "tags": ["EEG", "Transformer model"],
         "bullets": ["EEG wearable developed with a novel transformer model for real-time temporal EEG data analysis, tested on the CHB-MIT dataset and deployed on simulated live EEG data. Tested 90% seizure accuracy with ~10 seconds warning"] },
       { "title": "Non-Wearable Night-Time Seizure Monitoring System", "tags": ["mmWave radar", "Medical device", "Capstone"],
-        "bullets": ["Senior BME capstone using mmWave radar for bedside cardiorespiratory monitoring and SUDEP-risk mitigation. Included prototyping, verification/validation, standards/FDA research, and stakeholder interviews with epilepsy organizations and patients"] }
+        "bullets": ["Senior BME capstone using mmWave radar for low-cost, non-contact bedside cardiorespiratory monitoring and SUDEP-risk mitigation. Included prototyping, verification/validation, standards/FDA research, and stakeholder work with the Epilepsy Foundation, former U.S. Congressman Tony Coelho, and patients"] }
     ]},
     { "id": "experience", "title": "Teaching & additional experience", "type": "timeline", "items": [
-      { "title": "President", "org": "UW–Madison AAPS Chapter · University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Aug 2026 – present", "current": true },
+      { "title": "President", "org": "UW–Madison AAPS Chapter · University of Wisconsin–Madison", "location": "Madison, WI", "dates": "Aug 2026 – present", "current": true, "tags": ["Leadership", "Outreach"],
+        "bullets": ["Organizing data-analysis and poster-session workshops, guest speakers and industry connections, a conference travel fund, and public outreach at the Wisconsin Science Festival and Science on the Square"] },
       { "title": "Instructional Aide, BME 350: Introduction to Biomedical Engineering Design", "org": "Biomedical Engineering · University of Michigan", "location": "Ann Arbor, MI", "dates": "Aug 2025 – Dec 2025", "tags": ["Teaching", "Design controls"],
-        "bullets": ["Assisted in teaching students user needs, design inputs, standards, verification and validation, SOLIDWORKS, COMSOL, and design reviews for the biomedical device design and FDA approval process"] },
+        "bullets": ["Helped teach the semester-long peripheral artery bypass device project through in-lab support, office hours, team meetings, and occasional lectures: user needs, design inputs, standards, verification and validation, SOLIDWORKS, COMSOL/CFD, design reviews, and FDA requirements"] },
       { "title": "Student Coordinator", "org": "LSA Technology Services · University of Michigan", "location": "Ann Arbor, MI", "dates": "Aug 2024 – Jul 2026",
-        "bullets": ["Coordinated equipment-loan operations and provided customer-facing technical support for computing, camera, and audio equipment"] },
+        "bullets": ["Managed and trained a team of 40+ student employees in university IT services; coordinated equipment-loan operations and customer-facing technical support for computing, camera, and audio equipment, and rewrote training materials for beginners"] },
       { "title": "Engineering Lab Technician / Intern", "org": "Navitas Systems · Battery R&D", "location": "Ann Arbor, MI", "dates": "Jun 2023 – Sep 2023", "tags": ["Batteries", "SEM", "Glovebox"],
         "bullets": ["Fabricated and tested experimental battery cells using gloveboxes, SEM, die presses, calendering, annealing, and MACCOR battery cyclers"] },
       { "title": "Engineering Intern", "org": "KUKA", "location": "Fenton, MI", "dates": "Apr 2022 – Sep 2022", "tags": ["Siemens NX", "Teamcenter"],
@@ -91,13 +104,16 @@
       { "title": "Donald R. Shepherd Scholarship", "org": "University of Michigan", "dates": "Feb 2022" },
       { "title": "C. H. Butcher Scholarship", "org": "University of Michigan", "dates": "Feb 2022" }
     ]},
+    { "id": "training", "title": "Training & certifications", "type": "list", "items": [
+      { "title": "Research & laboratory safety", "bullets": ["Responsible Conduct of Research", "Biosafety", "Bloodborne Pathogens", "Chemical Safety", "Hazardous Chemical Waste Disposal", "Compressed Gas Safety", "Cryogen Safety", "Fume Hood Safety", "PPE", "Sharps Safety", "Animal Research Training"] }
+    ]},
     { "id": "skills", "title": "Skills", "type": "list", "items": [
       { "title": "Analytical chemistry & mass spectrometry", "bullets": ["Mass Spectrometry", "LC-MS/MS", "GC-MS", "NMR", "Chromatography", "Metabolomics", "Lipidomics", "Proteomics", "Peptidomics", "High-Throughput Screening (HTS)", "Plate Readers"] },
       { "title": "Data science & machine learning", "bullets": ["Statistical Analysis", "Data Visualization", "PCA", "PLS-DA", "t-SNE", "SVM", "Random Forest", "Autoencoder Models", "Logistic Regression", "Quantitative Cell Modeling"] },
       { "title": "Wet lab & drug development", "bullets": ["Drug Development", "Medicinal Chemistry", "Pharmaceutical Sciences", "Cell Culture", "MTT Assay", "Bradford Assay", "FP-Assays", "SDS-PAGE", "Western Blot", "Protein–Protein Interaction Studies", "Chemical Hygiene & Safety"] },
       { "title": "Engineering & fabrication", "bullets": ["SOLIDWORKS", "Siemens NX", "Teamcenter", "CAD Drafting", "Bioreactor Design", "Biomedical Instrumentation", "3D Printing (Additive Manufacturing)", "Scanning Electron Microscopy (SEM)", "Glovebox Operation", "Calendering & Electrode Fabrication", "Die Press Operation", "Annealing Ovens", "MACCOR Battery Testers"] },
       { "title": "Software & computing", "bullets": ["Python", "MATLAB", "C++", "Windows", "macOS", "Linux", "IT", "Network Troubleshooting", "LabArchives"] },
-      { "title": "Communication & languages", "bullets": ["German", "Research", "Technical Communication", "Research Documentation", "Quality Assurance", "Team Collaboration", "Leadership"] }
+      { "title": "Communication & languages", "bullets": ["German (spoken and written)", "Research", "Technical Communication", "Research Documentation", "Quality Assurance", "Team Collaboration", "Leadership"] }
     ]}
   ]
 }

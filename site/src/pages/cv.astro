@@ -21,12 +21,6 @@ const matchesFor = (skill: string) => {
   return entries.filter((e) => re.test(e.text)).map((e) => e.id);
 };
 
-const count = (id: string) => sections.find((s) => s.id === id)?.items.length ?? 0;
-const stats = [
-  { n: count('research'), label: 'research positions' },
-  { n: count('presentations'), label: 'presentations' },
-  { n: count('projects'), label: 'projects' },
-].filter((s) => s.n > 0);
 ---
 <Base title={`${cv.name} · CV`} description={`Curriculum vitae of ${cv.name}: ${cv.role}.`} jsonLd={jsonLd} class="cv">
   <div class="container">
@@ -41,9 +35,6 @@ const stats = [
           {cv.links.map((l) => <a class="cv-pill" href={l.href} rel="me noopener">{l.label}</a>)}
           {cv.location && <span class="cv-pill cv-pill-plain">{cv.location}</span>}
         </div>
-        {stats.length > 0 && (
-          <dl class="cv-stats">{stats.map((s) => <div><dt>{s.label}</dt><dd>{s.n}</dd></div>)}</dl>
-        )}
       </div>
     </section>
 
