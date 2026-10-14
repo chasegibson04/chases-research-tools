@@ -1,8 +1,7 @@
 // Writers for the other open formats: mzXML 3.2 (indexed, with <sha1>), MGF (msconvert-style TITLE templates),
 // MS1/MS2 text, and a long-format peak CSV.
-import { zlibSync } from 'fflate';
 import type { SpectrumSource, SpectrumRecord } from '../model';
-import { ByteBuilder, base64Bytes, xmlEsc, fmt, ticOf, basePeak, ZLIB_LEVEL, type OutputFormat, type WriteContext } from './util';
+import { ByteBuilder, base64Bytes, xmlEsc, fmt, ticOf, basePeak, zlibMany, type OutputFormat, type WriteContext } from './util';
 
 const actName = (s: SpectrumRecord) => {
   const a = s.precursors[0]?.activation ?? [];
@@ -27,16 +26,27 @@ export async function writeMzxml(src: SpectrumSource, opts: Partial<MzxmlOptions
   const offsets: Array<[number, number]> = [];
   let n = 0, t0 = Infinity, t1 = -Infinity;
   const seen = new Set<number>();
-  for await (const s of src.spectra()) {
-    if (ctx.signal.aborted) throw new Error('Cancelled.');
+  // network (big-endian) interleaved m/z-intensity pairs
+  const pack = (s: SpectrumRecord) => {
+    const k = s.mz.length, w = o.bits / 8, raw = new Uint8Array(2 * k * w), dv = new DataView(raw.buffer);
+    for (let i = 0; i < k; i++) {
+      if (w === 8) { dv.setFloat64(16 * i, s.mz[i], false); dv.setFloat64(16 * i + 8, s.intensity[i], false); }
+      else { dv.setFloat32(8 * i, s.mz[i], false); dv.setFloat32(8 * i + 4, s.intensity[i], false); }
+    }
+    return raw;
+  };
+  // spectra are written in batches so their peak blocks can be compressed concurrently
+  let batch: SpectrumRecord[] = [];
+  const flush = async () => {
+    const raws = batch.map(pack);
+    const packed = o.zlib ? await zlibMany(raws) : raws;
+    batch.forEach((s, bi) => writeScan(s, packed[bi]));
+    batch = [];
+    ctx.progress(src.count ? Math.min(0.97, n / src.count) : 0.5, `Wrote ${n} scans`);
+  };
+  const writeScan = (s: SpectrumRecord, bytes: Uint8Array) => {
     let num = scanNo(s); while (seen.has(num)) num++; seen.add(num);
     const k = s.mz.length;
-    const inter = o.bits === 64 ? new Float64Array(2 * k) : new Float32Array(2 * k);
-    for (let i = 0; i < k; i++) { inter[2 * i] = s.mz[i]; inter[2 * i + 1] = s.intensity[i]; }
-    // network (big-endian) byte order
-    const raw = new Uint8Array(inter.buffer); const w = o.bits / 8;
-    for (let i = 0; i < raw.length; i += w) raw.subarray(i, i + w).reverse();
-    const bytes = o.zlib ? zlibSync(raw, { level: ZLIB_LEVEL }) : raw;
     const [bpm, bpi] = s.basePeakMz != null ? [s.basePeakMz, s.basePeakIntensity ?? 0] : basePeak(s);
     if (s.rtSeconds != null) { t0 = Math.min(t0, s.rtSeconds); t1 = Math.max(t1, s.rtSeconds); }
     offsets.push([num, body.length]);
@@ -53,8 +63,13 @@ export async function writeMzxml(src: SpectrumSource, opts: Partial<MzxmlOptions
     body.push(base64Bytes(bytes));
     body.push('</peaks>\n</scan>\n');
     n++;
-    if (n % 100 === 0) ctx.progress(src.count ? Math.min(0.97, n / src.count) : 0.5, `Wrote ${n} scans`);
+  };
+  for await (const s of src.spectra()) {
+    if (ctx.signal.aborted) throw new Error('Cancelled.');
+    batch.push(s);
+    if (batch.length >= 32) await flush();
   }
+  if (batch.length) await flush();
   const m = src.meta;
   const out = new ByteBuilder(o.indexed);
   out.push('<?xml version="1.0" encoding="ISO-8859-1"?>\n<mzXML xmlns="http://sashimi.sourceforge.net/schema_revision/mzXML_3.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://sashimi.sourceforge.net/schema_revision/mzXML_3.2 http://sashimi.sourceforge.net/schema_revision/mzXML_3.2/mzXML_idx_3.2.xsd">\n');

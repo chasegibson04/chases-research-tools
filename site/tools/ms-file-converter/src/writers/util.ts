@@ -127,6 +127,12 @@ export async function encodeArrays(jobs: Array<{ values: Float64Array; e: ArrayE
   return Promise.all(jobs.map(async (j) => { const raw = rawArrayBytes(j.values, j.e); return { bytes: j.e.zlib ? await deflate(raw) : raw, cvs: encodingCvs(j.e) }; }));
 }
 
+/** zlib-compress many buffers, concurrently with the native zlib when available (fflate otherwise). */
+export async function zlibMany(list: Uint8Array[]): Promise<Uint8Array[]> {
+  if (!nativeDeflate) return list.map((b) => zlibSync(b, { level: ZLIB_LEVEL }));
+  return Promise.all(list.map(deflate));
+}
+
 /** Output of a writer: one or more files (mzML is one; some exports write companions such as imzML + .ibd). */
 export interface WrittenFile { name: string; blob: Blob; mime: string }
 export interface WriteContext {
