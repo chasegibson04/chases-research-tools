@@ -141,3 +141,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .ts[data-inputs="collapsed"] .ts-rail { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
 .ts-rail .rail-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: var(--fs-xs); color: var(--fg-muted); letter-spacing: 0.04em; }
 .icon-btn { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; padding: 0; border-radius: var(--radius-sm); }
+/* Long tables and code in tool READMEs scroll or wrap instead of widening the page on phones */
+.tool-doc { min-width: 0; overflow-wrap: anywhere; }
+.tool-doc table { display: block; max-width: 100%; overflow-x: auto; }
+.tool-doc pre { max-width: 100%; overflow-x: auto; }
+.tool-doc code { overflow-wrap: anywhere; }
