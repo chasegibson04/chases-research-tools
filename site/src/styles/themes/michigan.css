@@ -1,0 +1,12 @@
+/* MICHIGAN — fun preview only (loaded on /design/themes/, not site-wide). Official Michigan Blue #00274C and Maize #FFCB05. */
+:root[data-theme="michigan"] {
+  --bg: #00274c; --bg-elev: #06325d; --bg-sunken: #001d3a; --bg-panel: #0a3a68;
+  --fg: #f4f1e6; --fg-muted: #b9c3d3; --fg-faint: #7f8fa8;
+  --line: #17436f; --line-strong: #2b5a88;
+  --accent: #ffcb05; --accent-fg: #00274c; --accent-soft: rgb(255 203 5 / 0.14);
+  --link: #ffd84d; --ok: #6fdc9a; --warn: #ffcb05; --err: #ff8a80;
+  --code-bg: #001d3a;
+  color-scheme: dark;
+  --grid-dot: rgb(255 203 5 / 0.06);
+}
+:root[data-theme="michigan"] .site-header { border-bottom: 3px solid #ffcb05; }
