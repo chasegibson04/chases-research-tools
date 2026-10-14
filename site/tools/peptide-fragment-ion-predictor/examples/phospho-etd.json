@@ -1,0 +1,6 @@
+{
+  "label": "Phosphopeptide, ETD 3+ (c/z•)",
+  "description": "Phospho-kemptide LRRAS(p)LG. Kemptide is C32H61N13O9 (771.4715); +HPO3 gives 851.4378. c1 = L + NH3 + H+ = 131.1179; z•1 = G + H2O − NH2 + H+ = 60.0206.",
+  "input": { "sequence": "LRRAS[Phospho]LG", "topology": "linear", "precursorCharge": 3, "activation": "ETD", "ionTypes": [], "maxFragmentCharge": 2, "losses": false, "maxLosses": 1, "modLosses": true, "fixedMods": "", "adducts": [], "immonium": false, "precursorIons": true, "internal": false, "internalMaxLength": 4, "cyclicHydrolysis": false, "observed": "", "tolerance": 10, "toleranceUnit": "ppm" },
+  "expected": { "mono": 851.4378, "mz3": 284.8199, "c1": 131.1179, "z•1": 60.0206 }
+}

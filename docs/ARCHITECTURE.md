@@ -29,7 +29,7 @@ A **static site** built with **Astro 7** and deployed to **Cloudflare Workers (s
 
 ## Directory contract
 
-- `site/tools/<slug>/` is the unit of distribution. It must be self-contained (its `src/compute.ts` imports only from its own folder or `@/lib/runtime/*`), so users can download just that folder.
+- `site/tools/<slug>/` is the unit of distribution. It must be self-contained (its `src/compute.ts` imports only from its own folder, `@/lib/runtime/*`, or the shared mass-spectrometry library `@/lib/ms/*` per ADR-009), so users can download just that folder (plus `site/src/lib/ms/` for MS tools).
 - `site/src/` is the site framework. Tools consume it; they never modify it (open a PR against the shared component instead).
 - `docs/` is the knowledge base. `CHANGELOG.agent.log` is the work log.
 

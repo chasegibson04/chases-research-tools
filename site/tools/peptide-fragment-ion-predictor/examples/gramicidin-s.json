@@ -1,0 +1,6 @@
+{
+  "label": "Gramicidin S, HCD 2+ (cyclic)",
+  "description": "cyclo(Val-Orn-Leu-D-Phe-Pro)2, C60H92N12O10; [M+2H]2+ 571.36 as reported in the literature.",
+  "input": { "sequence": "cyclo(V(Orn)LfPV(Orn)LfP)", "topology": "cyclic", "precursorCharge": 2, "activation": "HCD", "ionTypes": [], "maxFragmentCharge": 2, "losses": true, "maxLosses": 2, "modLosses": true, "fixedMods": "", "adducts": [], "immonium": true, "precursorIons": true, "internal": false, "internalMaxLength": 4, "cyclicHydrolysis": false, "observed": "", "tolerance": 10, "toleranceUnit": "ppm" },
+  "expected": { "mono": 1140.7059, "mz1": 1141.7132, "mz2": 571.3602, "formula": "C60H92N12O10" }
+}

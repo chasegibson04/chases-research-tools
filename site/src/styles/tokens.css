@@ -16,5 +16,8 @@
   --ease: cubic-bezier(.2,.7,.2,1);
   --dur: 140ms;
   /* Categorical palette for figures (colorblind-safe, Okabe–Ito based) */
+  /* Fragment ion types (Okabe–Ito; b = blue and y = red follow the spectrum-annotation convention) */
+  --ion-a: #009e73; --ion-b: #0072b2; --ion-c: #56b4e9; --ion-x: #cc79a7; --ion-y: #d55e00; --ion-z: #e69f00;
+  --ion-internal: #8a7f72; --ion-immonium: #6f6a63; --ion-precursor: #7a4f9e; --ion-unassigned: #9a948a;
   --viz-1: #0072b2; --viz-2: #e69f00; --viz-3: #009e73; --viz-4: #d55e00; --viz-5: #cc79a7; --viz-6: #56b4e9; --viz-7: #f0e442; --viz-8: #7f7f7f;
 }

@@ -1,0 +1,6 @@
+{
+  "label": "Angiotensin II, HCD 2+ (linear)",
+  "description": "Expected values: [M+H]+ and b/y ions as listed by ProteinProspector MS-Product for DRVYIHPF.",
+  "input": { "sequence": "DRVYIHPF", "topology": "linear", "precursorCharge": 2, "activation": "HCD", "ionTypes": [], "maxFragmentCharge": 2, "losses": true, "maxLosses": 1, "modLosses": true, "fixedMods": "", "adducts": [], "immonium": true, "precursorIons": true, "internal": false, "internalMaxLength": 4, "cyclicHydrolysis": false, "observed": "", "tolerance": 10, "toleranceUnit": "ppm" },
+  "expected": { "mono": 1045.5345, "mz1": 1046.5418, "mz2": 523.7745, "b2": 272.1353, "y1": 166.0863, "y2": 263.1390, "formula": "C50H71N13O12" }
+}
