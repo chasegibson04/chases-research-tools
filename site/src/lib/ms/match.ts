@@ -26,8 +26,58 @@ export interface MatchResult {
   isotopeOf: Map<number, number>;
 }
 
+/**
+ * Deisotoping: find ¹³C envelopes (spacing 1.00336/z, ≥2 peaks, M+1 not more than 1.6× M for small ions) and
+ * return the charge of each monoisotopic peak plus the isotope peaks it owns. Peaks without an envelope get null.
+ */
+export function deisotope(peaks: Peak[], tol: Tolerance, maxZ = 4): { charge: Array<number | null>; isotopeOf: Map<number, number> } {
+  const charge: Array<number | null> = new Array(peaks.length).fill(null);
+  const owned = new Map<number, number>();
+  const order = peaks.map((_, i) => i).sort((a, b) => peaks[b].intensity - peaks[a].intensity);
+  const find = (target: number) => {
+    const d = tolDa(target, tol);
+    let best = -1;
+    for (let k = lowerBound(peaks.length, (i) => peaks[i].mz, target - d); k < peaks.length && peaks[k].mz <= target + d; k++) if (best < 0 || peaks[k].intensity > peaks[best].intensity) best = k;
+    return best;
+  };
+  for (const i of order) {
+    if (owned.has(i) || charge[i] != null) continue;
+    for (let z = maxZ; z >= 1; z--) {
+      const j = find(peaks[i].mz + NEUTRON / z);
+      if (j < 0 || owned.has(j)) continue;
+      const mass = peaks[i].mz * z;
+      if (peaks[j].intensity > peaks[i].intensity * Math.max(1.6, mass / 1200)) continue; // M+1 implausibly tall
+      const prev = find(peaks[i].mz - NEUTRON / z);
+      if (prev >= 0 && peaks[prev].intensity > peaks[i].intensity * 0.5 && mass < 2500) continue; // i is not monoisotopic
+      charge[i] = z; owned.set(j, i);
+      for (let iso = 2; iso <= 4; iso++) { const q = find(peaks[i].mz + (iso * NEUTRON) / z); if (q < 0 || owned.has(q)) break; owned.set(q, i); }
+      break;
+    }
+  }
+  return { charge, isotopeOf: owned };
+}
+
+/**
+ * Expected number of chance matches: re-run the matching with the theoretical ions shifted by offsets that
+ * correspond to no common chemistry (±7.7, ±11.3, ±17.1 Da / z) and average the matched-peak counts.
+ */
+export function decoyMatches(peaks: Peak[], ions: Ion[], tol: Tolerance): number {
+  const offsets = [-17.1, -11.3, -7.7, 7.7, 11.3, 17.1];
+  let total = 0;
+  for (const off of offsets) {
+    const hit = new Set<number>();
+    for (const ion of ions) {
+      const mz = ion.mz + off / ion.charge, d = tolDa(mz, tol);
+      const k = lowerBound(peaks.length, (i) => peaks[i].mz, mz - d);
+      if (k < peaks.length && peaks[k].mz <= mz + d) hit.add(k);
+    }
+    total += hit.size;
+  }
+  return total / offsets.length;
+}
+
 /** peaks must be sorted by m/z. */
-export function matchPeaks(peaks: Peak[], ions: Ion[], tol: Tolerance, opts: { minRelIntensity?: number } = {}): MatchResult {
+export function matchPeaks(peaks: Peak[], ions: Ion[], tol: Tolerance, opts: { minRelIntensity?: number; peakCharge?: Array<number | null> } = {}): MatchResult {
   const byIon = new Map<string, Match>();
   const byPeak = new Map<number, Match[]>();
   const maxI = peaks.reduce((m, p) => Math.max(m, p.intensity), 0) || 1;
@@ -39,6 +89,9 @@ export function matchPeaks(peaks: Peak[], ions: Ion[], tol: Tolerance, opts: { m
     for (; k < peaks.length && peaks[k].mz <= ion.mz + d; k++) {
       const pk = peaks[k];
       if (pk.intensity < minI) continue;
+      // With deisotoping, a peak whose envelope shows charge z only accepts ions of charge z.
+      const zObs = opts.peakCharge?.[k];
+      if (zObs != null && ion.charge !== zObs) continue;
       const m: Match = { ion, peak: k, obs: pk.mz, errorDa: pk.mz - ion.mz, errorPpm: ppmError(pk.mz, ion.mz), intensity: pk.intensity };
       if (!byPeak.has(k)) byPeak.set(k, []);
       byPeak.get(k)!.push(m);
@@ -64,7 +117,7 @@ export function matchPeaks(peaks: Peak[], ions: Ion[], tol: Tolerance, opts: { m
 
 /** Prefer backbone ions over losses/internal/immonium when errors tie. */
 function priority(ion: Ion) {
-  const base = ['b', 'y', 'c', 'z•', 'a', 'x', 'z', 'z+2', 'c-1', 'precursor', 'b+H2O', 'immonium', 'internal-b', 'internal-a'].indexOf(ion.type);
+  const base = ['b', 'y', 'c', 'z•', 'a', 'x', 'z', 'z+2', 'c-1', 'precursor', 'b+H2O', 'w', 'immonium', 'internal-b', 'internal-a', 'b-scr'].indexOf(ion.type);
   return base + (ion.loss ? 20 : 0) + (ion.carrier !== 'H' ? 10 : 0) + ion.charge;
 }
 
@@ -74,6 +127,8 @@ export interface Coverage {
   /** Backbone cleavage sites (linear: n−1 amide bonds; cyclic: n) supported by at least one backbone ion. */
   sitesObserved: number; sitesTotal: number;
   ionsMatched: number; ionsTotal: number;
+  /** Peaks expected to match by chance at this tolerance (decoy-shift estimate), when computed. */
+  chanceMatches?: number;
 }
 export function coverage(peaks: Peak[], ions: Ion[], m: MatchResult, residues: number, cyclic: boolean): Coverage {
   const total = peaks.reduce((s, p) => s + p.intensity, 0) || 1;

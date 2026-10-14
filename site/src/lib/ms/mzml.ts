@@ -28,13 +28,15 @@ export interface SpectrumMeta {
   energy: number | null;
   filter: string;
   points: number;
+  /** FAIMS compensation voltage (V), when present. */
+  faimsCv: number | null;
   start: number; // byte range in the file
   end: number;
   /** MGF only: the block's peak text is parsed on demand from the same range. */
 }
 
 export interface FileInfo {
-  format: 'mzML' | 'MGF';
+  format: 'mzML' | 'MGF' | 'mzXML';
   name: string;
   size: number;
   indexed: boolean;
@@ -121,7 +123,39 @@ export function parseSpectrumHeader(xml: string, groups: Record<string, string>,
     precursorMz: num(cv(lastPrec, 'MS:1000744')) ?? target ?? (msLevel > 1 ? filterPrec : null), charge: num(cv(lastPrec, 'MS:1000041')),
     isoLower: target != null && lo != null ? target - lo : null, isoUpper: target != null && hi != null ? target + hi : null,
     activation: msLevel > 1 ? activation || 'unknown' : '', energy: msLevel > 1 ? energy : null, filter, points, start, end,
+    faimsCv: num(cv(x, 'MS:1001581')),
   };
+}
+
+/** mzXML <scan> header (attributes + precursorMz element). Nested MS2 scans are indexed as their own entries. */
+function parseMzxmlHeader(xml: string, start: number, end: number, index: number): SpectrumMeta {
+  const tag = /<scan\b[^>]*>/.exec(xml)?.[0] ?? '';
+  const attr = (k: string) => new RegExp(`\\b${k}="([^"]*)"`).exec(tag)?.[1] ?? null;
+  const rtRaw = attr('retentionTime');
+  const rtM = rtRaw ? /^PT?([\d.]+)(S|M)?$/i.exec(rtRaw) : null;
+  const rt = rtM ? (rtM[2]?.toUpperCase() === 'M' ? Number(rtM[1]) : Number(rtM[1]) / 60) : null;
+  const pm = /<precursorMz\b([^>]*)>\s*([\d.eE+-]+)\s*<\/precursorMz>/.exec(xml);
+  const pAttr = (k: string) => (pm ? new RegExp(`\\b${k}="([^"]*)"`).exec(pm[1])?.[1] ?? null : null);
+  const filter = attr('filterLine') ?? '';
+  const msLevel = Number(attr('msLevel') ?? 1);
+  const fromFilter = activationFromFilter(filter);
+  const act = (pAttr('activationMethod') ?? '').toUpperCase();
+  return {
+    index, id: `scan=${attr('num') ?? index + 1}`, scan: num(attr('num')), msLevel, rt,
+    tic: num(attr('totIonCurrent')), basePeakMz: num(attr('basePeakMz')), basePeakIntensity: num(attr('basePeakIntensity')),
+    centroided: attr('centroided') == null ? null : attr('centroided') === '1', polarity: attr('polarity') === '-' ? '-' : attr('polarity') === '+' ? '+' : null,
+    precursorMz: pm ? Number(pm[2]) : null, charge: num(pAttr('precursorCharge')), isoLower: null, isoUpper: null,
+    activation: msLevel > 1 ? fromFilter.activation ?? (act === 'HCD' ? 'HCD' : act === 'CID' ? 'CID' : act === 'ETD' ? 'ETD' : act || 'unknown') : '',
+    energy: msLevel > 1 ? fromFilter.energy ?? num(attr('collisionEnergy')) : null, filter, points: Number(attr('peaksCount') ?? 0), start, end, faimsCv: null,
+  };
+}
+
+/** Decompress .mzML.gz / .mgf.gz into an in-memory Blob (gzip has no random access). Other files pass through. */
+export async function openSource(file: Blob): Promise<Blob> {
+  const magic = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+  if (magic[0] !== 0x1f || magic[1] !== 0x8b) return file;
+  if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decompress .gz files; unzip the file first.');
+  return await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).blob();
 }
 
 function parseMgfHeader(block: string, start: number, end: number, index: number): SpectrumMeta {
@@ -136,7 +170,7 @@ function parseMgfHeader(block: string, start: number, end: number, index: number
     index, id: title, scan: num(get('SCANS')?.split(/[-,]/)[0] ?? null), msLevel: Number(get('MSLEVEL') ?? 2), rt: rtSec != null ? rtSec / 60 : null,
     tic: null, basePeakMz: null, basePeakIntensity: null, centroided: true, polarity: null,
     precursorMz: pep ? Number(pep.split(/\s+/)[0]) : null, charge: num(get('CHARGE')?.replace(/[^0-9]/g, '') ?? null), isoLower: null, isoUpper: null,
-    activation: act.activation ?? 'unknown', energy: act.energy, filter, points: lines.length, start, end,
+    activation: act.activation ?? 'unknown', energy: act.energy, filter, points: lines.length, start, end, faimsCv: null,
   };
 }
 
@@ -144,9 +178,9 @@ function parseMgfHeader(block: string, start: number, end: number, index: number
 export async function indexSpectra(file: Source, name: string, onProgress?: (f: number) => void, signal?: AbortSignal): Promise<{ info: FileInfo; spectra: SpectrumMeta[] }> {
   const dec = new TextDecoder('latin1'); // one char per byte, so string offsets are byte offsets
   const headText = dec.decode(await file.slice(0, Math.min(file.size, 256 * 1024)).arrayBuffer());
-  const isMgf = /BEGIN IONS/.test(headText) && !/<mzML/.test(headText);
-  if (!isMgf && !/<mzML/.test(headText)) throw new Error('This does not look like an mzML or MGF file. Convert vendor files first (e.g. ThermoRawFileParser -f 2, or msconvert --mzML).');
-  if (/<mzXML/.test(headText)) throw new Error('mzXML is not supported; convert to mzML with msconvert.');
+  const isMzxml = /<mzXML/.test(headText);
+  const isMgf = !isMzxml && /BEGIN IONS/.test(headText) && !/<mzML/.test(headText);
+  if (!isMgf && !isMzxml && !/<mzML/.test(headText)) throw new Error('This does not look like an mzML, mzXML or MGF file. Convert vendor files first (e.g. ThermoRawFileParser -f 2, or msconvert --mzML).');
   const groups: Record<string, string> = {};
   for (const m of headText.matchAll(/<referenceableParamGroup\s+id="([^"]+)"\s*>([\s\S]*?)<\/referenceableParamGroup>/g)) groups[m[1]] = m[2];
   const software = [...headText.matchAll(/<software\b[^>]*>[\s\S]*?<\/software>/g)].map((m) => {
@@ -155,11 +189,11 @@ export async function indexSpectra(file: Source, name: string, onProgress?: (f: 
     return `${nm} ${ver}`.trim();
   });
   const instrument = /<instrumentConfiguration\b[\s\S]*?<cvParam[^>]*name="([^"]*)"/.exec(headText)?.[1] ?? '';
-  const info: FileInfo = { format: isMgf ? 'MGF' : 'mzML', name, size: file.size, indexed: /<indexedmzML/.test(headText), software, instrument, paramGroups: groups };
+  const info: FileInfo = { format: isMgf ? 'MGF' : isMzxml ? 'mzXML' : 'mzML', name, size: file.size, indexed: /<indexedmzML/.test(headText), software, instrument, paramGroups: groups };
 
-  const OPEN = isMgf ? 'BEGIN IONS' : '<spectrum ';
-  const HEADER_END = isMgf ? 'END IONS' : '<binaryDataArrayList';
-  const CLOSE = isMgf ? 'END IONS' : '</spectrum>';
+  const OPEN = isMgf ? 'BEGIN IONS' : isMzxml ? '<scan ' : '<spectrum ';
+  const HEADER_END = isMgf ? 'END IONS' : isMzxml ? '<peaks' : '<binaryDataArrayList';
+  const CLOSE = isMgf ? 'END IONS' : isMzxml ? '</peaks>' : '</spectrum>';
   const spectra: SpectrumMeta[] = [];
   const reader = (file.stream() as ReadableStream<Uint8Array>).getReader();
   let buf = '', base = 0, read = 0;
@@ -187,7 +221,7 @@ export async function indexSpectra(file: Source, name: string, onProgress?: (f: 
         const i = buf.indexOf(CLOSE);
         if (i < 0) { const keep = Math.min(buf.length, CLOSE.length); base += buf.length - keep; buf = buf.slice(buf.length - keep); break; }
         const end = base + i + CLOSE.length;
-        spectra.push(isMgf ? parseMgfHeader(header, start, end, spectra.length) : parseSpectrumHeader(header, groups, start, end, spectra.length));
+        spectra.push(isMgf ? parseMgfHeader(header, start, end, spectra.length) : isMzxml ? parseMzxmlHeader(header, start, end, spectra.length) : parseSpectrumHeader(header, groups, start, end, spectra.length));
         base += i + CLOSE.length; buf = buf.slice(i + CLOSE.length); state = 'seek';
       }
     }
@@ -216,8 +250,10 @@ export function base64ToBytes(s: string): Uint8Array {
   return out;
 }
 
-export function decodeArray(cvXml: string, b64: string): { kind: 'mz' | 'intensity' | 'other'; values: Float64Array } {
-  const kind = cvXml.includes('MS:1000514') ? 'mz' : cvXml.includes('MS:1000515') ? 'intensity' : 'other';
+/** Ion-mobility array accessions: mean/raw inverse reduced IM, drift time, generic IM array. */
+const MOBILITY = /MS:1002893|MS:1003006|MS:1003007|MS:1003008|MS:1002477|MS:1003153|MS:1003156|MS:1002816/;
+export function decodeArray(cvXml: string, b64: string): { kind: 'mz' | 'intensity' | 'mobility' | 'other'; values: Float64Array } {
+  const kind = cvXml.includes('MS:1000514') ? 'mz' : cvXml.includes('MS:1000515') ? 'intensity' : MOBILITY.test(cvXml) ? 'mobility' : 'other';
   let bytes = base64ToBytes(b64);
   if (!bytes.length) return { kind, values: new Float64Array(0) };
   if (/MS:100378[0-5]/.test(cvXml)) throw new Error('zstd-compressed arrays are not supported in the browser yet; re-convert with zlib.');
@@ -235,7 +271,7 @@ export function decodeArray(cvXml: string, b64: string): { kind: 'mz' | 'intensi
   return { kind, values: v };
 }
 
-export interface RawSpectrum { mz: Float64Array; intensity: Float64Array }
+export interface RawSpectrum { mz: Float64Array; intensity: Float64Array; mobility?: Float64Array }
 
 export async function readSpectrum(file: Source, meta: Pick<SpectrumMeta, 'start' | 'end'>, info: Pick<FileInfo, 'format' | 'paramGroups'>): Promise<RawSpectrum> {
   return parseSpectrumText(new TextDecoder('latin1').decode(await file.slice(meta.start, meta.end).arrayBuffer()), info);
@@ -251,22 +287,54 @@ export function parseSpectrumText(text: string, info: Pick<FileInfo, 'format' | 
     }
     return sortPair(Float64Array.from(mz), Float64Array.from(it));
   }
+  if (info.format === 'mzXML') return parseMzxmlPeaks(text);
   let mz: Float64Array = new Float64Array(0), intensity: Float64Array = new Float64Array(0);
+  let mobility: Float64Array | undefined;
   for (const m of text.matchAll(/<binaryDataArray\b[\s\S]*?<\/binaryDataArray>/g)) {
     const block = expandGroups(m[0], info.paramGroups);
     const bin = /<binary>([\s\S]*?)<\/binary>/.exec(block)?.[1] ?? '';
     const cvs = block.slice(0, block.indexOf('<binary>'));
     const arr = decodeArray(cvs, bin);
-    if (arr.kind === 'mz') mz = arr.values; else if (arr.kind === 'intensity') intensity = arr.values;
+    if (arr.kind === 'mz') mz = arr.values; else if (arr.kind === 'intensity') intensity = arr.values; else if (arr.kind === 'mobility') mobility = arr.values;
   }
   const n = Math.min(mz.length, intensity.length);
-  return sortPair(mz.subarray(0, n), intensity.subarray(0, n));
+  return sortPair(mz.subarray(0, n), intensity.subarray(0, n), mobility && mobility.length >= n ? mobility.subarray(0, n) : undefined);
 }
 
-function sortPair(mz: Float64Array, it: Float64Array): RawSpectrum {
+/** mzXML <peaks>: interleaved (m/z, intensity) pairs, big-endian ("network") 32/64-bit, optionally zlib. */
+function parseMzxmlPeaks(text: string): RawSpectrum {
+  const m = /<peaks\b([^>]*)>([\s\S]*?)<\/peaks>/.exec(text);
+  if (!m || !m[2].trim()) return { mz: new Float64Array(0), intensity: new Float64Array(0) };
+  const a = (k: string) => new RegExp(`\\b${k}="([^"]*)"`).exec(m[1])?.[1] ?? '';
+  let bytes = base64ToBytes(m[2]);
+  if (a('compressionType') === 'zlib') bytes = unzlibSync(bytes);
+  const p64 = a('precision') === '64';
+  const little = a('byteOrder') === 'little';
+  const dv = new DataView(bytes.slice().buffer);
+  const step = p64 ? 8 : 4, n = Math.floor(bytes.length / (2 * step));
+  const mz = new Float64Array(n), it = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const o = 2 * i * step;
+    mz[i] = p64 ? dv.getFloat64(o, little) : dv.getFloat32(o, little);
+    it[i] = p64 ? dv.getFloat64(o + step, little) : dv.getFloat32(o + step, little);
+  }
+  return sortPair(mz, it);
+}
+
+function sortPair(mz: Float64Array, it: Float64Array, mob?: Float64Array): RawSpectrum {
   let sorted = true;
   for (let i = 1; i < mz.length; i++) if (mz[i] < mz[i - 1]) { sorted = false; break; }
-  if (sorted) return { mz, intensity: it };
+  if (sorted) return mob ? { mz, intensity: it, mobility: mob } : { mz, intensity: it };
   const idx = Array.from(mz.keys()).sort((a, b) => mz[a] - mz[b]);
-  return { mz: Float64Array.from(idx, (i) => mz[i]), intensity: Float64Array.from(idx, (i) => it[i]) };
+  const out: RawSpectrum = { mz: Float64Array.from(idx, (i) => mz[i]), intensity: Float64Array.from(idx, (i) => it[i]) };
+  if (mob) out.mobility = Float64Array.from(idx, (i) => mob[i]);
+  return out;
+}
+
+/** Keep only points inside an ion-mobility window (e.g. 1/K0 0.85–1.05 V·s/cm²). */
+export function filterMobility(s: RawSpectrum, lo: number, hi: number): RawSpectrum {
+  if (!s.mobility) return s;
+  const keep: number[] = [];
+  for (let i = 0; i < s.mz.length; i++) if (s.mobility[i] >= lo && s.mobility[i] <= hi) keep.push(i);
+  return { mz: Float64Array.from(keep, (i) => s.mz[i]), intensity: Float64Array.from(keep, (i) => s.intensity[i]), mobility: Float64Array.from(keep, (i) => s.mobility![i]) };
 }

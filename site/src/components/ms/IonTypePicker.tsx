@@ -3,7 +3,7 @@ import { HelpTip } from '@/components/tool/HelpTip';
 
 const LINEAR: Array<[IonType, string, string]> = [
   ['a', 'a', 'b − CO'], ['b', 'b', 'acylium / oxazolone'], ['c', 'c', 'b + NH₃ (ETD)'], ['c-1', 'c−1', 'c − H (c•)'],
-  ['x', 'x', 'y + CO − 2H'], ['y', 'y', 'C-terminal + H₂O'], ['z', 'z', 'y − NH₃'], ['z•', 'z•', 'y − NH₂ (z+1, ETD)'], ['z+2', 'z+2', 'z• + H (z′)'],
+  ['x', 'x', 'y + CO − 2H'], ['y', 'y', 'C-terminal + H₂O'], ['z', 'z', 'y − NH₃'], ['z•', 'z•', 'y − NH₂ (z+1, ETD)'], ['z+2', 'z+2', 'z• + H (z′)'], ['w', 'w', 'z• − Cβ substituent (Leu/Ile/Val, ETD/EThcD)'],
 ];
 const CYCLIC: Array<[IonType, string, string]> = [
   ['b', 'b', 'contiguous arc + H⁺'], ['a', 'a', 'b − CO'], ['b+H2O', 'b+H₂O', 'ring opened by hydrolysis'],

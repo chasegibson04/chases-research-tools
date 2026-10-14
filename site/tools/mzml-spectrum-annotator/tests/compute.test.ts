@@ -171,3 +171,19 @@ describe.skipIf(!local.length)('local files', () => {
     }, 600_000);
   }
 });
+
+describe('mzXML', () => {
+  it('reads nested scans with big-endian zlib peaks', async () => {
+    const pairs = (vals: number[]) => { const b = Buffer.alloc(vals.length * 4); vals.forEach((v, i) => b.writeFloatBE(v, i * 4)); return deflateSync(b).toString('base64'); };
+    const xml = `<?xml version="1.0"?><mzXML><msRun scanCount="2"><scan num="1" msLevel="1" peaksCount="2" retentionTime="PT60.0S" centroided="1"><peaks precision="32" byteOrder="network" compressionType="zlib" contentType="m/z-int">${pairs([400, 100, 500, 200])}</peaks><scan num="2" msLevel="2" peaksCount="2" retentionTime="PT61.2S" filterLine="FTMS + c ESI d Full ms2 500.0000@hcd30.00 [100-1000]"><precursorMz precursorCharge="2" activationMethod="HCD">500.0</precursorMz><peaks precision="32" byteOrder="network" compressionType="zlib" contentType="m/z-int">${pairs([150, 10, 250, 20])}</peaks></scan></scan></msRun></mzXML>`;
+    const { info, spectra } = await indexSpectra(new Blob([xml]), 'tiny.mzXML');
+    expect(info.format).toBe('mzXML');
+    expect(spectra.map((s) => s.msLevel)).toEqual([1, 2]);
+    expect(spectra[1].precursorMz).toBe(500);
+    expect(spectra[1].activation).toBe('HCD');
+    expect(spectra[1].rt).toBeCloseTo(61.2 / 60, 6);
+    const sp = await readSpectrum(new Blob([xml]), spectra[1], info);
+    expect(Array.from(sp.mz)).toEqual([150, 250]);
+    expect(Array.from(sp.intensity)).toEqual([10, 20]);
+  });
+});

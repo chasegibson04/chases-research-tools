@@ -20,6 +20,8 @@ export interface ResidueDef {
   alphaMethyl?: boolean;
   /** Residues with identical elemental composition (cannot be told apart by mass). */
   isobaricWith?: string[];
+  /** Hydroxy acid in a depsipeptide: the backbone link is an ester (−O−) instead of an amide (−NH−). */
+  ester?: boolean;
 }
 
 const R = (code: string, three: string, name: string, formula: string, side: string, sideSmiles: string, extra: Partial<ResidueDef> = {}): ResidueDef =>
@@ -91,12 +93,12 @@ const NONSTANDARD: ResidueDef[] = [
   R('MeAspNMe2', 'MeAspNMe2', 'N-Me-Asp β-dimethylamide', 'C7H12N2O2', 'CH₂CON(CH₃)₂', 'CC(=O)N(C)C', { nMethyl: true }),
   R('MeCpg', 'MeCpg', 'N-Methylcyclopentylglycine', 'C8H13NO', 'c-C₅H₉', 'C1CCCC1', { nMethyl: true, isobaricWith: ['S5'] }),
   // Hydroxy-acid "residues" of depsipeptides (ester-linked: −O− replaces −NH−).
-  R('Hiv', 'Hiv', '2-Hydroxyisovaleric acid', 'C5H8O2', 'CH(CH₃)₂', 'C(C)C'),
-  R('Lac', 'Lac', 'Lactic acid', 'C3H4O2', 'CH₃', 'C'),
-  R('HMOA', 'HMOA', '3-Hydroxy-4-methyloctanoic acid', 'C9H16O2', '3-OH-4-Me-octanoyl', ''),
-  R('bHFA13', 'bHFA13', 'β-Hydroxy C13 fatty acid', 'C13H24O2', 'β-OH-C13 acyl', ''),
-  R('bHFA14', 'bHFA14', 'β-Hydroxy C14 fatty acid', 'C14H26O2', 'β-OH-C14 acyl', ''),
-  R('bHFA15', 'bHFA15', 'β-Hydroxy C15 fatty acid', 'C15H28O2', 'β-OH-C15 acyl', ''),
+  R('Hiv', 'Hiv', '2-Hydroxyisovaleric acid', 'C5H8O2', 'CH(CH₃)₂', 'C(C)C', { ester: true }),
+  R('Lac', 'Lac', 'Lactic acid', 'C3H4O2', 'CH₃', 'C', { ester: true }),
+  R('HMOA', 'HMOA', '3-Hydroxy-4-methyloctanoic acid', 'C9H16O2', '3-OH-4-Me-octanoyl', '', { ester: true }),
+  R('bHFA13', 'bHFA13', 'β-Hydroxy C13 fatty acid', 'C13H24O2', 'β-OH-C13 acyl', '', { ester: true }),
+  R('bHFA14', 'bHFA14', 'β-Hydroxy C14 fatty acid', 'C14H26O2', 'β-OH-C14 acyl', '', { ester: true }),
+  R('bHFA15', 'bHFA15', 'β-Hydroxy C15 fatty acid', 'C15H28O2', 'β-OH-C15 acyl', '', { ester: true }),
 ];
 /** Aliases from other notations (cycfrag uses [MeG] for sarcosine and [pE] for pyroglutamate). */
 export const RESIDUE_ALIASES: Record<string, string> = { MeG: 'Sar', pE: 'pGlu', Pyr: 'pGlu', pGlu: 'pGlu' };

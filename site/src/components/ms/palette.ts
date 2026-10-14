@@ -28,7 +28,7 @@ export function ionColor(p: MsPalette, type: IonType): string {
     case 'c': case 'c-1': return p.ion.c;
     case 'x': return p.ion.x;
     case 'y': return p.ion.y;
-    case 'z': case 'z•': case 'z+1': case 'z+2': return p.ion.z;
+    case 'z': case 'z•': case 'z+1': case 'z+2': case 'w': return p.ion.z;
     case 'cz•': case 'cz+1': return p.ion.c;
     case 'immonium': return p.immonium;
     case 'precursor': return p.precursor;

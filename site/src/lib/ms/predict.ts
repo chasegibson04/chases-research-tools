@@ -13,8 +13,8 @@ export type Activation = 'HCD' | 'CID' | 'ETD' | 'EThcD' | 'UVPD';
 const TYPE_WEIGHT: Record<Activation, Partial<Record<IonType, number>>> = {
   HCD: { y: 1, b: 0.55, a: 0.12, x: 0.02, c: 0.02, 'z•': 0.02, immonium: 0.2, 'internal-b': 0.06, 'internal-a': 0.03, precursor: 0.12, 'b+H2O': 0.1 },
   CID: { y: 1, b: 0.8, a: 0.1, immonium: 0.05, 'internal-b': 0.04, precursor: 0.3, 'b+H2O': 0.1 },
-  ETD: { c: 0.9, 'z•': 1, 'z+2': 0.3, 'c-1': 0.2, y: 0.12, b: 0.05, z: 0.1, precursor: 0.6 },
-  EThcD: { b: 0.5, y: 0.9, c: 0.7, 'z•': 0.7, 'z+2': 0.2, a: 0.08, immonium: 0.1, precursor: 0.2 },
+  ETD: { c: 0.9, 'z•': 1, 'z+2': 0.3, 'c-1': 0.2, y: 0.12, b: 0.05, z: 0.1, w: 0.08, precursor: 0.6 },
+  EThcD: { b: 0.5, y: 0.9, c: 0.7, 'z•': 0.7, 'z+2': 0.2, a: 0.08, w: 0.15, immonium: 0.1, precursor: 0.2 },
   UVPD: { a: 0.6, x: 0.5, b: 0.5, y: 0.8, c: 0.3, 'z•': 0.3, immonium: 0.1, precursor: 0.3 },
 };
 const BASIC = new Set(['K', 'R', 'H']);
@@ -26,7 +26,7 @@ export function predictSpectrum(p: Peptide, ions: Ion[], activation: Activation,
   const w = TYPE_WEIGHT[activation];
   const peaks: PredictedPeak[] = [];
   for (const ion of ions) {
-    let I = w[ion.type] ?? 0.03;
+    let I = ion.type === 'b-scr' ? 0.04 : w[ion.type] ?? 0.03;
     if (!I) continue;
     const res = p.residues;
     if (!p.cyclic && ['a', 'b', 'c', 'c-1', 'x', 'y', 'z', 'z•', 'z+2'].includes(ion.type)) {

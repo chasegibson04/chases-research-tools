@@ -249,6 +249,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
               <dl class="ms-stat"><dt>Assigned</dt><dd>{stats.peaksAssigned}/{peaks.length}</dd></dl>
               <dl class="ms-stat"><dt>Intensity</dt><dd>{stats.explainedPct.toFixed(1)}%</dd></dl>
               <dl class="ms-stat"><dt>Bonds</dt><dd>{stats.bondsCovered}/{stats.bondsTotal}</dd></dl>
+              {ann?.coverage.chanceMatches != null && <dl class="ms-stat" title="Peaks expected to match by chance at this tolerance (ions shifted by ±7.7/11.3/17.1 Da)"><dt>Chance</dt><dd>≈{Math.round(ann.coverage.chanceMatches)}</dd></dl>}
             </>}
           </div>
   ) : null;

@@ -30,3 +30,6 @@ export function parseFixedMods(s = ''): FixedMod[] {
     return { mod: mod.trim(), residues: sites.split(/[+/ ]+/).map((r) => r.trim()).filter(Boolean) };
   });
 }
+
+/** Extra fragment options exposed by both MS tools (advanced inputs). */
+export interface ExtraFragmentOptions { scrambling?: boolean; sideChainLosses?: boolean }

@@ -30,6 +30,8 @@ export interface Input {
   internalMaxLength?: number;
   precursorIons?: boolean;
   cyclicHydrolysis?: boolean;
+  scrambling?: boolean;
+  sideChainLosses?: boolean;
   observed?: string;
   /** A peak-list or spectrum file (text, MGF or mzML). mzML is averaged over its largest MS2 group. */
   observedFile?: Blob | null;
@@ -64,10 +66,10 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   ctx.progress(0.25, 'Fragment ions');
   const ions = generateFragments(peptide, {
     ionTypes, maxCharge: Math.max(1, Math.floor(Number(input.maxFragmentCharge) || 1)), precursorCharge: z,
-    losses: { h2o: !!input.losses, nh3: !!input.losses, mod: input.modLosses !== false, maxLosses: input.losses ? Math.max(1, Math.min(3, Number(input.maxLosses) || 1)) : (input.modLosses !== false ? 1 : 0) },
+    losses: { h2o: !!input.losses, nh3: !!input.losses, mod: input.modLosses !== false, sideChain: !!input.sideChainLosses, maxLosses: input.losses || input.sideChainLosses ? Math.max(1, Math.min(3, Number(input.maxLosses) || 1)) : (input.modLosses !== false ? 1 : 0) },
     adducts: input.adducts ?? [], immonium: !!input.immonium,
     internal: { enabled: !!input.internal && !peptide.cyclic, maxLength: Math.max(2, Number(input.internalMaxLength) || 4) },
-    precursor: input.precursorIons !== false, cyclicHydrolysis: !!input.cyclicHydrolysis,
+    precursor: input.precursorIons !== false, cyclicHydrolysis: !!input.cyclicHydrolysis, scrambling: !!input.scrambling,
   });
   if (ions.length > 200000) throw new Error('Too many ions; reduce charge states, losses or internal fragments.');
   ctx.progress(0.55, 'Representative spectrum');
@@ -79,13 +81,11 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   if (input.observedFile) {
     const name = input.observedFileName || (input.observedFile as File).name || 'peak list';
     const kind = await sniffSpectrumFile(input.observedFile);
-    if (kind === 'mzML' || kind === 'MGF') {
+    if (kind === 'mzML' || kind === 'MGF' || kind === 'mzXML') {
       const r = await loadDefaultSpectrum(input.observedFile, name, ctx, { preferPrecursors: precursors.map((p) => p.mz) });
       const peaks = Array.from(r.spectrum.mz, (mz, i) => ({ mz, intensity: r.spectrum.intensity[i] }));
       if (!peaks.length) throw new Error(`No peaks found in ${name}.`);
       observed = { peaks, precursorMz: r.group.precursorMz ?? undefined, title: `${name} · ${r.group.label} · ${r.spectrum.scans} scan${r.spectrum.scans > 1 ? 's' : ''} averaged`, source: kind };
-    } else if (kind === 'mzXML') {
-      throw new Error(`${name} is mzXML; convert it to mzML (msconvert --mzML) or open it in the mzML annotator.`);
     } else if (kind === 'binary') {
       throw new Error(`${name} is not a text peak list, MGF or mzML file. Vendor files (.raw, .d, .wiff) must be converted to mzML first.`);
     } else {

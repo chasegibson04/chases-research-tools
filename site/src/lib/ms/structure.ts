@@ -193,8 +193,8 @@ function layoutLinear(p: Peptide, mode: StructureMode): StructureScene {
     // N
     if (k === 0) atoms.push({ x: xn + 0.18, y: 0, label: nTermLabel(p, r), anchor: 'end', residue: k, role: 'term' });
     else {
-      atoms.push({ x: xn, y: 0, label: 'N', residue: k, role: 'backbone' });
-      if (!r.def.ringToN) {
+      atoms.push({ x: xn, y: 0, label: r.def.ester ? 'O' : 'N', residue: k, role: 'backbone' });
+      if (!r.def.ringToN && !r.def.ester) {
         bonds.push({ x1: xn, y1: 0, x2: xn, y2: -0.72, order: 1, residue: k, role: 'h' });
         atoms.push({ x: xn, y: -1, label: r.nMethyl ? 'CH₃' : 'H', residue: k, role: 'h' });
       }
@@ -259,8 +259,8 @@ function layoutCyclic(p: Peptide, mode: StructureMode): StructureScene {
     const r = p.residues[k];
     const iN = 3 * k, iA = 3 * k + 1, iC = 3 * k + 2;
     const pN = P(iN), pA = P(iA), pC = P(iC), pNext = P((iC + 1) % (3 * n));
-    atoms.push({ x: pN[0], y: pN[1], label: 'N', residue: k, role: 'backbone' });
-    if (!r.def.ringToN) {
+    atoms.push({ x: pN[0], y: pN[1], label: r.def.ester ? 'O' : 'N', residue: k, role: 'backbone' });
+    if (!r.def.ringToN && !r.def.ester) {
       const [hx, hy] = P(iN, R - 0.95); const [bx, by] = P(iN, R - 0.7);
       bonds.push({ x1: pN[0], y1: pN[1], x2: bx, y2: by, order: 1, residue: k, role: 'h' });
       atoms.push({ x: hx, y: hy, label: r.nMethyl ? 'CH₃' : 'H', residue: k, role: 'h', small: r.nMethyl });

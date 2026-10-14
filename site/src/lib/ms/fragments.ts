@@ -6,7 +6,7 @@
 import { addFormula, monoMass, formatFormula, PROTON, CARRIERS, type Formula } from './elements';
 import type { Peptide, Residue } from './sequence';
 
-export type IonType = 'a' | 'b' | 'c' | 'c-1' | 'x' | 'y' | 'z' | 'z•' | 'z+1' | 'z+2' | 'cz•' | 'cz+1' | 'immonium' | 'internal-b' | 'internal-a' | 'precursor' | 'b+H2O';
+export type IonType = 'a' | 'b' | 'c' | 'c-1' | 'x' | 'y' | 'z' | 'z•' | 'z+1' | 'z+2' | 'w' | 'cz•' | 'cz+1' | 'immonium' | 'internal-b' | 'internal-a' | 'precursor' | 'b+H2O' | 'b-scr';
 /** Cyclic ETD-type arc ions (offsets relative to Σ residues, as in cycfrag/fragments.py). */
 export const CYCLIC_ETD_TYPES: IonType[] = ['cz•', 'cz+1', 'c', 'c-1', 'z•', 'z+1'];
 export const N_TERM_TYPES: IonType[] = ['a', 'b', 'c', 'c-1'];
@@ -29,13 +29,24 @@ export const LOSS_NH3: Loss = { name: 'NH₃', formula: { N: 1, H: 3 } };
 export const LOSS_CO: Loss = { name: 'CO', formula: { C: 1, O: 1 } };
 const H2O_RES = new Set(['S', 'T', 'E', 'D']);
 const NH3_RES = new Set(['R', 'K', 'Q', 'N']);
+/** Side-chain-specific neutral losses (owner's cycfrag annotation atlas; Paizs & Suhai 2005). */
+const SIDE_LOSSES: Record<string, Loss[]> = {
+  T: [{ name: 'C₂H₄O', formula: { C: 2, H: 4, O: 1 } }], S: [{ name: 'CH₂O', formula: { C: 1, H: 2, O: 1 } }],
+  D: [{ name: 'CO₂', formula: { C: 1, O: 2 } }], E: [{ name: 'CO₂', formula: { C: 1, O: 2 } }],
+  R: [{ name: 'CH₅N₃', formula: { C: 1, H: 5, N: 3 } }, { name: 'CH₂N₂', formula: { C: 1, H: 2, N: 2 } }],
+  M: [{ name: 'CH₄S', formula: { C: 1, H: 4, S: 1 } }], MeAspNMe2: [{ name: 'C₂H₇N', formula: { C: 2, H: 7, N: 1 } }],
+};
+/** w ions (ETD/EThcD): z• minus the Cβ substituent radical; distinguishes Leu from Ile (Zubarev). */
+const W_LOSS: Record<string, Array<{ tag: string; formula: Formula }>> = {
+  L: [{ tag: '', formula: { C: 3, H: 7 } }], I: [{ tag: 'a', formula: { C: 2, H: 5 } }, { tag: 'b', formula: { C: 1, H: 3 } }], V: [{ tag: '', formula: { C: 1, H: 3 } }],
+};
 
 export interface FragmentOptions {
   ionTypes: IonType[];
   /** Highest fragment charge; capped at precursorCharge. */
   maxCharge: number;
   precursorCharge: number;
-  losses: { h2o: boolean; nh3: boolean; mod: boolean; maxLosses: number; anyResidue?: boolean };
+  losses: { h2o: boolean; nh3: boolean; mod: boolean; maxLosses: number; anyResidue?: boolean; sideChain?: boolean };
   /** Extra charge carriers besides H⁺, e.g. ['Na'] produces [b+Na]⁺ variants. */
   adducts?: string[];
   immonium?: boolean;
@@ -43,6 +54,12 @@ export interface FragmentOptions {
   precursor?: boolean;
   /** Cyclic only: also generate b+H2O ions (ring opened by hydrolysis; common for depsipeptides). */
   cyclicHydrolysis?: boolean;
+  /**
+   * b-ion sequence scrambling: macrocyclic b ions (≥4 residues in rings, ≥5 in linear peptides) re-close and
+   * re-open elsewhere, giving b-type fragments whose residues are contiguous only in the re-closed parent.
+   * Generated as type 'b-scr' (Harrison, Paizs et al.; Bleiholder et al. JASMS 2008).
+   */
+  scrambling?: boolean;
 }
 
 export interface Ion {
@@ -103,6 +120,7 @@ function availableLosses(res: Residue[], o: FragmentOptions['losses']): Loss[] {
   if (o.h2o && (o.anyResidue || res.some((r) => H2O_RES.has(r.def.code)))) out.push(LOSS_H2O);
   if (o.nh3 && (o.anyResidue || res.some((r) => NH3_RES.has(r.def.code)))) out.push(LOSS_NH3);
   if (o.mod) for (const r of res) for (const m of r.mods) if (m.loss && !out.some((l) => l.name === m.loss!.name)) out.push({ name: m.loss.name, formula: m.loss.formula });
+  if (o.sideChain) for (const r of res) for (const l of SIDE_LOSSES[r.def.code] ?? []) if (!out.some((x) => x.name === l.name)) out.push(l);
   return out;
 }
 /** Loss combinations up to maxLosses. H2O and NH3 may repeat (b−2H2O, b−H2O−NH3); modification losses occur once. */
@@ -192,6 +210,10 @@ export function generateFragments(p: Peptide, opts: FragmentOptions): Ion[] {
         const core = t === 'z•' ? `z${sub(String(j))}•` : t === 'z+2' ? `z${sub(String(j))}+2` : `${t}${sub(String(j))}`;
         push({ type: t, size: j, start: i, end: n - 1, base: addFormula(sf, ION_DELTA[t]), baseDelta: sd, residues: suf, bonds: [bond], labelCore: core, seq: tok(suf) });
       }
+      if (types.has('w') && !suf[0].def.ringToN) for (const wl of W_LOSS[suf[0].def.code] ?? []) {
+        const base = addFormula(addFormula(sf, ION_DELTA['z•']), wl.formula, -1);
+        push({ type: 'w', size: j, start: i, end: n - 1, base, baseDelta: sd, residues: suf, bonds: [bondIndex.cZ(k)], labelCore: `w${wl.tag}${sub(String(j))}`, seq: tok(suf) }, false);
+      }
     }
     // Pair complementary terminal ions (same charge/carrier, no losses on either side).
     const byId = new Map(ions.map((ion) => [ion.id, ion]));
@@ -230,6 +252,30 @@ export function generateFragments(p: Peptide, opts: FragmentOptions): Ion[] {
         push({ type: t, size: L, start: s, end: e, base: addFormula(R.formula, CYCLIC_ETD_DELTA[t]), baseDelta: R.delta, residues: rs, bonds: [nCut, cCut], labelCore: core, seq }, t === 'c' || t === 'cz+1');
       }
       if (opts.cyclicHydrolysis) push({ type: 'b+H2O', size: L, start: s, end: e, base: addFormula(R.formula, ION_DELTA['b+H2O']), baseDelta: R.delta, residues: rs, bonds: [before, after], labelCore: `${core('b')}+H₂O`, seq }, false);
+    }
+  }
+
+  if (opts.scrambling && !p.nTermMods.length) {
+    // Direct fragments: every contiguous stretch of the original chain (linear) or ring (cyclic).
+    const T = p.residues.map((r) => r.token + r.mods.map((m) => m.name).join(''));
+    const direct = new Set<string>();
+    const add = (arr: string[]) => direct.add(arr.join('|'));
+    if (p.cyclic) { for (let L = 1; L <= n; L++) for (let s = 0; s < n; s++) add(Array.from({ length: L }, (_, q) => T[(s + q) % n])); }
+    else for (let s = 0; s < n; s++) for (let e = s; e < n; e++) add(T.slice(s, e + 1));
+    const parents: number[][] = []; // residue indices of macrocyclic b-ion parents
+    if (p.cyclic) { for (let L = 4; L < n; L++) for (let s = 0; s < n; s++) parents.push(Array.from({ length: L }, (_, q) => (s + q) % n)); }
+    else for (let L = 5; L < n; L++) parents.push(Array.from({ length: L }, (_, q) => q));
+    const seen = new Set<string>();
+    for (const par of parents) {
+      const L = par.length;
+      for (let r = 0; r < L; r++) for (let k = 2; k < L; k++) {
+        const idx = Array.from({ length: k }, (_, q) => par[(r + q) % L]);
+        const key = idx.map((q) => T[q]).join('|');
+        if (direct.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        const rs = idx.map((q) => p.residues[q]); const R = residueSum(rs);
+        push({ type: 'b-scr', size: k, start: idx[0], end: idx[k - 1], base: R.formula, baseDelta: R.delta, residues: rs, bonds: [], labelCore: `b${sub(String(k))}ˢ`, seq: tok(rs) }, false);
+      }
     }
   }
 

@@ -6,11 +6,11 @@
 import type { ComputeFn, ComputeContext } from '@/lib/types';
 import { parseSequence, type Peptide } from '@/lib/ms/sequence';
 import { generateFragments, peptideMass, type Ion, type IonType } from '@/lib/ms/fragments';
-import { matchPeaks, coverage, type Coverage, type MatchResult, type Peak } from '@/lib/ms/match';
+import { matchPeaks, coverage, deisotope, decoyMatches, type Coverage, type MatchResult, type Peak } from '@/lib/ms/match';
 import { PRESETS, presetFor, parseFixedMods } from '@/lib/ms/presets';
 import { formatFormula, PROTON } from '@/lib/ms/elements';
 import type { Activation } from '@/lib/ms/predict';
-import { indexSpectra, type FileInfo, type SpectrumMeta } from '@/lib/ms/mzml';
+import { indexSpectra, openSource, type FileInfo, type SpectrumMeta } from '@/lib/ms/mzml';
 import { groupScans, averageRanges, inferCharge, MAX_SCANS, type ScanGroup, type SpectrumResult } from '@/lib/ms/spectrumFile';
 export { groupScans, inferCharge, type ScanGroup, type SpectrumResult };
 
@@ -31,6 +31,10 @@ export interface AnnotateOptions {
   immonium?: boolean;
   precursorIons?: boolean;
   cyclicHydrolysis?: boolean;
+  scrambling?: boolean;
+  sideChainLosses?: boolean;
+  /** Detect ¹³C envelopes and only match ions at the charge the envelope shows. */
+  deisotope?: boolean;
   tolerance?: number;
   toleranceUnit?: 'ppm' | 'Da';
 }
@@ -49,6 +53,8 @@ export interface Input extends AnnotateOptions {
   averageTolPpm?: number;
   minFraction?: number;
   minRelIntensity?: number;
+  /** Ion-mobility window "lo-hi" (e.g. "0.85-1.05"); empty = all. Applied before centroiding/averaging. */
+  mobilityWindow?: string;
   /** annotate op */
   peaks?: { mz: number[]; intensity: number[] };
 }
@@ -86,16 +92,17 @@ export function annotate(peaks: Peak[], o: AnnotateOptions, scanActivation = 'HC
   const losses = o.losses !== false;
   const ions = generateFragments(peptide, {
     ionTypes, maxCharge: Math.max(1, Number(o.maxFragmentCharge) || 2), precursorCharge: z,
-    losses: { h2o: losses, nh3: losses, mod: o.modLosses !== false, maxLosses: losses ? Math.max(1, Math.min(3, Number(o.maxLosses) || 2)) : 1 },
-    adducts: o.adducts ?? [], immonium: o.immonium !== false, precursor: o.precursorIons !== false, cyclicHydrolysis: !!o.cyclicHydrolysis,
+    losses: { h2o: losses, nh3: losses, mod: o.modLosses !== false, sideChain: !!o.sideChainLosses, maxLosses: losses ? Math.max(1, Math.min(3, Number(o.maxLosses) || 2)) : 1 },
+    adducts: o.adducts ?? [], immonium: o.immonium !== false, precursor: o.precursorIons !== false, cyclicHydrolysis: !!o.cyclicHydrolysis, scrambling: !!o.scrambling,
   });
   const tol = { value: Math.max(0.0001, Number(o.tolerance) || 10), unit: (o.toleranceUnit === 'Da' ? 'Da' : 'ppm') as 'ppm' | 'Da' };
-  const match = matchPeaks(peaks, ions, tol);
+  const iso = o.deisotope !== false ? deisotope(peaks, tol, Math.max(1, Math.min(6, z))) : null;
+  const match = matchPeaks(peaks, ions, tol, { peakCharge: iso?.charge });
   const { mono, formula } = peptideMass(peptide);
   return {
     peptide, mono, formula: formatFormula(formula), precursorCharge: z, activation,
     precursors: Array.from({ length: z }, (_, i) => ({ z: i + 1, mz: (mono + (i + 1) * PROTON) / (i + 1) })),
-    ions, ionTypes, match, coverage: coverage(peaks, ions, match, peptide.residues.length, peptide.cyclic),
+    ions, ionTypes, match, coverage: { ...coverage(peaks, ions, match, peptide.residues.length, peptide.cyclic), chanceMatches: decoyMatches(peaks, ions, tol) },
   };
 }
 
@@ -104,14 +111,19 @@ function safeAnnotate(peaks: Peak[], o: AnnotateOptions, act?: string, z?: numbe
   try { return { annotation: annotate(peaks, o, act, z ?? null) }; } catch (e) { return { annotation: null, annotationError: (e as Error).message }; }
 }
 
+export function parseWindow(s?: string): [number, number] | null {
+  const m = /^\s*([\d.]+)\s*[-–:]\s*([\d.]+)\s*$/.exec(s ?? '');
+  return m ? [Math.min(Number(m[1]), Number(m[2])), Math.max(Number(m[1]), Number(m[2]))] : null;
+}
+
 const toPeaks = (s: { mz: ArrayLike<number>; intensity: ArrayLike<number> }): Peak[] => Array.from({ length: s.mz.length }, (_, i) => ({ mz: s.mz[i], intensity: s.intensity[i] }));
 
 async function sourceOf(input: Input): Promise<Blob> {
-  if (input.file) return input.file;
+  if (input.file) return openSource(input.file);
   if (input.url) {
     const r = await fetch(input.url);
     if (!r.ok) throw new Error(`Could not load the demo file (${r.status}).`);
-    return await r.blob();
+    return openSource(await r.blob());
   }
   throw new Error('Choose an mzML or MGF file (it is read locally and never uploaded).');
 }
@@ -124,7 +136,7 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   }
   const file = await sourceOf(input);
   if (op === 'spectrum') {
-    const spectrum = await averageRanges(file, { ...input, ranges: input.ranges ?? [], info: input.info! }, ctx);
+    const spectrum = await averageRanges(file, { ...input, ranges: input.ranges ?? [], info: input.info!, mobilityWindow: parseWindow(input.mobilityWindow) }, ctx);
     const inferred = inferCharge(spectrum, input.precursorMz ?? null);
     ctx.progress(0.95, 'Annotating');
     const charge = Number(input.precursorCharge) || inferred || input.scanCharge || null;
@@ -136,7 +148,7 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   const groups = groupScans(spectra);
   const g = groups[0];
   const ranges = g.indices.slice(0, MAX_SCANS).map((i) => ({ start: spectra[i].start, end: spectra[i].end, centroided: spectra[i].centroided }));
-  const spectrum = await averageRanges(file, { ...input, ranges, info }, ctx);
+  const spectrum = await averageRanges(file, { ...input, ranges, info, mobilityWindow: parseWindow(input.mobilityWindow) }, ctx);
   const inferred = g.msLevel > 1 ? inferCharge(spectrum, g.precursorMz) : null;
   const charge = Number(input.precursorCharge) || inferred || g.charge || null;
   ctx.progress(0.95, 'Annotating');

@@ -8,62 +8,475 @@
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",
-  "subcategories": ["peptidomics", "proteomics"],
-  "tags": ["peptide", "fragmentation", "ms-ms", "cyclic-peptide", "b-ions", "y-ions", "etd", "hcd", "annotation"],
-  "keywords": ["peptide fragment ion calculator", "b and y ion calculator", "cyclic peptide fragmentation", "ETD c and z ions", "MS/MS fragment prediction", "peptide fragmentation diagram", "theoretical fragment ions"],
-  "related": ["mzml-spectrum-annotator", "peptide-mass-calculator"],
-  "runtime": { "engine": "js", "languages": ["TypeScript"], "bundleSizeKB": 60 },
-  "compute": { "location": "client", "worker": true, "maxRuntimeSeconds": 60, "maxMemoryMB": 512, "maxInputSizeMB": 20, "threads": 1, "warnOnMobile": false, "longRunning": false },
-  "layout": { "aspect": "tall", "inputsPosition": "left", "inputsWidthPx": 320, "panels": ["inputs", "custom", "figure", "table"], "fullWidth": true },
+  "subcategories": [
+    "peptidomics",
+    "proteomics"
+  ],
+  "tags": [
+    "peptide",
+    "fragmentation",
+    "ms-ms",
+    "cyclic-peptide",
+    "b-ions",
+    "y-ions",
+    "etd",
+    "hcd",
+    "annotation"
+  ],
+  "keywords": [
+    "peptide fragment ion calculator",
+    "b and y ion calculator",
+    "cyclic peptide fragmentation",
+    "ETD c and z ions",
+    "MS/MS fragment prediction",
+    "peptide fragmentation diagram",
+    "theoretical fragment ions"
+  ],
+  "related": [
+    "mzml-spectrum-annotator",
+    "peptide-mass-calculator"
+  ],
+  "runtime": {
+    "engine": "js",
+    "languages": [
+      "TypeScript"
+    ],
+    "bundleSizeKB": 60
+  },
+  "compute": {
+    "location": "client",
+    "worker": true,
+    "maxRuntimeSeconds": 60,
+    "maxMemoryMB": 512,
+    "maxInputSizeMB": 20,
+    "threads": 1,
+    "warnOnMobile": false,
+    "longRunning": false
+  },
+  "layout": {
+    "aspect": "tall",
+    "inputsPosition": "left",
+    "inputsWidthPx": 320,
+    "panels": [
+      "inputs",
+      "custom",
+      "figure",
+      "table"
+    ],
+    "fullWidth": true
+  },
   "inputs": [
-    { "name": "sequence", "label": "Peptide sequence", "type": "textarea", "help": "One-letter codes (lowercase = D-residue), mods in brackets: PEPM[Oxidation]K, S[+79.9663], [Acetyl]-PEPTIDE-[Amidated]. Non-standard residues in parentheses or brackets: (Orn), [MeL], (D-Phe). cyclo(...) makes it cyclic.", "default": "DRVYIHPF", "placeholder": "e.g. DRVYIHPF or cyclo(RGDf(MeV))", "required": true },
-    { "name": "topology", "label": "Topology", "type": "select", "help": "Linear peptides have N- and C-termini (a/b/c and x/y/z series). Head-to-tail cyclic peptides fragment by ring opening plus a second cleavage, giving contiguous b/a-type arcs (and c/z-type arcs in ETD).", "default": "linear", "options": [{ "value": "linear", "label": "Linear" }, { "value": "cyclic", "label": "Head-to-tail cyclic" }] },
-    { "name": "precursorCharge", "label": "Precursor charge", "type": "integer", "help": "Charge state of the isolated precursor. Fragment charges are capped at this value. ETD and EThcD need at least 2+.", "default": 2, "min": 1, "max": 10, "step": 1, "unit": "z", "required": true },
-    { "name": "activation", "label": "Fragmentation", "type": "select", "help": "Sets the default ion series and the intensity pattern of the representative spectrum: HCD/CID give b/y (b/a for rings), ETD gives c/z•, EThcD gives both, UVPD gives all six series.", "default": "HCD", "options": [{ "value": "HCD", "label": "HCD (beam-type CID)" }, { "value": "CID", "label": "CID (ion trap)" }, { "value": "ETD", "label": "ETD" }, { "value": "EThcD", "label": "EThcD" }, { "value": "UVPD", "label": "UVPD" }] },
-    { "name": "ionTypes", "label": "Ion types", "type": "multiselect", "help": "Which fragment series to compute. Leave on the preset to follow the chosen fragmentation method, or pick series individually (e.g. add c and z• to an HCD prediction).", "default": [], "options": [{ "value": "a", "label": "a" }, { "value": "b", "label": "b" }, { "value": "c", "label": "c" }, { "value": "x", "label": "x" }, { "value": "y", "label": "y" }, { "value": "z•", "label": "z•" }] },
-    { "name": "maxFragmentCharge", "label": "Max fragment charge", "type": "integer", "help": "Highest charge state computed for fragment ions (never above the precursor charge). 1–2 covers most HCD spectra of small peptides; use 3+ for long or very basic peptides.", "default": 2, "min": 1, "max": 6, "step": 1, "unit": "z" },
-    { "name": "losses", "label": "Neutral losses (H₂O, NH₃)", "type": "boolean", "help": "Adds −H₂O for fragments containing S, T, E or D and −NH₃ for fragments containing R, K, Q or N (residue-gated, as in ProteinProspector).", "default": true },
-    { "name": "fixedMods", "label": "Fixed modifications", "type": "text", "help": "Applied to every matching residue, as Name@Site, comma separated: Carbamidomethyl@C, Oxidation@M, TMT6plex@K+N-term. Leave empty for none.", "default": "", "placeholder": "e.g. Carbamidomethyl@C" },
-    { "name": "observed", "label": "Observed peaks (optional)", "type": "textarea", "help": "Paste a peak list to compare: one 'm/z intensity' pair per line (space, tab or comma), or an MGF spectrum. Matched peaks are annotated and drawn above the prediction (mirror plot).", "default": "", "placeholder": "m/z  intensity" },
-    { "name": "tolerance", "label": "Match tolerance", "type": "number", "help": "Fragment mass tolerance for matching observed peaks. 10 ppm suits Orbitrap and Astral data; use about 0.4 Da (switch the unit) for ion-trap spectra.", "default": 10, "min": 0.0001, "max": 1000, "step": 0.1, "unit": "ppm" },
-    { "name": "toleranceUnit", "label": "Tolerance unit", "type": "select", "help": "ppm scales with m/z (high resolution); Da is a fixed window (low resolution, ion trap).", "default": "ppm", "options": [{ "value": "ppm", "label": "ppm" }, { "value": "Da", "label": "Da" }], "advanced": true },
-    { "name": "maxLosses", "label": "Max losses per fragment", "type": "integer", "help": "How many neutral losses may combine on one fragment (2 allows b−2H₂O and b−H₂O−NH₃, which are common in cyclic peptides).", "default": 1, "min": 1, "max": 3, "step": 1, "advanced": true },
-    { "name": "modLosses", "label": "Modification losses", "type": "boolean", "help": "Characteristic losses from modified residues: −H₃PO₄ from phospho, −CH₄SO from oxidised Met, −SO₃ from sulfation, −HexNAc from glycans.", "default": true, "advanced": true },
-    { "name": "adducts", "label": "Adduct ions", "type": "multiselect", "help": "Also compute fragments carrying a metal or ammonium ion instead of one proton ([b+Na]⁺ etc.). Useful for sodiated precursors and some cyclic natural products.", "default": [], "options": [{ "value": "Na", "label": "Na⁺" }, { "value": "K", "label": "K⁺" }, { "value": "NH4", "label": "NH₄⁺" }, { "value": "Li", "label": "Li⁺" }], "advanced": true },
-    { "name": "immonium", "label": "Immonium ions", "type": "boolean", "help": "Low-mass immonium ions (residue − CO + H⁺), diagnostic for H, F, Y, W, L/I, P and modified residues.", "default": true, "advanced": true },
-    { "name": "precursorIons", "label": "Precursor ions", "type": "boolean", "help": "Adds [M+zH] for every charge plus precursor neutral losses, so unfragmented precursor peaks are labelled.", "default": true, "advanced": true },
-    { "name": "internal", "label": "Internal fragments (linear)", "type": "boolean", "help": "b-type and a-type internal fragments from two backbone cleavages (linear peptides only; every cyclic fragment is already internal).", "default": false, "advanced": true },
-    { "name": "internalMaxLength", "label": "Max internal length", "type": "integer", "help": "Longest internal fragment (in residues) to compute. Short internal ions (2–4 residues) are the ones usually observed.", "default": 4, "min": 2, "max": 10, "step": 1, "advanced": true },
-    { "name": "cyclicHydrolysis", "label": "b+H₂O ions (cyclic)", "type": "boolean", "help": "Cyclic only: arcs that carry an extra water (ring opened by hydrolysis), typical for depsipeptides and seen in some lactam rings.", "default": false, "advanced": true }
+    {
+      "name": "sequence",
+      "label": "Peptide sequence",
+      "type": "textarea",
+      "help": "One-letter codes (lowercase = D-residue), mods in brackets: PEPM[Oxidation]K, S[+79.9663], [Acetyl]-PEPTIDE-[Amidated]. Non-standard residues in parentheses or brackets: (Orn), [MeL], (D-Phe). cyclo(...) makes it cyclic.",
+      "default": "DRVYIHPF",
+      "placeholder": "e.g. DRVYIHPF or cyclo(RGDf(MeV))",
+      "required": true
+    },
+    {
+      "name": "topology",
+      "label": "Topology",
+      "type": "select",
+      "help": "Linear peptides have N- and C-termini (a/b/c and x/y/z series). Head-to-tail cyclic peptides fragment by ring opening plus a second cleavage, giving contiguous b/a-type arcs (and c/z-type arcs in ETD).",
+      "default": "linear",
+      "options": [
+        {
+          "value": "linear",
+          "label": "Linear"
+        },
+        {
+          "value": "cyclic",
+          "label": "Head-to-tail cyclic"
+        }
+      ]
+    },
+    {
+      "name": "precursorCharge",
+      "label": "Precursor charge",
+      "type": "integer",
+      "help": "Charge state of the isolated precursor. Fragment charges are capped at this value. ETD and EThcD need at least 2+.",
+      "default": 2,
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "unit": "z",
+      "required": true
+    },
+    {
+      "name": "activation",
+      "label": "Fragmentation",
+      "type": "select",
+      "help": "Sets the default ion series and the intensity pattern of the representative spectrum: HCD/CID give b/y (b/a for rings), ETD gives c/z•, EThcD gives both, UVPD gives all six series.",
+      "default": "HCD",
+      "options": [
+        {
+          "value": "HCD",
+          "label": "HCD (beam-type CID)"
+        },
+        {
+          "value": "CID",
+          "label": "CID (ion trap)"
+        },
+        {
+          "value": "ETD",
+          "label": "ETD"
+        },
+        {
+          "value": "EThcD",
+          "label": "EThcD"
+        },
+        {
+          "value": "UVPD",
+          "label": "UVPD"
+        }
+      ]
+    },
+    {
+      "name": "ionTypes",
+      "label": "Ion types",
+      "type": "multiselect",
+      "help": "Which fragment series to compute. Leave on the preset to follow the chosen fragmentation method, or pick series individually (e.g. add c and z• to an HCD prediction).",
+      "default": [],
+      "options": [
+        {
+          "value": "a",
+          "label": "a"
+        },
+        {
+          "value": "b",
+          "label": "b"
+        },
+        {
+          "value": "c",
+          "label": "c"
+        },
+        {
+          "value": "x",
+          "label": "x"
+        },
+        {
+          "value": "y",
+          "label": "y"
+        },
+        {
+          "value": "z•",
+          "label": "z•"
+        },
+        {
+          "value": "w",
+          "label": "w"
+        }
+      ]
+    },
+    {
+      "name": "maxFragmentCharge",
+      "label": "Max fragment charge",
+      "type": "integer",
+      "help": "Highest charge state computed for fragment ions (never above the precursor charge). 1–2 covers most HCD spectra of small peptides; use 3+ for long or very basic peptides.",
+      "default": 2,
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "unit": "z"
+    },
+    {
+      "name": "losses",
+      "label": "Neutral losses (H₂O, NH₃)",
+      "type": "boolean",
+      "help": "Adds −H₂O for fragments containing S, T, E or D and −NH₃ for fragments containing R, K, Q or N (residue-gated, as in ProteinProspector).",
+      "default": true
+    },
+    {
+      "name": "fixedMods",
+      "label": "Fixed modifications",
+      "type": "text",
+      "help": "Applied to every matching residue, as Name@Site, comma separated: Carbamidomethyl@C, Oxidation@M, TMT6plex@K+N-term. Leave empty for none.",
+      "default": "",
+      "placeholder": "e.g. Carbamidomethyl@C"
+    },
+    {
+      "name": "observed",
+      "label": "Observed peaks (optional)",
+      "type": "textarea",
+      "help": "Paste a peak list to compare: one 'm/z intensity' pair per line (space, tab or comma), or an MGF spectrum. Matched peaks are annotated and drawn above the prediction (mirror plot).",
+      "default": "",
+      "placeholder": "m/z  intensity"
+    },
+    {
+      "name": "tolerance",
+      "label": "Match tolerance",
+      "type": "number",
+      "help": "Fragment mass tolerance for matching observed peaks. 10 ppm suits Orbitrap and Astral data; use about 0.4 Da (switch the unit) for ion-trap spectra.",
+      "default": 10,
+      "min": 0.0001,
+      "max": 1000,
+      "step": 0.1,
+      "unit": "ppm"
+    },
+    {
+      "name": "toleranceUnit",
+      "label": "Tolerance unit",
+      "type": "select",
+      "help": "ppm scales with m/z (high resolution); Da is a fixed window (low resolution, ion trap).",
+      "default": "ppm",
+      "options": [
+        {
+          "value": "ppm",
+          "label": "ppm"
+        },
+        {
+          "value": "Da",
+          "label": "Da"
+        }
+      ],
+      "advanced": true
+    },
+    {
+      "name": "maxLosses",
+      "label": "Max losses per fragment",
+      "type": "integer",
+      "help": "How many neutral losses may combine on one fragment (2 allows b−2H₂O and b−H₂O−NH₃, which are common in cyclic peptides).",
+      "default": 1,
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "advanced": true
+    },
+    {
+      "name": "modLosses",
+      "label": "Modification losses",
+      "type": "boolean",
+      "help": "Characteristic losses from modified residues: −H₃PO₄ from phospho, −CH₄SO from oxidised Met, −SO₃ from sulfation, −HexNAc from glycans.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "adducts",
+      "label": "Adduct ions",
+      "type": "multiselect",
+      "help": "Also compute fragments carrying a metal or ammonium ion instead of one proton ([b+Na]⁺ etc.). Useful for sodiated precursors and some cyclic natural products.",
+      "default": [],
+      "options": [
+        {
+          "value": "Na",
+          "label": "Na⁺"
+        },
+        {
+          "value": "K",
+          "label": "K⁺"
+        },
+        {
+          "value": "NH4",
+          "label": "NH₄⁺"
+        },
+        {
+          "value": "Li",
+          "label": "Li⁺"
+        }
+      ],
+      "advanced": true
+    },
+    {
+      "name": "immonium",
+      "label": "Immonium ions",
+      "type": "boolean",
+      "help": "Low-mass immonium ions (residue − CO + H⁺), diagnostic for H, F, Y, W, L/I, P and modified residues.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "precursorIons",
+      "label": "Precursor ions",
+      "type": "boolean",
+      "help": "Adds [M+zH] for every charge plus precursor neutral losses, so unfragmented precursor peaks are labelled.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "internal",
+      "label": "Internal fragments (linear)",
+      "type": "boolean",
+      "help": "b-type and a-type internal fragments from two backbone cleavages (linear peptides only; every cyclic fragment is already internal).",
+      "default": false,
+      "advanced": true
+    },
+    {
+      "name": "internalMaxLength",
+      "label": "Max internal length",
+      "type": "integer",
+      "help": "Longest internal fragment (in residues) to compute. Short internal ions (2–4 residues) are the ones usually observed.",
+      "default": 4,
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "advanced": true
+    },
+    {
+      "name": "cyclicHydrolysis",
+      "label": "b+H₂O ions (cyclic)",
+      "type": "boolean",
+      "help": "Cyclic only: arcs that carry an extra water (ring opened by hydrolysis), typical for depsipeptides and seen in some lactam rings.",
+      "default": false,
+      "advanced": true
+    },
+    {
+      "name": "scrambling",
+      "label": "Sequence scrambling (b ions)",
+      "type": "boolean",
+      "help": "Also generate 'scrambled' b-type fragments from macrocyclic b ions that re-close and re-open elsewhere (≥4 residues in rings, ≥5 in linear peptides). Explains extra peaks in large rings (e.g. N-methylated macrocycles) but adds many candidates; flagged as bₖˢ.",
+      "default": false,
+      "advanced": true
+    },
+    {
+      "name": "sideChainLosses",
+      "label": "Side-chain losses",
+      "type": "boolean",
+      "help": "Residue-specific neutral losses: Thr −C₂H₄O, Ser −CH₂O, Asp/Glu −CO₂, Arg −CH₅N₃ and −CH₂N₂, Met −CH₄S, dimethylamide −C₂H₇N.",
+      "default": false,
+      "advanced": true
+    }
   ],
   "outputs": [
-    { "name": "ions", "label": "Fragment ion table", "type": "table", "help": "Every theoretical ion with label, sequence, charge, m/z and formula; observed m/z and ppm when a peak list is given.", "exportFormats": ["csv", "tsv", "json"] },
-    { "name": "structure", "label": "Structure diagram", "type": "figure", "exportFormats": ["svg", "png"] },
-    { "name": "spectrum", "label": "Representative / annotated spectrum", "type": "figure", "exportFormats": ["svg", "png"] }
+    {
+      "name": "ions",
+      "label": "Fragment ion table",
+      "type": "table",
+      "help": "Every theoretical ion with label, sequence, charge, m/z and formula; observed m/z and ppm when a peak list is given.",
+      "exportFormats": [
+        "csv",
+        "tsv",
+        "json"
+      ]
+    },
+    {
+      "name": "structure",
+      "label": "Structure diagram",
+      "type": "figure",
+      "exportFormats": [
+        "svg",
+        "png"
+      ]
+    },
+    {
+      "name": "spectrum",
+      "label": "Representative / annotated spectrum",
+      "type": "figure",
+      "exportFormats": [
+        "svg",
+        "png"
+      ]
+    }
   ],
-  "figures": { "enabled": true, "library": "none", "exportable": true },
-  "exports": ["csv", "tsv", "json", "txt", "png", "svg"],
+  "figures": {
+    "enabled": true,
+    "library": "none",
+    "exportable": true
+  },
+  "exports": [
+    "csv",
+    "tsv",
+    "json",
+    "txt",
+    "png",
+    "svg"
+  ],
   "examples": [
-    { "file": "angiotensin-ii-hcd.json", "label": "Angiotensin II, HCD 2+ (linear)", "description": "Classic standard; values cross-checked against ProteinProspector MS-Product.", "expectedRuntimeSeconds": 1 },
-    { "file": "gramicidin-s.json", "label": "Gramicidin S, HCD 2+ (cyclic)", "description": "cyclo(Val-Orn-Leu-D-Phe-Pro)2; literature [M+2H]2+ 571.36.", "expectedRuntimeSeconds": 1 },
-    { "file": "cyclosporin-a.json", "label": "Cyclosporin A, HCD 1+ (cyclic, N-methylated)", "description": "11 residues with MeBmt, Abu, Sar, MeLeu, D-Ala and MeVal; C62H111N11O12.", "expectedRuntimeSeconds": 1 },
-    { "file": "phospho-etd.json", "label": "Phosphopeptide, ETD 3+ (c/z•)", "description": "ProForma modifications and ETD ion series.", "expectedRuntimeSeconds": 1 }
+    {
+      "file": "angiotensin-ii-hcd.json",
+      "label": "Angiotensin II, HCD 2+ (linear)",
+      "description": "Classic standard; values cross-checked against ProteinProspector MS-Product.",
+      "expectedRuntimeSeconds": 1
+    },
+    {
+      "file": "gramicidin-s.json",
+      "label": "Gramicidin S, HCD 2+ (cyclic)",
+      "description": "cyclo(Val-Orn-Leu-D-Phe-Pro)2; literature [M+2H]2+ 571.36.",
+      "expectedRuntimeSeconds": 1
+    },
+    {
+      "file": "cyclosporin-a.json",
+      "label": "Cyclosporin A, HCD 1+ (cyclic, N-methylated)",
+      "description": "11 residues with MeBmt, Abu, Sar, MeLeu, D-Ala and MeVal; C62H111N11O12.",
+      "expectedRuntimeSeconds": 1
+    },
+    {
+      "file": "phospho-etd.json",
+      "label": "Phosphopeptide, ETD 3+ (c/z•)",
+      "description": "ProForma modifications and ETD ion series.",
+      "expectedRuntimeSeconds": 1
+    }
   ],
-  "citation": { "authors": [{ "family": "Gibson", "given": "Chase", "orcid": "0009-0004-9871-8121" }], "year": 2026, "title": "Peptide Fragment Ion Predictor", "doi": null, "preferredFormat": "apa", "alsoCite": [
-    { "text": "Roepstorff P, Fohlman J. Proposal for a common nomenclature for sequence ions in mass spectra of peptides. Biomed Mass Spectrom 11, 601 (1984).", "doi": "10.1002/bms.1200111109" },
-    { "text": "Ngoka LCM, Gross ML. A nomenclature system for labeling cyclic peptide fragments. J Am Soc Mass Spectrom 10, 360–363 (1999).", "doi": "10.1016/S1044-0305(99)00006-7" }
-  ] },
-  "seo": { "title": "Peptide Fragment Ion Calculator: linear & cyclic, b/y, c/z", "metaDescription": "Free peptide fragment ion calculator for linear and cyclic peptides: a/b/c/x/y/z ions on a structure diagram, linked spectrum and table. Runs in your browser.", "ogImage": null, "schemaType": "WebApplication",
+  "citation": {
+    "authors": [
+      {
+        "family": "Gibson",
+        "given": "Chase",
+        "orcid": "0009-0004-9871-8121"
+      }
+    ],
+    "year": 2026,
+    "title": "Peptide Fragment Ion Predictor",
+    "doi": null,
+    "preferredFormat": "apa",
+    "alsoCite": [
+      {
+        "text": "Roepstorff P, Fohlman J. Proposal for a common nomenclature for sequence ions in mass spectra of peptides. Biomed Mass Spectrom 11, 601 (1984).",
+        "doi": "10.1002/bms.1200111109"
+      },
+      {
+        "text": "Ngoka LCM, Gross ML. A nomenclature system for labeling cyclic peptide fragments. J Am Soc Mass Spectrom 10, 360–363 (1999).",
+        "doi": "10.1016/S1044-0305(99)00006-7"
+      }
+    ]
+  },
+  "seo": {
+    "title": "Peptide Fragment Ion Calculator: linear & cyclic, b/y, c/z",
+    "metaDescription": "Free peptide fragment ion calculator for linear and cyclic peptides: a/b/c/x/y/z ions on a structure diagram, linked spectrum and table. Runs in your browser.",
+    "ogImage": null,
+    "schemaType": "WebApplication",
     "faq": [
-      { "q": "How are b and y ion masses calculated?", "a": "A singly protonated b ion is the sum of the N-terminal residue masses plus a proton (1.007276); a y ion is the sum of the C-terminal residue masses plus water (18.010565) plus a proton. For charge z, add z protons and divide by z." },
-      { "q": "Why are there no y ions for a cyclic peptide?", "a": "A head-to-tail ring has no termini. Fragmentation first opens the ring at one amide bond, giving a linear b-type ion with the precursor mass; a second cleavage releases contiguous b-type arcs. Ions that look like y ions are b ions from a different ring-opening site." },
-      { "q": "What is the difference between z and z• ions?", "a": "ETD produces radical z• ions (z+1, y − 16.019 Da). The even-electron z ion is y − NH3 (17.027 Da) and z+2 (z′) carries one more hydrogen. The tool lists the formula offset of each ion so naming conventions cannot be confused." },
-      { "q": "Is the predicted spectrum a machine-learning prediction?", "a": "No. Intensities come from a transparent rule set (ion-type weights per activation, proline and aspartic-acid effects, charge plausibility) plus each ion's isotope pattern. It shows which ions to expect, not exact intensities." }
-    ] },
-  "ads": { "allow": true },
-  "maintenance": { "created": "2026-10-14", "updated": "2026-10-14", "author": "Chase Gibson", "sourceOrigin": "Written for this site; cyclic ion types and residue alphabet follow the owner's cycfrag package (Coon lab rotation project)." },
-  "links": { "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/peptide-fragment-ion-predictor", "release": null, "paper": null, "docs": null },
-  "accessibility": { "keyboardOperable": true, "notes": "Table cells and structure markers are hoverable; the table is the keyboard-accessible view of every ion." },
-  "privacy": { "sendsData": false, "storesLocal": false },
+      {
+        "q": "How are b and y ion masses calculated?",
+        "a": "A singly protonated b ion is the sum of the N-terminal residue masses plus a proton (1.007276); a y ion is the sum of the C-terminal residue masses plus water (18.010565) plus a proton. For charge z, add z protons and divide by z."
+      },
+      {
+        "q": "Why are there no y ions for a cyclic peptide?",
+        "a": "A head-to-tail ring has no termini. Fragmentation first opens the ring at one amide bond, giving a linear b-type ion with the precursor mass; a second cleavage releases contiguous b-type arcs. Ions that look like y ions are b ions from a different ring-opening site."
+      },
+      {
+        "q": "What is the difference between z and z• ions?",
+        "a": "ETD produces radical z• ions (z+1, y − 16.019 Da). The even-electron z ion is y − NH3 (17.027 Da) and z+2 (z′) carries one more hydrogen. The tool lists the formula offset of each ion so naming conventions cannot be confused."
+      },
+      {
+        "q": "Is the predicted spectrum a machine-learning prediction?",
+        "a": "No. Intensities come from a transparent rule set (ion-type weights per activation, proline and aspartic-acid effects, charge plausibility) plus each ion's isotope pattern. It shows which ions to expect, not exact intensities."
+      }
+    ]
+  },
+  "ads": {
+    "allow": true
+  },
+  "maintenance": {
+    "created": "2026-10-14",
+    "updated": "2026-10-14",
+    "author": "Chase Gibson",
+    "sourceOrigin": "Written for this site; cyclic ion types and residue alphabet follow the owner's cycfrag package (Coon lab rotation project)."
+  },
+  "links": {
+    "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/peptide-fragment-ion-predictor",
+    "release": null,
+    "paper": null,
+    "docs": null
+  },
+  "accessibility": {
+    "keyboardOperable": true,
+    "notes": "Table cells and structure markers are hoverable; the table is the keyboard-accessible view of every ion."
+  },
+  "privacy": {
+    "sendsData": false,
+    "storesLocal": false
+  },
   "license": "MIT"
 }

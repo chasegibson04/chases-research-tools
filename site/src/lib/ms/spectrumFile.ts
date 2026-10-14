@@ -1,31 +1,37 @@
 // Loading spectra from an mzML/MGF file for the MS tools: scan groups, block reads, averaging, charge inference.
 import type { ComputeContext } from '@/lib/types';
-import { parseSpectrumText, indexSpectra, type FileInfo, type SpectrumMeta, type RawSpectrum } from './mzml';
+import { parseSpectrumText, indexSpectra, filterMobility, openSource, type FileInfo, type SpectrumMeta, type RawSpectrum } from './mzml';
 import { averageSpectra, centroid, looksProfile, filterPeaks } from './average';
 
-export interface ScanGroup { key: string; msLevel: number; precursorMz: number | null; activation: string; energy: number | null; charge: number | null; indices: number[]; label: string }
-export interface SpectrumResult { mz: Float64Array; intensity: Float64Array; count?: Uint16Array; scans: number; profile: boolean; points: number }
-export interface AverageOptions { ranges: Array<{ start: number; end: number; centroided: boolean | null }>; info: Pick<FileInfo, 'format' | 'paramGroups'>; averageTolPpm?: number; minFraction?: number; minRelIntensity?: number }
+export interface ScanGroup { key: string; msLevel: number; precursorMz: number | null; activation: string; energy: number | null; charge: number | null; indices: number[]; label: string; /** scans that actually contain peaks */ nonEmpty: number }
+export interface SpectrumResult { mz: Float64Array; intensity: Float64Array; count?: Uint16Array; scans: number; profile: boolean; points: number; hasMobility?: boolean }
+export interface AverageOptions { ranges: Array<{ start: number; end: number; centroided: boolean | null }>; info: Pick<FileInfo, 'format' | 'paramGroups'>; averageTolPpm?: number; minFraction?: number; minRelIntensity?: number; mobilityWindow?: [number, number] | null }
+export interface SpectrumResultExtra { hasMobility: boolean }
 export const MAX_SCANS = 5000;
+let lastSawMobility = false;
 
 export function groupScans(spectra: SpectrumMeta[]): ScanGroup[] {
   const map = new Map<string, ScanGroup>();
   for (const s of spectra) {
-    const key = s.msLevel === 1 ? 'MS1' : `MS${s.msLevel}|${s.precursorMz?.toFixed(2)}|${s.activation}|${s.energy ?? ''}`;
+    const cvTag = s.faimsCv != null ? `|CV${s.faimsCv}` : '';
+    const key = (s.msLevel === 1 ? 'MS1' : `MS${s.msLevel}|${s.precursorMz?.toFixed(2)}|${s.activation}|${s.energy ?? ''}`) + cvTag;
     let g = map.get(key);
     if (!g) {
-      const lbl = s.msLevel === 1 ? 'MS1 scans' : `MS${s.msLevel} ${s.precursorMz?.toFixed(4) ?? '?'} · ${s.activation}${s.energy != null ? ` ${s.energy}` : ''}`;
-      g = { key, msLevel: s.msLevel, precursorMz: s.precursorMz, activation: s.activation, energy: s.energy, charge: s.charge, indices: [], label: lbl };
+      const lbl = (s.msLevel === 1 ? 'MS1 scans' : `MS${s.msLevel} ${s.precursorMz?.toFixed(4) ?? '?'} · ${s.activation}${s.energy != null ? ` ${s.energy}` : ''}`) + (s.faimsCv != null ? ` · CV ${s.faimsCv}` : '');
+      g = { key, msLevel: s.msLevel, precursorMz: s.precursorMz, activation: s.activation, energy: s.energy, charge: s.charge, indices: [], label: lbl, nonEmpty: 0 };
       map.set(key, g);
     }
     g.indices.push(s.index);
+    if (s.points > 0) g.nonEmpty++;
   }
-  return [...map.values()].sort((a, b) => (b.msLevel > 1 ? 1 : 0) - (a.msLevel > 1 ? 1 : 0) || b.indices.length - a.indices.length);
+  // MSn groups first, then by the number of scans that contain peaks (some files hold many empty scans).
+  return [...map.values()].sort((a, b) => (b.msLevel > 1 ? 1 : 0) - (a.msLevel > 1 ? 1 : 0) || (b.nonEmpty > 0 ? 1 : 0) - (a.nonEmpty > 0 ? 1 : 0) || b.nonEmpty - a.nonEmpty || b.indices.length - a.indices.length);
 }
 
 /** Read several spectra, merging nearby byte ranges into one read (consecutive direct-infusion scans). */
-async function readMany(file: Blob, ranges: AverageOptions['ranges'], info: AverageOptions['info'], ctx: ComputeContext): Promise<RawSpectrum[]> {
+async function readMany(file: Blob, ranges: AverageOptions['ranges'], info: AverageOptions['info'], ctx: ComputeContext, mobilityWindow?: [number, number] | null): Promise<RawSpectrum[]> {
   const out: RawSpectrum[] = new Array(ranges.length);
+  let sawMobility = false;
   const order = ranges.map((r, i) => ({ ...r, i })).sort((a, b) => a.start - b.start);
   let k = 0;
   while (k < order.length) {
@@ -36,24 +42,32 @@ async function readMany(file: Blob, ranges: AverageOptions['ranges'], info: Aver
       if (ctx.signal.aborted) throw new Error('Cancelled.');
       const r = order[q];
       let s = parseSpectrumText(text.slice(r.start - blockStart, r.end - blockStart), info);
+      if (s.mobility) sawMobility = true;
+      if (mobilityWindow && s.mobility) s = filterMobility(s, mobilityWindow[0], mobilityWindow[1]);
       if (looksProfile(s, r.centroided)) s = centroid(s);
       out[r.i] = s;
     }
     ctx.progress(0.35 + 0.45 * ((j + 1) / order.length), `Reading spectra ${j + 1}/${order.length}`);
     k = j + 1;
   }
+  lastSawMobility = sawMobility;
   return out;
 }
 
 export async function averageRanges(file: Blob, input: AverageOptions, ctx: ComputeContext): Promise<SpectrumResult> {
   const ranges = (input.ranges ?? []).slice(0, MAX_SCANS);
   if (!ranges.length) throw new Error('No scans selected.');
-  const raws = await readMany(file, ranges, input.info!, ctx);
+  const all = await readMany(file, ranges, input.info!, ctx, input.mobilityWindow);
+  // Empty scans would dilute the minimum-presence rule; average only scans with peaks.
+  const raws = all.filter((r) => r.mz.length > 0);
+  if (!raws.length) return { mz: new Float64Array(0), intensity: new Float64Array(0), scans: 0, profile: false, points: 0, hasMobility: lastSawMobility };
   const profile = ranges.some((r) => r.centroided === false);
   ctx.progress(0.85, `Averaging ${raws.length} scan${raws.length > 1 ? 's' : ''}`);
-  const avg = averageSpectra(raws, Number(input.averageTolPpm) || 10, raws.length > 1 ? Math.max(0, Math.min(1, input.minFraction ?? 0.3)) : 0);
+  let avg = averageSpectra(raws, Number(input.averageTolPpm) || 10, raws.length > 1 ? Math.max(0, Math.min(1, input.minFraction ?? 0.3)) : 0);
+  // Sparse scans (e.g. MSn chains with one or two peaks each) can lose everything to the presence rule: fall back to the union.
+  if (!avg.mz.length && raws.length > 1) avg = averageSpectra(raws, Number(input.averageTolPpm) || 10, 0);
   const filtered = filterPeaks(avg, Math.max(0, Number(input.minRelIntensity) || 0) / 100);
-  return { mz: filtered.mz, intensity: filtered.intensity, count: avg.count && filtered.mz.length === avg.mz.length ? avg.count : undefined, scans: raws.length, profile, points: raws.reduce((n, r) => n + r.mz.length, 0) };
+  return { mz: filtered.mz, intensity: filtered.intensity, count: avg.count && filtered.mz.length === avg.mz.length ? avg.count : undefined, scans: raws.length, profile, points: raws.reduce((n, r) => n + r.mz.length, 0), hasMobility: lastSawMobility };
 }
 
 /**
@@ -81,7 +95,8 @@ export function inferCharge(s: { mz: ArrayLike<number>; intensity: ArrayLike<num
 
 
 /** Index a file, pick the largest MS2 group (or MS1 if none), and average it: the default "peak list from a file". */
-export async function loadDefaultSpectrum(file: Blob, name: string, ctx: ComputeContext, opts: { averageTolPpm?: number; minFraction?: number; preferPrecursors?: number[] } = {}) {
+export async function loadDefaultSpectrum(fileIn: Blob, name: string, ctx: ComputeContext, opts: { averageTolPpm?: number; minFraction?: number; preferPrecursors?: number[] } = {}) {
+  const file = await openSource(fileIn);
   const { info, spectra } = await indexSpectra(file, name, (f) => ctx.progress(0.05 + 0.3 * f, `Indexing ${name} ${Math.round(f * 100)}%`), ctx.signal);
   const groups = groupScans(spectra);
   // When the peptide is known, use the MS2 group isolated at one of its [M+zH] values (±0.05 Th); else the largest.
@@ -95,6 +110,7 @@ export async function loadDefaultSpectrum(file: Blob, name: string, ctx: Compute
 /** Sniff the first bytes: mzML/MGF are read as spectrum files, anything else as a text peak list. */
 export async function sniffSpectrumFile(file: Blob): Promise<'mzML' | 'MGF' | 'mzXML' | 'text' | 'binary'> {
   const head = new TextDecoder('latin1').decode(await file.slice(0, 64 * 1024).arrayBuffer());
+  if (head.charCodeAt(0) === 0x1f && head.charCodeAt(1) === 0x8b) return sniffSpectrumFile(await openSource(file));
   if (/<mzXML/.test(head)) return 'mzXML';
   if (/<mzML|<indexedmzML/.test(head)) return 'mzML';
   if (/BEGIN IONS/.test(head)) return 'MGF';

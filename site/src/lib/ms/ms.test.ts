@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { parseFormula, monoMass, isotopePattern, PROTON, formatFormula } from './elements';
 import { parseSequence } from './sequence';
 import { generateFragments, peptideMass, type FragmentOptions } from './fragments';
-import { matchPeaks, deltaLookup, coverage } from './match';
+import { matchPeaks, deltaLookup, coverage, deisotope, decoyMatches } from './match';
+import { layoutStructure } from './structure';
 
 const base: FragmentOptions = { ionTypes: ['a', 'b', 'c', 'x', 'y', 'z•'], maxCharge: 1, precursorCharge: 2, losses: { h2o: false, nh3: false, mod: false, maxLosses: 0 } };
 const find = (ions: ReturnType<typeof generateFragments>, label: string) => ions.find((i) => i.label === label);
@@ -138,5 +139,47 @@ describe('matching and Δm lookup', () => {
     expect(deltaLookup(57.0215, 300, { value: 10, unit: 'ppm' })[0].label).toBe('G');
     const two = deltaLookup(113.08406 / 2, 600, { value: 10, unit: 'ppm' });
     expect(two.some((c) => c.charge === 2 && c.label.includes('L'))).toBe(true);
+  });
+});
+
+describe('limits round: scrambling, w ions, side-chain losses, deisotoping, decoys', () => {
+  it('generates scrambled b ions that are contiguous only in the re-closed parent', () => {
+    const p = parseSequence('cyclo(GAVLF)');
+    const ions = generateFragments(p, { ionTypes: ['b'], maxCharge: 1, precursorCharge: 1, losses: { h2o: false, nh3: false, mod: false, maxLosses: 0 }, scrambling: true });
+    const scr = ions.filter((i) => i.type === 'b-scr');
+    expect(scr.some((i) => i.seq === 'L-G')).toBe(true); // G-A-V-L re-closes; L and G are not adjacent in the ring
+    expect(scr.some((i) => i.seq === 'A-V')).toBe(false); // direct arcs are never duplicated as scrambled
+  });
+  it('computes w ions (z• minus the Cβ substituent) for Leu and Ile', () => {
+    const p = parseSequence('GLGIG');
+    const ions = generateFragments(p, { ionTypes: ['z•', 'w'], maxCharge: 1, precursorCharge: 2, losses: { h2o: false, nh3: false, mod: false, maxLosses: 0 } });
+    const z4 = ions.find((i) => i.type === 'z•' && i.size === 4)!;
+    const w4 = ions.find((i) => i.type === 'w' && i.size === 4)!;
+    expect(z4.mz - w4.mz).toBeCloseTo(3 * 12 + 7 * 1.00782503223, 4); // C3H7 from Leu
+    expect(ions.filter((i) => i.type === 'w' && i.size === 2)).toHaveLength(2); // Ile: wa (−C2H5) and wb (−CH3)
+  });
+  it('adds residue-specific side-chain losses only when enabled', () => {
+    const p = parseSequence('GTG');
+    const on = generateFragments(p, { ionTypes: ['b'], maxCharge: 1, precursorCharge: 1, losses: { h2o: false, nh3: false, mod: false, maxLosses: 1, sideChain: true } });
+    expect(on.some((i) => i.loss === 'C₂H₄O')).toBe(true);
+    const off = generateFragments(p, { ionTypes: ['b'], maxCharge: 1, precursorCharge: 1, losses: { h2o: false, nh3: false, mod: false, maxLosses: 1 } });
+    expect(off.some((i) => i.loss === 'C₂H₄O')).toBe(false);
+  });
+  it('deisotopes a 2+ envelope and blocks wrong-charge matches', () => {
+    const peaks = [{ mz: 500, intensity: 100 }, { mz: 500 + 1.00336 / 2, intensity: 60 }, { mz: 501.00336, intensity: 20 }, { mz: 700, intensity: 50 }];
+    const d = deisotope(peaks, { value: 10, unit: 'ppm' }, 3);
+    expect(d.charge[0]).toBe(2);
+    expect(d.isotopeOf.get(1)).toBe(0);
+    expect(d.charge[3]).toBeNull();
+  });
+  it('estimates chance matches with shifted decoys', () => {
+    const p = parseSequence('DRVYIHPF');
+    const ions = generateFragments(p, { ionTypes: ['b', 'y'], maxCharge: 1, precursorCharge: 2, losses: { h2o: false, nh3: false, mod: false, maxLosses: 0 } });
+    const exact = ions.map((i) => ({ mz: i.mz, intensity: 10 })).sort((a, b) => a.mz - b.mz);
+    expect(decoyMatches(exact, ions, { value: 10, unit: 'ppm' })).toBeLessThan(1);
+  });
+  it('draws ester residues with an O in the backbone', () => {
+    const s = layoutStructure(parseSequence('cyclo((Hiv)V(MeL))'), 'full');
+    expect(s.atoms.some((a) => a.residue === 0 && a.role === 'backbone' && a.label === 'O')).toBe(true);
   });
 });
