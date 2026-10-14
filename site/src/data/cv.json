@@ -6,6 +6,7 @@
   "summary": "Pharmaceutical Sciences PhD student at the University of Wisconsin–Madison. B.S.E. in Biomedical Engineering from the University of Michigan, with international experience living in Frankfurt, Germany. Experienced in metabolomics research, medical device design, small-molecule oncogenic inhibitor research and development, computational chemistry and AI-based drug discovery, and applying engineering concepts to the laboratory.",
   "headshot": "/cv/headshot.jpg",
   "links": [
+    { "label": "Email", "href": "mailto:cgibson8@wisc.edu" },
     { "label": "LinkedIn", "href": "https://www.linkedin.com/in/chase-gibson04" },
     { "label": "GitHub", "href": "https://github.com/chasegibson04" },
     { "label": "ORCID", "href": "https://orcid.org/0009-0004-9871-8121" }

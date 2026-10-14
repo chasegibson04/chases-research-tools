@@ -27,7 +27,7 @@ Add a new section type only by extending `cv.astro`'s rendering switch and docum
 Dropdown per entry (native `<details>`), Expand all / Collapse all, sticky section nav, skill-chip highlighting (Esc clears), Print / PDF via `window.print()` with every entry expanded for print. Without JS everything still reads and opens.
 
 ## Privacy
-The public page intentionally omits the phone number and personal email from the owner's .docx. Add an email link only once the owner picks a public alias.
+The public page shows the owner's university email (cgibson8@wisc.edu, approved 2026-10-13) and intentionally never shows the phone number from the .docx.
 
 ## Ideas (not yet built)
 Filter publications by year/type, expandable abstracts once publications exist, Google Scholar link once a profile exists.

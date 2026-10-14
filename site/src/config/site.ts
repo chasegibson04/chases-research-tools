@@ -14,7 +14,7 @@ export const SITE = {
     name: 'Chase Gibson',
     affiliation: 'University of Wisconsin–Madison',
     orcid: '0009-0004-9871-8121',
-    email: '', // public contact address (consider a dedicated alias)
+    email: 'cgibson8@wisc.edu',
     github: 'chasegibson04',
   },
   repo: 'https://github.com/chasegibson04/chases-research-tools',
