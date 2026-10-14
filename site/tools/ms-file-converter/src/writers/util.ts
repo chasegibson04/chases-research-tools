@@ -5,6 +5,8 @@ import { encodeLinear, encodePic, encodeSlof } from '@/lib/ms/numpress';
 import type { SpectrumRecord, SpectrumSource } from '../model';
 
 const enc = new TextEncoder();
+/** zlib level for binary arrays: 6 (zlib's and msconvert's default); levels 1–6 measured the same speed and size on float arrays. */
+export const ZLIB_LEVEL = 6;
 
 /** Accumulates output bytes; flushes to Blob parts every few MB. Tracks the total length for offsets. */
 export class ByteBuilder {
@@ -101,13 +103,13 @@ export function encodeArray(values: Float64Array, e: ArrayEncoding): { bytes: Ui
       slof: ['MS:1002314', 'MS-Numpress short logged float compression', 'MS:1002748', 'MS-Numpress short logged float compression followed by zlib compression'] }[e.numpress];
     // Numpress arrays decode to 64-bit floats.
     cvs.push(['MS:1000523', '64-bit float']);
-    if (e.zlib) { bytes = zlibSync(bytes); cvs.push([acc[2], acc[3]]); } else cvs.push([acc[0], acc[1]]);
+    if (e.zlib) { bytes = zlibSync(bytes, { level: ZLIB_LEVEL }); cvs.push([acc[2], acc[3]]); } else cvs.push([acc[0], acc[1]]);
     return { bytes, cvs };
   }
   if (e.bits === 64) bytes = new Uint8Array(values.buffer.slice(values.byteOffset, values.byteOffset + values.byteLength));
   else bytes = new Uint8Array(Float32Array.from(values).buffer);
   cvs.push(e.bits === 64 ? ['MS:1000523', '64-bit float'] : ['MS:1000521', '32-bit float']);
-  if (e.zlib) { bytes = zlibSync(bytes); cvs.push(['MS:1000574', 'zlib compression']); } else cvs.push(['MS:1000576', 'no compression']);
+  if (e.zlib) { bytes = zlibSync(bytes, { level: ZLIB_LEVEL }); cvs.push(['MS:1000574', 'zlib compression']); } else cvs.push(['MS:1000576', 'no compression']);
   return { bytes, cvs };
 }
 

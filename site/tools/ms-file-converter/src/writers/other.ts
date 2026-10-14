@@ -2,7 +2,7 @@
 // MS1/MS2 text, and a long-format peak CSV.
 import { zlibSync } from 'fflate';
 import type { SpectrumSource, SpectrumRecord } from '../model';
-import { ByteBuilder, base64Bytes, xmlEsc, fmt, ticOf, basePeak, type OutputFormat, type WriteContext } from './util';
+import { ByteBuilder, base64Bytes, xmlEsc, fmt, ticOf, basePeak, ZLIB_LEVEL, type OutputFormat, type WriteContext } from './util';
 
 const actName = (s: SpectrumRecord) => {
   const a = s.precursors[0]?.activation ?? [];
@@ -36,7 +36,7 @@ export async function writeMzxml(src: SpectrumSource, opts: Partial<MzxmlOptions
     // network (big-endian) byte order
     const raw = new Uint8Array(inter.buffer); const w = o.bits / 8;
     for (let i = 0; i < raw.length; i += w) raw.subarray(i, i + w).reverse();
-    const bytes = o.zlib ? zlibSync(raw) : raw;
+    const bytes = o.zlib ? zlibSync(raw, { level: ZLIB_LEVEL }) : raw;
     const [bpm, bpi] = s.basePeakMz != null ? [s.basePeakMz, s.basePeakIntensity ?? 0] : basePeak(s);
     if (s.rtSeconds != null) { t0 = Math.min(t0, s.rtSeconds); t1 = Math.max(t1, s.rtSeconds); }
     offsets.push([num, body.length]);

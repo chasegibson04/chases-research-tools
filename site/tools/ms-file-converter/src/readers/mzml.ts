@@ -4,7 +4,14 @@ import { parseSpectrumHeader, decodeArray, openSource } from '@/lib/ms/mzml';
 import { CV, type InputFormat, type InputBundle, type SpectrumSource, type SpectrumRecord, type ChromatogramRecord, type RunMetadata, type ReaderContext, type CvParam, type Precursor, type BinaryArray, readHead, asciiOf } from '../model';
 
 const dec = new TextDecoder('latin1');
-const utf8 = (latin1: string) => new TextDecoder('utf-8').decode(Uint8Array.from(latin1, (c) => c.charCodeAt(0)));
+const u8dec = new TextDecoder('utf-8');
+/** The file is decoded as latin1 (so char offsets = byte offsets); re-decode as UTF-8 only when non-ASCII bytes occur. */
+const utf8 = (latin1: string) => {
+  if (!/[-ÿ]/.test(latin1)) return latin1;
+  const b = new Uint8Array(latin1.length);
+  for (let i = 0; i < latin1.length; i++) b[i] = latin1.charCodeAt(i);
+  return u8dec.decode(b);
+};
 
 /** All cvParams directly inside an XML fragment. */
 export function cvParams(xml: string): CvParam[] {
