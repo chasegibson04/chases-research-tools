@@ -29,5 +29,5 @@ jobs:
           cd site && npx playwright install --with-deps chromium && cd ..
           npm --prefix site run test:e2e
       - name: Upload build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: dist, path: site/dist, retention-days: 3 }
