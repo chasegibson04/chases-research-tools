@@ -58,3 +58,8 @@ button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(
 .ms-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); }
 @media (max-width: 1100px) { .ms-grid-2 { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .hide-sm { display: none; } }
+.scan-groups { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+.scan-chart { padding: 0 var(--space-3); }
+.scan-chart canvas { display: block; cursor: crosshair; }
+.err-plot { width: 100%; height: auto; display: block; padding: var(--space-2); }
+label.btn { display: inline-flex; align-items: center; cursor: pointer; }

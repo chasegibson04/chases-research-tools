@@ -11,7 +11,7 @@
   "subcategories": ["peptidomics", "proteomics"],
   "tags": ["peptide", "fragmentation", "ms-ms", "cyclic-peptide", "b-ions", "y-ions", "etd", "hcd", "annotation"],
   "keywords": ["peptide fragment ion calculator", "b and y ion calculator", "cyclic peptide fragmentation", "ETD c and z ions", "MS/MS fragment prediction", "peptide fragmentation diagram", "theoretical fragment ions"],
-  "related": ["peptide-mass-calculator"],
+  "related": ["mzml-spectrum-annotator", "peptide-mass-calculator"],
   "runtime": { "engine": "js", "languages": ["TypeScript"], "bundleSizeKB": 60 },
   "compute": { "location": "client", "worker": true, "maxRuntimeSeconds": 60, "maxMemoryMB": 512, "maxInputSizeMB": 20, "threads": 1, "warnOnMobile": false, "longRunning": false },
   "layout": { "aspect": "tall", "inputsPosition": "left", "inputsWidthPx": 320, "panels": ["inputs", "custom", "figure", "table"], "fullWidth": true },

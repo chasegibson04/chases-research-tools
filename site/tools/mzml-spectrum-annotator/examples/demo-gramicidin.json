@@ -1,0 +1,6 @@
+{
+  "label": "Synthetic demo: gramicidin S + angiotensin II (HCD)",
+  "description": "A small synthetic mzML written like ThermoRawFileParser output (plain mzML, zlib, 64-bit, centroided): 2 MS1 and 24 HCD MS2 scans of two precursors with 1.5 ppm noise and random noise peaks. Not real data. Expected precursor [M+2H]2+ of gramicidin S = 571.3602.",
+  "input": { "op": "load", "url": "/tools/mzml-spectrum-annotator/demo-synthetic.mzML", "sequence": "cyclo(V(Orn)LfPV(Orn)LfP)", "topology": "cyclic", "precursorCharge": 0, "activation": "auto", "ionTypes": [], "maxFragmentCharge": 2, "losses": true, "maxLosses": 2, "modLosses": true, "fixedMods": "", "adducts": [], "immonium": true, "precursorIons": true, "cyclicHydrolysis": false, "tolerance": 10, "toleranceUnit": "ppm", "averageTolPpm": 10, "minFraction": 0.3, "minRelIntensity": 0 },
+  "expected": { "precursorMz": 571.3602, "spectraCount": 26, "scansAveraged": 12 }
+}

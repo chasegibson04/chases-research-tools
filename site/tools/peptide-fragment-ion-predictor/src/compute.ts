@@ -2,12 +2,14 @@
 // spectrum, and optional matching against a pasted peak list. Chemistry lives in @/lib/ms (shared with the
 // mzML annotator; see docs/DECISIONS.md ADR-009).
 import type { ComputeFn } from '@/lib/types';
-import { parseSequence, type Peptide, type FixedMod } from '@/lib/ms/sequence';
+import { parseSequence, type Peptide } from '@/lib/ms/sequence';
 import { generateFragments, peptideMass, type Ion, type IonType } from '@/lib/ms/fragments';
 import { predictSpectrum, type Activation, type PredictedPeak } from '@/lib/ms/predict';
 import { matchPeaks, coverage, type Coverage, type MatchResult, type Peak } from '@/lib/ms/match';
 import { parsePeakList } from '@/lib/ms/peaklist';
 import { formatFormula, PROTON } from '@/lib/ms/elements';
+import { PRESETS, parseFixedMods } from '@/lib/ms/presets';
+export { PRESETS, parseFixedMods };
 
 export interface Input {
   sequence: string;
@@ -43,24 +45,6 @@ export interface Output {
   observed?: { peaks: Peak[]; title?: string; precursorMz?: number };
   match?: MatchResult;
   coverage?: Coverage;
-}
-
-/** Ion series per activation (linear). Cyclic presets mirror cycfrag METHOD_IONS. */
-export const PRESETS: Record<Activation, { linear: IonType[]; cyclic: IonType[] }> = {
-  HCD: { linear: ['b', 'y', 'a'], cyclic: ['b', 'a'] },
-  CID: { linear: ['b', 'y', 'a'], cyclic: ['b', 'a'] },
-  ETD: { linear: ['c', 'z•', 'z+2', 'y'], cyclic: ['b', 'cz•', 'cz+1', 'c', 'c-1', 'z•', 'z+1'] },
-  EThcD: { linear: ['b', 'y', 'c', 'z•'], cyclic: ['b', 'a', 'cz•', 'cz+1', 'c', 'c-1', 'z•', 'z+1'] },
-  UVPD: { linear: ['a', 'b', 'c', 'x', 'y', 'z•'], cyclic: ['b', 'a'] },
-};
-
-/** "Carbamidomethyl@C, Oxidation@M" → fixed modifications. */
-export function parseFixedMods(s = ''): FixedMod[] {
-  return s.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean).map((x) => {
-    const [mod, sites] = x.split('@');
-    if (!sites) throw new Error(`Fixed modification "${x}" needs a site, e.g. Carbamidomethyl@C or Acetyl@N-term.`);
-    return { mod: mod.trim(), residues: sites.split(/[+/ ]+/).map((r) => r.trim()).filter(Boolean) };
-  });
 }
 
 const run: ComputeFn<Input, Output> = async (input, ctx) => {
