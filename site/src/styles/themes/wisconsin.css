@@ -1,0 +1,12 @@
+/* WISCONSIN — fun preview only (loaded on /design/themes/, not site-wide). Official Badger Red #C5050C, dark red #9B0000. */
+:root[data-theme="wisconsin"] {
+  --bg: #fbfaf9; --bg-elev: #ffffff; --bg-sunken: #f1eeec; --bg-panel: #fdfcfb;
+  --fg: #282728; --fg-muted: #646569; --fg-faint: #9c9ca0;
+  --line: #e4e0de; --line-strong: #cfc9c6;
+  --accent: #c5050c; --accent-fg: #ffffff; --accent-soft: rgb(197 5 12 / 0.08);
+  --link: #9b0000; --ok: #2e7d32; --warn: #a85d00; --err: #9b0000;
+  --code-bg: #f1eeec;
+  color-scheme: light;
+  --grid-dot: rgb(155 0 0 / 0.05);
+}
+:root[data-theme="wisconsin"] .site-header { border-bottom: 3px solid #c5050c; }

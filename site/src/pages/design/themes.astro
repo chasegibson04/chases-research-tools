@@ -1,12 +1,15 @@
 ---
 // Internal theme mockup page (noindex, excluded from sitemap). Switch themes live to pick one, then set SITE.theme.
 import Base from '@/layouts/Base.astro';
+// Just-for-fun school themes: loaded only on this page so they never ship site-wide.
+import '@/styles/themes/michigan.css';
+import '@/styles/themes/wisconsin.css';
 ---
 <Base title="Theme mockups" description="Internal design preview" noindex>
   <div class="container" style="padding-top:var(--space-8)">
     <h1>Theme candidates</h1>
     <p class="muted">Pick one, then set <code>theme</code> in <code>src/config/site.ts</code>. Rules live in docs/DESIGN_SYSTEM.md.</p>
-    <p class="ts-bar">{['graphite', 'paper', 'spectra'].map((t) => <button type="button" data-set-theme={t}>{t}</button>)}</p>
+    <p class="ts-bar">{['graphite', 'paper', 'spectra', 'michigan', 'wisconsin'].map((t) => <button type="button" data-set-theme={t}>{t}</button>)}</p>
     <div class="tool-frame" style="min-height:360px;padding:var(--space-4)">
       <div class="ts"><aside class="ts-inputs"><div class="field"><label>Sequence <span class="help">?</span></label><input value="DRVYIHPF" /></div><div class="field"><label>Charge states</label><input value="1-3" /></div><div class="ts-bar"><button class="btn-primary">Run</button></div></aside>
       <section class="ts-main"><div class="ts-status" data-state="done">Done · 12 ms</div><table><tr><th>z</th><th>m/z</th></tr><tr><td>1</td><td>1046.5418</td></tr><tr><td>2</td><td>523.7745</td></tr></table><div class="fig"><div class="fig-bar"><strong>Isotope distribution</strong><span class="spacer"></span><button class="btn-sm">PNG</button><button class="btn-sm">SVG</button></div><div class="fig-plot" style="display:grid;place-items:center" class="faint">plot area</div></div></section></div>

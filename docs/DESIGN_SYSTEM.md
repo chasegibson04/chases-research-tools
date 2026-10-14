@@ -10,6 +10,7 @@ Type scale, spacing, radii, shadows, motion, max widths, viz palette. Themes ove
 - **graphite**: dark instrument panel, teal accent, warm grey text. Best for long analysis sessions; dark figures on screen export to white.
 - **paper**: warm off-white journal page, ink text, oxblood accent. Prints beautifully; reads "academic".
 - **spectra**: cool light slate with indigo accent and a faint spectral line under the header. Reads "clean lab".
+Two just-for-fun school themes, **michigan** (Blue #00274C + Maize #FFCB05, dark) and **wisconsin** (Badger Red #C5050C on white), exist only as previews: their CSS is imported by `/design/themes/` alone, so to use one site-wide also import it in `global.css` and add it to the `theme` union.
 Set `theme` in `src/config/site.ts`. A user-facing light/dark toggle is a planned addition (respect `prefers-color-scheme`; persist in `localStorage`).
 
 ## Rules that keep it from looking generated
