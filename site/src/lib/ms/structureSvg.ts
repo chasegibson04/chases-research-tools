@@ -36,7 +36,7 @@ export function structureToSvg(scene: StructureScene, o: SvgOptions): string {
   const out: string[] = [];
   const fs = Math.round(u * 0.42);
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${W.toFixed(0)}" height="${H.toFixed(0)}" font-family="${esc(P.font)}" font-size="${fs}" class="pep-structure">`);
-  out.push(`<style>.pep-structure text{paint-order:stroke;stroke:${P.bg};stroke-width:${(fs * 0.32).toFixed(1)}px;stroke-linejoin:round}.mk{cursor:pointer}.mk .hit{stroke:transparent;stroke-width:${(u * 0.42).toFixed(0)}px;fill:none}.mk text{font-weight:600}</style>`);
+  out.push(`<style>.pep-structure text{paint-order:stroke;stroke:${P.bg};stroke-width:${(fs * 0.32).toFixed(1)}px;stroke-linejoin:round}.mk{cursor:pointer}.mk .hit{stroke:transparent;stroke-width:${(u * 0.42).toFixed(0)}px;fill:none}.mk text{font-weight:600;cursor:pointer}.mk text:hover{text-decoration:underline}</style>`);
   if (o.title) out.push(`<text x="${(W / 2).toFixed(1)}" y="19" text-anchor="middle" font-size="${fs + 2}" font-weight="600" fill="${P.fg}">${esc(o.title)}</text>`);
 
   // residue bands (hidden until highlighted)
@@ -115,10 +115,10 @@ function linearMarker(m: SMarker, scene: StructureScene, o: SvgOptions, X: (x: n
     const ly = yB + (yB > 0 ? 0.32 : -0.34);
     const lx = m.x + hookDir * (hook + 0.08);
     const d = `M${X(m.x)},${Y(yA)} L${X(m.x)},${Y(yB)} L${X(hx)},${Y(yB)}`;
-    parts.push(`<g class="mk" data-bond="${m.bond}" data-side="${side}" data-type="${type}" opacity="${op}">`
+    parts.push(`<g class="mk" data-bond="${m.bond}" data-side="${side}" data-type="${type}" data-size="${side === 'n' ? m.nIndex : m.cIndex}" opacity="${op}">`
       + `<path class="hit" d="${d}"/>`
       + `<path class="ln" d="${d}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${obs ? 'none' : dash}"/>`
-      + `<text x="${X(lx)}" y="${Y(ly)}" text-anchor="${hookDir > 0 ? 'start' : 'end'}" fill="${col}" font-size="${Math.round(u * 0.36)}" dominant-baseline="central">${type}${subNum(side === 'n' ? m.nIndex : m.cIndex)}</text></g>`);
+      + `<text data-label="1" x="${X(lx)}" y="${Y(ly)}" text-anchor="${hookDir > 0 ? 'start' : 'end'}" fill="${col}" font-size="${Math.round(u * 0.36)}" dominant-baseline="central">${type}${subNum(side === 'n' ? m.nIndex : m.cIndex)}</text></g>`);
   };
   if (scene.mode === 'condensed') {
     if (showC) seg('c', cT, 0.3, scene.rows.top, 1, '');

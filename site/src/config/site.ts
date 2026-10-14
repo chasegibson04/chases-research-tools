@@ -18,7 +18,7 @@ export const SITE = {
     github: 'chasegibson04',
   },
   repo: 'https://github.com/chasegibson04/chases-research-tools',
-  theme: 'paper' as 'graphite' | 'paper' | 'spectra',
+  theme: 'michigan' as 'graphite' | 'paper' | 'spectra' | 'michigan' | 'wisconsin',
   nav: [
     { label: 'Tools', href: '/tools/' },
     { label: 'Categories', href: '/categories/' },

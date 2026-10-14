@@ -6,11 +6,11 @@ Goal: a sleek, fast, scientific instrument feel that reads as hand-built. Everyt
 Type scale, spacing, radii, shadows, motion, max widths, viz palette. Themes override colour tokens only.
 
 ## Themes (`themes/*.css`) — preview at `/design/themes/`
-**Active theme: paper** (chosen by the owner 2026-10-13). The other two stay as alternatives.
+**Active theme: michigan** (owner's choice 2026-10-14; paper was used 2026-10-13). All five themes ship in `global.css` and can be previewed at `/design/themes/`.
 - **graphite**: dark instrument panel, teal accent, warm grey text. Best for long analysis sessions; dark figures on screen export to white.
 - **paper**: warm off-white journal page, ink text, oxblood accent. Prints beautifully; reads "academic".
 - **spectra**: cool light slate with indigo accent and a faint spectral line under the header. Reads "clean lab".
-Two just-for-fun school themes, **michigan** (Blue #00274C + Maize #FFCB05, dark) and **wisconsin** (Badger Red #C5050C on white), exist only as previews: their CSS is imported by `/design/themes/` alone, so to use one site-wide also import it in `global.css` and add it to the `theme` union.
+Two school themes: **michigan** (Blue #00274C + Maize #FFCB05, dark; overrides the ion and viz colours for contrast on navy) and **wisconsin** (Badger Red #C5050C on white).
 Set `theme` in `src/config/site.ts`. A user-facing light/dark toggle is a planned addition (respect `prefers-color-scheme`; persist in `localStorage`).
 
 ## Rules that keep it from looking generated

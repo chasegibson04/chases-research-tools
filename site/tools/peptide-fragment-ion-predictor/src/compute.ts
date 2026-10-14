@@ -9,6 +9,7 @@ import { matchPeaks, coverage, type Coverage, type MatchResult, type Peak } from
 import { parsePeakList } from '@/lib/ms/peaklist';
 import { formatFormula, PROTON } from '@/lib/ms/elements';
 import { PRESETS, parseFixedMods } from '@/lib/ms/presets';
+import { loadDefaultSpectrum, sniffSpectrumFile } from '@/lib/ms/spectrumFile';
 export { PRESETS, parseFixedMods };
 
 export interface Input {
@@ -30,6 +31,9 @@ export interface Input {
   precursorIons?: boolean;
   cyclicHydrolysis?: boolean;
   observed?: string;
+  /** A peak-list or spectrum file (text, MGF or mzML). mzML is averaged over its largest MS2 group. */
+  observedFile?: Blob | null;
+  observedFileName?: string;
   tolerance?: number;
   toleranceUnit?: 'ppm' | 'Da';
 }
@@ -42,7 +46,7 @@ export interface Output {
   ions: Ion[];
   ionTypes: IonType[];
   predicted: PredictedPeak[];
-  observed?: { peaks: Peak[]; title?: string; precursorMz?: number };
+  observed?: { peaks: Peak[]; title?: string; precursorMz?: number; source?: string };
   match?: MatchResult;
   coverage?: Coverage;
 }
@@ -72,13 +76,33 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
   const precursors = Array.from({ length: z }, (_, i) => ({ z: i + 1, mz: (mono + (i + 1) * PROTON) / (i + 1) }));
 
   let observed: Output['observed'], match: MatchResult | undefined, cov: Coverage | undefined;
-  if (input.observed && input.observed.trim()) {
-    ctx.progress(0.75, 'Matching observed peaks');
+  if (input.observedFile) {
+    const name = input.observedFileName || (input.observedFile as File).name || 'peak list';
+    const kind = await sniffSpectrumFile(input.observedFile);
+    if (kind === 'mzML' || kind === 'MGF') {
+      const r = await loadDefaultSpectrum(input.observedFile, name, ctx, { preferPrecursors: precursors.map((p) => p.mz) });
+      const peaks = Array.from(r.spectrum.mz, (mz, i) => ({ mz, intensity: r.spectrum.intensity[i] }));
+      if (!peaks.length) throw new Error(`No peaks found in ${name}.`);
+      observed = { peaks, precursorMz: r.group.precursorMz ?? undefined, title: `${name} · ${r.group.label} · ${r.spectrum.scans} scan${r.spectrum.scans > 1 ? 's' : ''} averaged`, source: kind };
+    } else if (kind === 'mzXML') {
+      throw new Error(`${name} is mzXML; convert it to mzML (msconvert --mzML) or open it in the mzML annotator.`);
+    } else if (kind === 'binary') {
+      throw new Error(`${name} is not a text peak list, MGF or mzML file. Vendor files (.raw, .d, .wiff) must be converted to mzML first.`);
+    } else {
+      if (input.observedFile.size > 50 * 1024 * 1024) throw new Error(`${name} is too large for a text peak list (over 50 MB).`);
+      const parsed = parsePeakList(await input.observedFile.text());
+      observed = { peaks: parsed.peaks, title: parsed.title ?? name, precursorMz: parsed.precursorMz, source: 'text' };
+    }
+  } else if (input.observed && input.observed.trim()) {
+    if (input.observed.length > 20e6) throw new Error('The pasted peak list is too large; load it as a file instead.');
     const parsed = parsePeakList(input.observed);
-    observed = { peaks: parsed.peaks, title: parsed.title, precursorMz: parsed.precursorMz };
+    observed = { peaks: parsed.peaks, title: parsed.title, precursorMz: parsed.precursorMz, source: 'pasted' };
+  }
+  if (observed) {
+    ctx.progress(0.85, 'Matching observed peaks');
     const tol = { value: Math.max(0.0001, Number(input.tolerance) || 10), unit: (input.toleranceUnit === 'Da' ? 'Da' : 'ppm') as 'ppm' | 'Da' };
-    match = matchPeaks(parsed.peaks, ions, tol);
-    cov = coverage(parsed.peaks, ions, match, peptide.residues.length, peptide.cyclic);
+    match = matchPeaks(observed.peaks, ions, tol);
+    cov = coverage(observed.peaks, ions, match, peptide.residues.length, peptide.cyclic);
   }
   ctx.progress(1, 'Done');
   return { peptide, mono, formula: formatFormula(formula), precursors, ions, ionTypes, predicted, observed, match, coverage: cov };

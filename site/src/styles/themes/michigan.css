@@ -1,4 +1,4 @@
-/* MICHIGAN — fun preview only (loaded on /design/themes/, not site-wide). Official Michigan Blue #00274C and Maize #FFCB05. */
+/* MICHIGAN — active site theme (owner's choice, 2026-10-14). Official Michigan Blue #00274C and Maize #FFCB05. */
 :root[data-theme="michigan"] {
   --bg: #00274c; --bg-elev: #06325d; --bg-sunken: #001d3a; --bg-panel: #0a3a68;
   --fg: #f4f1e6; --fg-muted: #b9c3d3; --fg-faint: #7f8fa8;
@@ -8,5 +8,9 @@
   --code-bg: #001d3a;
   color-scheme: dark;
   --grid-dot: rgb(255 203 5 / 0.06);
+  /* Ion colours brightened for the navy background (still distinguishable for common colour-vision deficiencies). */
+  --ion-a: #3ddc97; --ion-b: #6cb6ff; --ion-c: #9be7ff; --ion-x: #f29fd0; --ion-y: #ff8a5c; --ion-z: #ffcb05;
+  --ion-internal: #b7a99a; --ion-immonium: #c3c9d4; --ion-precursor: #c9a7ff; --ion-unassigned: #6f84a3;
+  --viz-1: #6cb6ff; --viz-2: #ffcb05; --viz-3: #3ddc97; --viz-4: #ff8a5c; --viz-5: #f29fd0; --viz-6: #9be7ff; --viz-7: #f0e442; --viz-8: #b7c0cc;
 }
 :root[data-theme="michigan"] .site-header { border-bottom: 3px solid #ffcb05; }

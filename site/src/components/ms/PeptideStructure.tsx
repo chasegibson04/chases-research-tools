@@ -5,6 +5,8 @@ import { structureToSvg } from '@/lib/ms/structureSvg';
 import { screenPalette, printPalette } from './palette';
 import { downloadSvg, downloadPng } from './exportImage';
 
+export interface MarkerHit { bond: number; side: 'n' | 'c'; type: string; size: number; label: boolean }
+
 export interface StructureHighlight {
   /** Marker halves to emphasise: bond index + side ('n' = a/b/c, 'c' = x/y/z). */
   marks: Array<{ bond: number; side: 'n' | 'c' }>;
@@ -18,14 +20,17 @@ interface Props {
   observed?: { n: Set<number>; c: Set<number> };
   observedOnly?: boolean;
   highlight?: StructureHighlight;
-  onHover?: (m: { bond: number; side: 'n' | 'c' } | null) => void;
-  onClick?: (m: { bond: number; side: 'n' | 'c' }) => void;
+  onHover?: (m: MarkerHit | null) => void;
+  /** label = the user clicked the ion label (e.g. "b₃") rather than the cleavage line. */
+  onClick?: (m: MarkerHit) => void;
   filename?: string;
   defaultMode?: StructureMode;
+  /** Maximum rendered height of a cyclic structure in "fit" mode. */
+  maxRingPx?: number;
 }
 
 /** Interactive peptide structure with a/b/c and x/y/z cleavage markers (linear) or ring cleavage ticks (cyclic). */
-export function PeptideStructure({ peptide, families, observed, observedOnly, highlight, onHover, onClick, filename = 'peptide-structure', defaultMode = 'full' }: Props) {
+export function PeptideStructure({ peptide, families, observed, observedOnly, highlight, onHover, onClick, filename = 'peptide-structure', defaultMode = 'full', maxRingPx = 400 }: Props) {
   const [mode, setMode] = useState<StructureMode>(defaultMode);
   const [zoom, setZoom] = useState<'fit' | number>('fit');
   const [themeTick, setThemeTick] = useState(0);
@@ -47,14 +52,18 @@ export function PeptideStructure({ peptide, families, observed, observedOnly, hi
     return rules.join('');
   }, [highlight]);
 
-  const target = (e: Event) => {
-    const el = (e.target as Element).closest?.('.mk') as SVGGElement | null;
-    return el ? { bond: Number(el.dataset.bond), side: el.dataset.side as 'n' | 'c' } : null;
+  const target = (e: Event): MarkerHit | null => {
+    const t = e.target as Element;
+    const el = t.closest?.('.mk') as SVGGElement | null;
+    return el ? { bond: Number(el.dataset.bond), side: el.dataset.side as 'n' | 'c', type: el.dataset.type ?? '', size: Number(el.dataset.size ?? 0), label: !!t.closest?.('text[data-label]') } : null;
   };
   const exportSvg = (title?: string) => structureToSvg(scene, { palette: printPalette(screenPalette()), families, observed, observedOnly, title });
 
   const w = scene.bounds.maxX - scene.bounds.minX;
-  const style = zoom === 'fit' ? { width: '100%', maxWidth: `${Math.round(w * 38 * 1.6)}px`, height: 'auto' } : { width: `${Math.round(w * 38 * zoom)}px`, height: 'auto' };
+  // Rings are drawn at a capped height so the panel stays compact; linear peptides keep the full width.
+  const h = scene.bounds.maxY - scene.bounds.minY;
+  const ringFit = peptide.cyclic ? Math.min(1.6, (maxRingPx / (h * 38))) : 1.6;
+  const style = zoom === 'fit' ? { width: '100%', maxWidth: `${Math.round(w * 38 * ringFit)}px`, height: 'auto' } : { width: `${Math.round(w * 38 * zoom)}px`, height: 'auto' };
 
   return (
     <div class="pep-panel">

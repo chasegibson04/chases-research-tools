@@ -3,9 +3,9 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, openAsBlob } from '
 import { deflateSync } from 'node:zlib';
 import { join } from 'node:path';
 import run, { groupScans, annotate, type Input, type Output } from '../src/compute';
-import { activationFromFilter, indexSpectra, readSpectrum, decodeArray } from '../src/mzml';
-import { averageSpectra, centroid } from '../src/average';
-import { decodeLinear, decodePic, decodeSlof, encodeLinearForTest, encodePicForTest, encodeSlofForTest } from '../src/numpress';
+import { activationFromFilter, indexSpectra, readSpectrum, decodeArray } from '@/lib/ms/mzml';
+import { averageSpectra, centroid } from '@/lib/ms/average';
+import { decodeLinear, decodePic, decodeSlof, encodeLinearForTest, encodePicForTest, encodeSlofForTest } from '@/lib/ms/numpress';
 import { parseSequence } from '@/lib/ms/sequence';
 import { generateFragments } from '@/lib/ms/fragments';
 import { predictSpectrum } from '@/lib/ms/predict';

@@ -23,6 +23,9 @@ interface Props {
   filename?: string;
   /** Show labels for unannotated peaks too (m/z values of the strongest peaks). */
   labelUnassigned?: boolean;
+  /** Scale the y axis to these intensities instead of the tallest visible peak (focus mode). */
+  topScale?: number;
+  mirrorScale?: number;
 }
 
 const M = { l: 58, r: 14, t: 22, b: 38 };
@@ -49,7 +52,7 @@ interface Scene {
   yTop: (rel: number) => number; yBot: (rel: number) => number;
   maxTop: number; maxBot: number; view: [number, number];
 }
-function makeScene(W: number, H: number, view: [number, number], top: SpecLayer, mirror?: SpecLayer): Scene {
+function makeScene(W: number, H: number, view: [number, number], top: SpecLayer, mirror?: SpecLayer, topScale?: number, mirrorScale?: number): Scene {
   const split = !!mirror;
   const plotH = H - M.t - M.b;
   const half = split ? plotH / 2 : plotH;
@@ -62,7 +65,7 @@ function makeScene(W: number, H: number, view: [number, number], top: SpecLayer,
     for (let i = a; i < L.peaks.length && L.peaks[i].mz <= v1; i++) m = Math.max(m, L.peaks[i].intensity);
     return m || 1;
   };
-  const maxTop = maxIn(top), maxBot = maxIn(mirror);
+  const maxTop = topScale && topScale > 0 ? topScale * 1.08 : maxIn(top), maxBot = mirrorScale && mirrorScale > 0 ? mirrorScale * 1.08 : maxIn(mirror);
   const base = M.t + half;
   return {
     W, H, plotH, mirrorTop: base, split, x, inv, view,
@@ -115,7 +118,7 @@ export function SpectrumCanvas(p: Props) {
     return () => { ro.disconnect(); mo.disconnect(); };
   }, []);
 
-  const scene = useMemo(() => makeScene(W, H, view, p.top, p.mirror), [W, H, view[0], view[1], p.top, p.mirror]);
+  const scene = useMemo(() => makeScene(W, H, view, p.top, p.mirror, p.topScale, p.mirrorScale), [W, H, view[0], view[1], p.top, p.mirror, p.topScale, p.mirrorScale]);
 
   // ---- drawing -------------------------------------------------------------------------------
   useEffect(() => {
@@ -178,7 +181,7 @@ export function SpectrumCanvas(p: Props) {
     return () => c.removeEventListener('wheel', onWheel);
   });
 
-  const exportSvg = () => toSvg(makeScene(W, H, view, p.top, p.mirror), printPalette(screenPalette()), p);
+  const exportSvg = () => toSvg(makeScene(W, H, view, p.top, p.mirror, p.topScale, p.mirrorScale), printPalette(screenPalette()), p);
   const tip = hover ? (() => {
     const L = hover.layer === 'top' ? p.top : p.mirror!;
     const pk = L.peaks[hover.index]; const an = L.annotations?.get(hover.index);

@@ -27,7 +27,7 @@ test.describe('peptide-fragment-ion-predictor interactions', () => {
   test('a pasted peak list is matched and summarised', async ({ page }) => {
     await page.locator('#in-observed').fill('166.0864 100\n263.1392 60\n272.1355 40\n513.2800 30\n784.4099 25\n999.9 5');
     await page.locator('[data-action="run"]').click();
-    await expect(page.locator('.ms-summary')).toContainText('Peaks explained', { timeout: 20_000 });
+    await expect(page.locator('.ms-summary')).toContainText('Intensity', { timeout: 20_000 });
     await expect(page.locator('.spec').first()).toContainText('Observed (top) vs representative (bottom)');
   });
 
@@ -53,7 +53,7 @@ test.describe('mzml-spectrum-annotator interactions', () => {
     // pick two assigned y ions from the table and measure: y1 (F) → y2 (PF) = Pro, 97.0528
     const rows = page.locator('.ion-list tbody tr');
     await page.locator('.ion-list tbody tr').filter({ has: page.locator('td:nth-child(3)', { hasText: /^y₁$/ }) }).first().click();
-    await expect(page.locator('.ms-info')).toContainText('y₁');
+    await expect(page.locator('.ms-info').first()).toContainText('y₁');
     const y2row = page.locator('.ion-list tbody tr').filter({ has: page.locator('td:nth-child(3)', { hasText: /^y₂$/ }) });
     const y2mz = await y2row.first().locator('td').first().textContent();
     expect(Number(y2mz)).toBeCloseTo(263.139, 2);

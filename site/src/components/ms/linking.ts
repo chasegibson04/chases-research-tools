@@ -58,3 +58,28 @@ export function observedBonds(matchedIons: Ion[], cyclic: boolean): { n: Set<num
   }
   return { n, c };
 }
+
+/** A pinned selection: a whole cleavage (all its fragments) or one specific ion. */
+export type Focus = { kind: 'bond'; bond: number; side: 'n' | 'c' } | { kind: 'ion'; id: string } | null;
+
+export function focusedIons(focus: Focus, ions: Ion[], cyclic: boolean): Ion[] {
+  if (!focus) return [];
+  if (focus.kind === 'ion') { const i = ions.find((x) => x.id === focus.id); return i ? [i] : []; }
+  return ionsForMarker(ions, focus.bond, focus.side, cyclic);
+}
+
+/** The ion named by a clicked marker label (e.g. b₃ → type b, size 3, 1+, no loss); falls back to any charge. */
+export function ionForLabel(ions: Ion[], type: string, size: number, side: 'n' | 'c', cyclic: boolean, bond: number): Ion | undefined {
+  const kinds: Record<string, IonType[]> = { a: ['a'], b: ['b'], c: ['c', 'c-1', 'cz•', 'cz+1'], x: ['x'], y: ['y'], z: ['z•', 'z', 'z+2', 'z+1'] };
+  const cands = ions.filter((i) => (kinds[type] ?? [type as IonType]).includes(i.type) && !i.loss && i.carrier === 'H' && (cyclic ? i.bonds.includes(bond) : i.size === size && ionSide(i.type) === side));
+  return cands.sort((a, b) => a.charge - b.charge)[0];
+}
+
+/** m/z window that frames a set of peaks (all fragments of a cleavage, or one ion with its isotopes). */
+export function frameMz(mzs: number[], single: boolean): [number, number] | undefined {
+  if (!mzs.length) return undefined;
+  const lo = Math.min(...mzs), hi = Math.max(...mzs);
+  if (single || hi - lo < 1) return [lo - 4, hi + 6];
+  const pad = Math.max(8, (hi - lo) * 0.06);
+  return [Math.max(0, lo - pad), hi + pad];
+}

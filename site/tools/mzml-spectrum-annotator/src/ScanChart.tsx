@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { SpectrumMeta } from './mzml';
+import type { SpectrumMeta } from '@/lib/ms/mzml';
 
 interface Props {
   spectra: SpectrumMeta[];

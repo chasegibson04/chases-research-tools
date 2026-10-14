@@ -21,6 +21,8 @@ interface Props<I> {
   errors?: Partial<Record<keyof I & string, string>>;
   children?: ComponentChildren; // results area
   extraInputs?: ComponentChildren; // tool-specific custom inputs
+  /** Compact summary shown in the sticky result header next to the status (key numbers of the current result). */
+  header?: ComponentChildren;
 }
 
 /** Standard two-panel tool layout: inputs (left) and results (right), with run/cancel/status. */
@@ -45,20 +47,23 @@ export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
             </div>
           </details>
         )}
-        <div class="ts-bar" style={{ marginTop: 'auto' }}>
+        <div class="ts-bar ts-run">
           <button class="btn-primary" type="button" onClick={p.onRun} disabled={p.state === 'running' || blocked} data-action="run">Run</button>
           {p.state === 'running' && <button type="button" onClick={p.onCancel} data-action="cancel">Cancel</button>}
         </div>
         {warnings.map((w) => <p class="small" style={{ color: w.level === 'block' ? 'var(--err)' : w.level === 'warn' ? 'var(--warn)' : 'var(--fg-faint)', margin: 0 }}>{w.message}</p>)}
       </aside>
       <section class="ts-main" aria-label="Results" aria-live="polite">
+        <div class="ts-sticky">
         <div class="ts-status" data-state={p.state}>
           {p.state === 'idle' && <span>Set parameters or load an example, then press Run.</span>}
           {p.state === 'running' && <span>Running… {p.message ?? ''}</span>}
           {p.state === 'done' && <span>Done{p.message ? ` · ${p.message}` : ''}</span>}
           {p.state === 'error' && <span role="alert">Error: {p.message}</span>}
         </div>
+        {p.header}
         {p.state === 'running' && <div class="ts-progress" aria-hidden="true"><div style={{ width: `${Math.round((p.progress ?? 0) * 100)}%` }} /></div>}
+        </div>
         {p.children}
       </section>
     </div>

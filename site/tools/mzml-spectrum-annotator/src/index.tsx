@@ -6,7 +6,7 @@ import { PeptideStructure } from '@/components/ms/PeptideStructure';
 import { SpectrumCanvas, type SpecAnnotation } from '@/components/ms/SpectrumCanvas';
 import { IonTypePicker } from '@/components/ms/IonTypePicker';
 import { screenPalette, ionColor } from '@/components/ms/palette';
-import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedBonds } from '@/components/ms/linking';
+import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedBonds, focusedIons, ionForLabel, frameMz, type Focus } from '@/components/ms/linking';
 import { deltaLookup, lowerBound, tolDa, ppmError, type Peak } from '@/lib/ms/match';
 import { PRESETS, presetFor } from '@/lib/ms/presets';
 import { downloadJSON } from '@/lib/export';
@@ -14,7 +14,7 @@ import type { Ion, IonType } from '@/lib/ms/fragments';
 import '@/components/ms/ms.css';
 import { ScanChart } from './ScanChart';
 import type { Input, Output, ScanGroup, SpectrumResult, Annotation } from './compute';
-import type { FileInfo, SpectrumMeta } from './mzml';
+import type { FileInfo, SpectrumMeta } from '@/lib/ms/mzml';
 
 const CUSTOM = new Set(['ionTypes']);
 const f4 = (x: number) => x.toFixed(4);
@@ -47,6 +47,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const [custom, setCustom] = useState('');
   /** Mass-scale correction in ppm applied to all observed m/z (recalibration from assigned peaks). */
   const [calPpm, setCalPpm] = useState(0);
+  const [annError, setAnnError] = useState<string | undefined>();
+  const [scansOpen, setScansOpen] = useState(true);
+  /** Pinned structure selection (a cleavage or one ion) that zooms the spectrum and greys out the rest. */
+  const [focus, setFocus] = useState<Focus>(null);
   const palette = useMemo(() => screenPalette(), [spectrum]);
   const loaded = !!info;
 
@@ -77,7 +81,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
       const g = o.groups?.find((x) => x.key === o.group);
       setCurrent(g ? { label: g.label, indices: g.indices, key: g.key } : null);
       setMsLevel(g?.msLevel ?? 2);
-      setSpectrum(o.spectrum); setAnn(o.annotation ?? null); setSelected([]); setView(undefined); setCalPpm(0);
+      setSpectrum(o.spectrum); setAnn(o.annotation ?? null); setAnnError(o.annotationError); setSelected([]); setView(undefined); setCalPpm(0); setFocus(null);
       setCharges({ used: o.scanCharge ?? null, inferred: o.inferredCharge ?? null, written: o.writtenCharge ?? null });
       setOverrides(loadOverrides(name, g?.key ?? '', String(values.sequence ?? '')));
       setMsg(`${o.spectra?.length.toLocaleString()} spectra indexed · ${o.spectrum?.scans} scan(s) averaged · ${(ms / 1000).toFixed(1)} s`);
@@ -91,7 +95,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
     const lbl = label ?? (indices.length === 1 ? `Scan ${first.scan ?? first.index + 1}${first.rt != null ? ` · ${first.rt.toFixed(3)} min` : ''}` : `${indices.length} scans averaged`);
     exec({ ...annOpts(), op: 'spectrum', file: source.file, url: source.url, ranges, info: { format: info.format, paramGroups: info.paramGroups }, scanActivation: first.activation, scanCharge: first.charge, precursorMz: first.precursorMz }, (o, ms) => {
       setCurrent({ label: lbl, indices, key: key ?? `sel:${indices.length}:${indices[0]}` });
-      setSpectrum(o.spectrum); setAnn(o.annotation ?? null); setSelected([]); setView(undefined); setCalPpm(0);
+      setSpectrum(o.spectrum); setAnn(o.annotation ?? null); setAnnError(o.annotationError); setSelected([]); setView(undefined); setCalPpm(0); setFocus(null);
       setCharges({ used: o.scanCharge ?? null, inferred: o.inferredCharge ?? null, written: first.charge });
       setOverrides(loadOverrides(source.name, key ?? lbl, String(values.sequence ?? '')));
       setMsg(`${lbl} · ${o.spectrum?.mz.length} peaks · ${Math.round(ms)} ms`);
@@ -102,7 +106,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   useEffect(() => {
     if (!loaded || !spectrum) return;
     const t = setTimeout(() => {
-      exec({ ...annOpts(), op: 'annotate', peaks: { mz: Array.from(spectrum.mz, (m) => m * (1 - calPpm * 1e-6)), intensity: Array.from(spectrum.intensity) }, scanActivation: scanAct, scanCharge: charges.used }, (o) => setAnn(o.annotation ?? null));
+      exec({ ...annOpts(), op: 'annotate', peaks: { mz: Array.from(spectrum.mz, (m) => m * (1 - calPpm * 1e-6)), intensity: Array.from(spectrum.intensity) }, scanActivation: scanAct, scanCharge: charges.used }, (o) => { setAnn(o.annotation ?? null); setAnnError(o.annotationError); setFocus(null); });
     }, 400);
     return () => clearTimeout(t);
   }, [calPpm, values.sequence, values.topology, values.precursorCharge, values.activation, values.ionTypes, values.tolerance, values.toleranceUnit, values.losses, values.maxLosses, values.modLosses, values.fixedMods, values.adducts, values.immonium, values.precursorIons, values.cyclicHydrolysis, values.maxFragmentCharge]);
@@ -144,13 +148,15 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   useEffect(() => { if (source && current) saveOverrides(source.name, current.key, String(values.sequence ?? ''), overrides); }, [overrides]);
 
   // ---- highlighting ---------------------------------------------------------------------------------
+  const pinned = useMemo(() => (ann ? focusedIons(focus, ann.ions, ann.peptide.cyclic) : []), [focus, ann]);
+  const pinnedSet = useMemo(() => new Set(pinned.map((i) => i.id)), [pinned]);
   const focusPeak = selected[selected.length - 1];
   const focusIons = useMemo(() => {
-    const ids = hoverIons ?? (focusPeak != null && assigned.get(focusPeak)?.ion ? [assigned.get(focusPeak)!.ion!.id] : []);
+    const ids = hoverIons ?? (pinned.length ? pinned.map((i) => i.id) : focusPeak != null && assigned.get(focusPeak)?.ion ? [assigned.get(focusPeak)!.ion!.id] : []);
     const list = ids.map((id) => ionById.get(id)).filter(Boolean) as Ion[];
     if (ann && list.length <= 3) for (const ion of [...list]) { const c = complementOf(ion, ann.ions, ann.peptide); if (c) list.push(c); }
     return list;
-  }, [hoverIons, focusPeak, assigned, ionById, ann]);
+  }, [hoverIons, focusPeak, assigned, ionById, ann, pinned]);
   const structureHl = useMemo(() => {
     if (!ann) return undefined;
     const sel = [...focusIons];
@@ -158,13 +164,28 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
     return structureHighlight(sel, ann.peptide);
   }, [focusIons, selected, assigned, ann]);
 
+  const pinnedPeaks = useMemo(() => [...assigned.values()].filter((a) => !a.isotope && a.ion && pinnedSet.has(a.ion.id)), [assigned, pinnedSet]);
+  useEffect(() => {
+    if (!focus) { setView(undefined); return; }
+    setView(frameMz(pinnedPeaks.length ? pinnedPeaks.map((a) => peaks[a.peak].mz) : pinned.map((i) => i.mz), focus.kind === 'ion'));
+  }, [focus, pinnedPeaks]);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { setFocus(null); setSelected([]); } };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k);
+  }, []);
+
   const topLayer = useMemo(() => {
     const annotations = new Map<number, SpecAnnotation>();
-    for (const a of assigned.values()) annotations.set(a.peak, { label: a.label, color: a.color, dim: a.isotope });
+    for (const a of assigned.values()) {
+      const inFocus = !focus || (a.ion && pinnedSet.has(a.ion.id));
+      annotations.set(a.peak, inFocus ? { label: a.label, color: a.color, dim: a.isotope } : { label: '', color: palette.faint, dim: true });
+    }
     const highlight = new Set<number>();
-    for (const ion of focusIons) for (const a of assigned.values()) if (a.ion?.id === ion.id) highlight.add(a.peak);
+    const hovered = new Set(hoverIons ?? []);
+    for (const a of assigned.values()) if (a.ion && hovered.has(a.ion.id)) highlight.add(a.peak);
     return { peaks, annotations, highlight, label: current?.label };
-  }, [peaks, assigned, focusIons, current]);
+  }, [peaks, assigned, hoverIons, current, focus, pinnedSet, palette]);
+  const topScale = focus && pinnedPeaks.length ? Math.max(...pinnedPeaks.map((a) => peaks[a.peak].intensity)) : undefined;
 
   // ---- Δm measurement --------------------------------------------------------------------------------
   const delta = useMemo(() => {
@@ -215,8 +236,25 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
     return pts.length >= 5 ? pts[Math.floor(pts.length / 2)] : null;
   })();
 
+  const header = loaded && spectrum ? (
+          <div class="ms-summary">
+            <dl class="ms-stat"><dt>File</dt><dd title={info!.name}>{info!.name}</dd></dl>
+            <dl class="ms-stat"><dt>Spectra</dt><dd data-output="spectraCount">{spectra.length}</dd></dl>
+            <dl class="ms-stat"><dt>Showing</dt><dd title={current?.label}>{current?.label}</dd></dl>
+            <dl class="ms-stat"><dt>Averaged</dt><dd data-output="scansAveraged">{spectrum.scans}</dd></dl>
+            <dl class="ms-stat"><dt>Peaks</dt><dd>{peaks.length}{spectrum.profile ? ' (centroided)' : ''}</dd></dl>
+            <dl class="ms-stat"><dt>z</dt><dd>{charges.used ?? '–'}{charges.inferred != null && charges.written != null && charges.inferred !== charges.written ? <span class="small" style={{ color: 'var(--warn)' }}> (file says {charges.written})</span> : null}</dd></dl>
+            {ann && <dl class="ms-stat"><dt>[M+{ann.precursorCharge > 1 ? ann.precursorCharge : ''}H]{ann.precursorCharge > 1 ? `${ann.precursorCharge}+` : '+'}</dt><dd data-output="precursorMz">{f4(ann.precursors[ann.precursorCharge - 1].mz)}</dd></dl>}
+            {stats && <>
+              <dl class="ms-stat"><dt>Assigned</dt><dd>{stats.peaksAssigned}/{peaks.length}</dd></dl>
+              <dl class="ms-stat"><dt>Intensity</dt><dd>{stats.explainedPct.toFixed(1)}%</dd></dl>
+              <dl class="ms-stat"><dt>Bonds</dt><dd>{stats.bondsCovered}/{stats.bondsTotal}</dd></dl>
+            </>}
+          </div>
+  ) : null;
+
   return (
-    <ToolShell manifest={shellManifest} examples={examples} values={values} state={state} message={msg} progress={progress}
+    <ToolShell manifest={shellManifest} examples={examples} values={values} state={state} message={msg} progress={progress} header={header}
       onChange={(k, v) => setValues({ ...values, [k]: v })} onLoadExample={(ex) => setValues({ ...defaults, ...ex.input })} onRun={onRun} onCancel={() => { handle.current?.cancel(); setState('idle'); }}
       extraInputs={<>
         <IonTypePicker cyclic={cyclicInput} value={(values.ionTypes ?? []) as IonType[]} preset={preset} onChange={(v) => setValues({ ...values, ionTypes: v })} help={manifest.inputs.find((i) => i.name === 'ionTypes')!.help} />
@@ -224,30 +262,18 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
       </>}>
       {loaded && spectrum && (
         <div class="ms-tool">
-          <div class="ms-summary">
-            <dl class="ms-stat"><dt>File</dt><dd>{info!.name}</dd></dl>
-            <dl class="ms-stat"><dt>Spectra</dt><dd data-output="spectraCount">{spectra.length}</dd></dl>
-            <dl class="ms-stat"><dt>Showing</dt><dd>{current?.label}</dd></dl>
-            <dl class="ms-stat"><dt>Scans averaged</dt><dd data-output="scansAveraged">{spectrum.scans}</dd></dl>
-            <dl class="ms-stat"><dt>Peaks</dt><dd>{peaks.length}{spectrum.profile ? ' (centroided)' : ''}</dd></dl>
-            <dl class="ms-stat"><dt>Charge used</dt><dd>{charges.used ?? '–'}{charges.inferred != null && charges.written != null && charges.inferred !== charges.written ? <span class="small" style={{ color: 'var(--warn)' }}> (file says {charges.written})</span> : null}</dd></dl>
-            {ann && <dl class="ms-stat"><dt>[M+{ann.precursorCharge > 1 ? ann.precursorCharge : ''}H]{ann.precursorCharge > 1 ? `${ann.precursorCharge}+` : '+'}</dt><dd data-output="precursorMz">{f4(ann.precursors[ann.precursorCharge - 1].mz)}</dd></dl>}
-            {stats && <>
-              <dl class="ms-stat"><dt>Peaks assigned</dt><dd>{stats.peaksAssigned}/{peaks.length}</dd></dl>
-              <dl class="ms-stat"><dt>Intensity explained</dt><dd>{stats.explainedPct.toFixed(1)}%</dd></dl>
-              <dl class="ms-stat"><dt>Bonds covered</dt><dd>{stats.bondsCovered}/{stats.bondsTotal}</dd></dl>
-            </>}
-          </div>
-
           <div class="ms-card">
             <div class="fig-bar">
+              <button type="button" class="linklike" aria-expanded={scansOpen} aria-label={scansOpen ? 'Collapse scans' : 'Expand scans'} onClick={() => setScansOpen(!scansOpen)}>{scansOpen ? '▾' : '▸'}</button>
               <strong>Scans</strong>
               <span class="small muted">{info!.format}{info!.indexed ? ' (indexed)' : ''} · {info!.software.slice(0, 2).join(', ')}{info!.instrument ? ` · ${info!.instrument}` : ''}</span>
               <span class="spacer" />
               <select class="input-sm" value={String(msLevel)} onChange={(e) => { const v = (e.target as HTMLSelectElement).value; setMsLevel(v === 'all' ? 'all' : Number(v)); }} aria-label="MS level shown">
                 <option value="all">All levels</option><option value="1">MS1</option><option value="2">MS2</option><option value="3">MS3</option>
               </select>
+              <button type="button" class="btn-sm" disabled={!groups[0] || current?.key === groups[0].key} onClick={() => groups[0] && pickScans(groups[0].indices.slice(0, 5000), `${groups[0].label} · ${groups[0].indices.length} scans`, groups[0].key)} title="Average all scans of the main precursor group again">Reset</button>
             </div>
+            {scansOpen && <>
             <div class="scan-groups">
               {groups.slice(0, 12).map((g) => (
                 <button type="button" class="btn-sm" aria-pressed={current?.key === g.key} onClick={() => pickScans(g.indices.slice(0, 5000), `${g.label} · ${g.indices.length} scans`, g.key)}>
@@ -258,11 +284,12 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
             </div>
             <ScanChart spectra={spectra} active={activeSet} msLevel={msLevel} onPick={(idx) => pickScans(idx)} />
             <p class="small faint" style={{ margin: '0 var(--space-3) var(--space-2)' }}>Click a scan to view it; drag across scans to average them; buttons average a whole precursor group.</p>
+            </>}
           </div>
 
           <div class="ms-card">
             <SpectrumCanvas top={topLayer} height={380} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
-              selected={selected} view={view} onView={setView}
+              selected={selected} view={view} onView={setView} topScale={topScale}
               measureLabel={delta ? `Δ ${delta.d.toFixed(4)}${delta.cands[0] ? ` · ${delta.cands[0].label}${delta.cands[0].charge > 1 ? ` (${delta.cands[0].charge}+)` : ''}` : ''}` : undefined}
               markers={current && spectra[current.indices[0]]?.precursorMz ? [{ mz: spectra[current.indices[0]].precursorMz!, label: 'precursor' }] : []}
               labelUnassigned={!ann}
@@ -318,12 +345,25 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
             </div>
           )}
 
-          {ann && (
-            <div class="ms-card">
+          <div class="ms-card">
+            {ann ? (<>
               <PeptideStructure peptide={ann.peptide} families={familiesFor(ann.ionTypes, ann.peptide.cyclic)} observed={stats?.observed} highlight={structureHl} filename={`${manifest.id}-structure`}
-                onHover={(m) => setHoverIons(m ? ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id) : null)} />
-            </div>
-          )}
+                onHover={(m) => setHoverIons(m ? (m.label ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
+                onClick={(m) => {
+                  if (m.label) { const ion = ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond); setFocus((f) => (ion && !(f?.kind === 'ion' && f.id === ion.id) ? { kind: 'ion', id: ion.id } : null)); return; }
+                  setFocus((f) => (f?.kind === 'bond' && f.bond === m.bond && f.side === m.side ? null : { kind: 'bond', bond: m.bond, side: m.side }));
+                }} />
+              <div class="ms-info">
+                <span class="small muted">{focus ? `${pinnedPeaks.length} assigned peak${pinnedPeaks.length === 1 ? '' : 's'} for this ${focus.kind === 'bond' ? 'cleavage' : 'ion'}` : 'Click a cleavage line to show only its fragments in the spectrum, or an ion label (b₃, y₅…) to zoom to that ion.'}</span>
+                {focus && <><span class="spacer" /><button type="button" class="btn-sm" onClick={() => setFocus(null)}>Clear selection (Esc)</button></>}
+              </div>
+            </>) : (
+              <div class="ms-empty">
+                <strong>Peptide structure</strong>
+                <p class="small muted">{annError ? <span style={{ color: 'var(--err)' }}>Could not annotate: {annError}</span> : 'Enter the peptide sequence on the left (e.g. cyclo(V(Orn)LfPV(Orn)LfP) or DRVYIHPF) to draw its structure and annotate this spectrum. Changes apply immediately.'}</p>
+              </div>
+            )}
+          </div>
 
           <div class="ms-grid-2">
             <div class="ms-card ion-table">

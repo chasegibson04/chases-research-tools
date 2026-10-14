@@ -6,7 +6,7 @@ const fullTitle = title === SITE.name ? title : `${title} · ${SITE.name}`;
 const url = canonical ?? new URL(Astro.url.pathname, SITE.url).href;
 const img = ogImage ?? new URL('/og-default.png', SITE.url).href;
 // Browser UI colour = the active theme's --bg (keep in sync with src/styles/themes/*.css).
-const themeColor = { graphite: '#111417', paper: '#f7f5f0', spectra: '#f5f7fa' }[SITE.theme];
+const themeColor = { graphite: '#111417', paper: '#f7f5f0', spectra: '#f5f7fa', michigan: '#00274c', wisconsin: '#fbfaf9' }[SITE.theme];
 const site: Record<string, unknown> = { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, description: SITE.description, author: { '@type': 'Person', name: SITE.author.name, affiliation: SITE.author.affiliation } };
 ---
 <title>{fullTitle}</title>
