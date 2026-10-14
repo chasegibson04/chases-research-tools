@@ -46,3 +46,23 @@ test('annotator: XIC and reference mirror comparison', async ({ page }) => {
   await expect(page.locator('.ms-card').filter({ hasText: 'Reference:' }).first()).toContainText('cosine', { timeout: 30_000 });
   expect(errors).toEqual([]);
 });
+
+test('annotator: panels collapse, the inputs rail hides, and hovering an ion shades only its residues', async ({ page }) => {
+  await page.goto('/tools/mzml-spectrum-annotator/');
+  await page.locator('#example-select').selectOption({ index: 1 });
+  await page.locator('[data-action="run"]').click();
+  await expect(page.locator('[data-output="spectraCount"]')).toHaveText('26', { timeout: 30_000 });
+  // hover a b4 assignment: 4 of 10 residues highlighted, not the whole ring
+  const row = page.locator('.ion-table tbody tr.matched').filter({ hasText: /^.*b₄/ }).first();
+  await row.hover();
+  const css = await page.locator('.pep-panel > style').evaluate((e) => e.textContent ?? '');
+  expect(new Set(css.match(/data-res="\d+"/g) ?? []).size).toBe(4);
+  // collapse the Scans panel
+  await page.locator('section.panel[aria-label="Scans"] .panel-toggle').click();
+  await expect(page.locator('section.panel[aria-label="Scans"] .panel-body')).toBeHidden();
+  // hide and show the inputs
+  await page.getByRole('button', { name: 'Hide inputs' }).click();
+  await expect(page.locator('.ts')).toHaveAttribute('data-inputs', 'collapsed');
+  await page.getByRole('button', { name: 'Show inputs' }).click();
+  await expect(page.locator('.ts')).toHaveAttribute('data-inputs', 'open');
+});

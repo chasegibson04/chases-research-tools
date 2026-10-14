@@ -10,7 +10,7 @@
 
 ## Done: launch (2026-10-13 – 2026-10-14)
 - [x] Move repo out of Box; push to GitHub; connect Cloudflare Workers Builds (DEPLOYMENT.md). Live at https://chases-research-tools.chase-gibson04.workers.dev
-- [x] Pick a theme at `/design/themes/`; set `SITE.theme` (michigan); self-host fonts (Fontsource: Source Sans 3, JetBrains Mono)
+- [x] Pick a theme at `/design/themes/`; set `SITE.theme` (paper by default since 2026-10-14; header theme menu offers Paper, Dark, Michigan, Wisconsin); self-host fonts (Fontsource: Source Sans 3, JetBrains Mono)
 - [x] Fill `site.ts` (GitHub user, email, ORCID), replace every `CHANGEME`
 - [x] CV page from the owner's CV + headshot (CV_PAGE_GUIDE.md)
 - [x] First real tool: peptide-fragment-ion-predictor (linear and cyclic peptides)
@@ -23,7 +23,7 @@
 - [x] Tool self-containment: `npm run validate` enforces the allowed imports; `npm run export-tool -- <slug>` writes a standalone runnable copy
 
 ## Next
-- [ ] De novo residue-ladder tool: working preview at `/design/next-tool/` (`site/src/components/preview/LadderPreview.tsx`); promote to a real tool
+- [ ] De novo residue-ladder tool: working preview on branch `preview/de-novo-ladder` (not on the live site; owner is still deciding); promote to a real tool
 - [ ] ms-file-converter: upstream the vendored OpenTFRaw activation-decoding patch (or drop it once upstream decodes activation)
 - [ ] ms-file-converter: list MSX multiplexed precursors and SPS-MS3 ions as extra precursors, as msconvert does
 - [ ] ms-file-converter: mzMLb, imzML and netCDF output

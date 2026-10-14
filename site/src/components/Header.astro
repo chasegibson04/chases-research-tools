@@ -1,9 +1,11 @@
 ---
 import { SITE } from '@/config/site';
 const path = Astro.url.pathname;
+const { wide = false } = Astro.props as { wide?: boolean };
+const THEMES = [['paper', 'Paper'], ['graphite', 'Dark'], ['michigan', 'Michigan'], ['wisconsin', 'Wisconsin']];
 ---
 <header class="site-header">
-  <div class="container">
+  <div class:list={['container', { 'container-wide': wide }]}>
     <a class="brand" href="/" aria-label={SITE.name}>
       <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="var(--accent)" opacity=".15"/><path d="M18 44 L30 20 L38 36 L46 28" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>{SITE.name}</span>
@@ -11,5 +13,21 @@ const path = Astro.url.pathname;
     <nav class="nav" aria-label="Primary">
       {SITE.nav.map((n) => <a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a>)}
     </nav>
+    <label class="theme-pick"><span class="sr-only">Theme</span>
+      <select id="theme-select" aria-label="Colour theme">
+        {THEMES.map(([id, label]) => <option value={id}>{label}</option>)}
+      </select>
+    </label>
   </div>
 </header>
+<script>
+  // Theme choice is a per-visitor convenience (localStorage); the site default comes from SITE.theme.
+  const sel = document.getElementById('theme-select') as HTMLSelectElement | null;
+  if (sel) {
+    sel.value = document.documentElement.dataset.theme ?? '';
+    sel.addEventListener('change', () => {
+      document.documentElement.dataset.theme = sel.value;
+      try { localStorage.setItem('crt-theme', sel.value); } catch { /* storage blocked: theme still applies for this page */ }
+    });
+  }
+</script>

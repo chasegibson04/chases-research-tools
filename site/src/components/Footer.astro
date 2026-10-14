@@ -3,9 +3,10 @@ import { SITE } from '@/config/site';
 import DonateButton from './DonateButton.astro';
 import { CATEGORIES } from '@/lib/tools';
 const year = new Date().getFullYear();
+const { wide = false } = Astro.props as { wide?: boolean };
 ---
 <footer class="site-footer">
-  <div class="container cols">
+  <div class:list={['container', 'cols', { 'container-wide': wide }]}>
     <div>
       <strong style="color:var(--fg)">{SITE.name}</strong>
       <p style="margin-top:.5rem">{SITE.tagline}</p>

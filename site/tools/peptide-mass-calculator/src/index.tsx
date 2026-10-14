@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'preact/hooks';
 import type { ToolProps } from '@/lib/types';
+import { Panel } from '@/components/tool/Panel';
 import { ToolShell, type RunState } from '@/components/tool/ToolShell';
 import { ExportMenu } from '@/components/tool/ExportMenu';
 import { FigurePanel } from '@/components/tool/FigurePanel';
@@ -30,6 +31,8 @@ export default function PeptideMassTool({ manifest, examples, run }: ToolProps<I
     <ToolShell manifest={manifest} examples={examples} values={values} state={state} message={msg} progress={progress}
       onChange={(k, v) => setValues({ ...values, [k]: v })} onLoadExample={(ex) => setValues(ex.input)} onRun={onRun} onCancel={() => { handle?.cancel(); setState('idle'); }}>
       {out && (<>
+        <Panel id="mass-calculator:masses" title="Masses">
+        <div style={{ padding: 'var(--space-3)', display: 'grid', gap: 'var(--space-3)' }}>
         <dl class="kv">
           <dt>Sequence</dt><dd data-output="sequence">{out.cleanSequence} ({out.length} aa)</dd>
           <dt>Formula</dt><dd data-output="formula">{out.formula}</dd>
@@ -38,7 +41,11 @@ export default function PeptideMassTool({ manifest, examples, run }: ToolProps<I
         </dl>
         <div class="results-table"><table><thead><tr><th>z</th><th>[M+zH]z+ m/z</th></tr></thead><tbody>{out.mz.map((r) => <tr><td>{r.z}+</td><td data-output={`mz${r.z}`}>{fmt(r.mz)}</td></tr>)}</tbody></table></div>
         <ExportMenu filename={`${manifest.id}-${out.cleanSequence}`} rows={out.mz} json={out} formats={['csv', 'json']} />
+        </div>
+        </Panel>
+        <Panel id="mass-calculator:isotopes" title="Isotope envelope">
         <FigurePanel traces={traces} filename={`${out.cleanSequence}-isotopes`} style={{ title: `Isotope envelope of ${out.cleanSequence} (1+)`, xTitle: 'm/z', yTitle: 'Relative intensity (%)', showLegend: false }} />
+        </Panel>
       </>)}
     </ToolShell>
   );

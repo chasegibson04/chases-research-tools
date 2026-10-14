@@ -30,14 +30,26 @@ interface Props<I> {
 /** Standard two-panel tool layout: inputs (left) and results (right), with run/cancel/status. */
 export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
   const [showAdv, setShowAdv] = useState(false);
+  const railKey = `crt-inputs-collapsed:${p.manifest.id}`;
+  const [collapsed, setCollapsedState] = useState(() => { try { return localStorage.getItem(railKey) === '1'; } catch { return false; } });
+  const setCollapsed = (c: boolean) => { setCollapsedState(c); try { localStorage.setItem(railKey, c ? '1' : '0'); } catch { /* storage blocked */ } };
+  const chevron = (dir: 'l' | 'r') => <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d={dir === 'l' ? 'M8 2 L4 6 L8 10' : 'M4 2 L8 6 L4 10'} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>;
   const inputs = p.manifest.inputs as ToolInputSpec[];
   const basic = inputs.filter((i) => !i.advanced);
   const adv = inputs.filter((i) => i.advanced);
   const warnings = preflight(p.manifest);
   const blocked = warnings.some((w) => w.level === 'block');
   return (
-    <div class="ts" data-tool={p.manifest.id}>
+    <div class="ts" data-tool={p.manifest.id} data-inputs={collapsed ? 'collapsed' : 'open'} style={p.manifest.layout.inputsWidthPx ? { '--inputs-w': `${p.manifest.layout.inputsWidthPx}px` } : undefined}>
       <aside class="ts-inputs" aria-label="Inputs">
+        <div class="ts-rail">
+          <button type="button" class="icon-btn" onClick={() => setCollapsed(false)} aria-label="Show inputs" title="Show inputs">{chevron('r')}</button>
+          <span class="rail-label">Inputs</span>
+          <button class="btn-primary icon-btn" type="button" onClick={p.onRun} disabled={p.state === 'running' || blocked} aria-label="Run" title="Run">
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2 L10 6 L3 10 Z" fill="currentColor" /></svg>
+          </button>
+        </div>
+        <button type="button" class="icon-btn ts-collapse" onClick={() => setCollapsed(true)} aria-label="Hide inputs" title="Hide inputs to give the results more room">{chevron('l')}</button>
         <ExampleLoader examples={p.examples} onLoad={p.onLoadExample} />
         {p.leadInputs}
         {basic.map((spec) => <ParamField spec={spec} value={p.values[spec.name]} error={p.errors?.[spec.name]} onChange={(v) => p.onChange(spec.name, v)} />)}

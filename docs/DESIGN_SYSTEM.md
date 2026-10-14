@@ -6,7 +6,7 @@ Goal: a sleek, fast, scientific instrument feel that reads as hand-built. Everyt
 Type scale, spacing, radii, shadows, motion, max widths, viz palette. Themes override colour tokens only.
 
 ## Themes (`themes/*.css`) — preview at `/design/themes/`
-**Active theme: michigan** (owner's choice 2026-10-14; paper was used 2026-10-13). All five themes ship in `global.css` and can be previewed at `/design/themes/`.
+**Default theme: paper** (owner's choice, 2026-10-14). Visitors can switch themes with the header menu: Paper, Dark (graphite), Michigan, Wisconsin; the choice is stored in `localStorage` (`crt-theme`) and applied before first paint by an inline script in `Base.astro`. All five themes ship in `global.css` and can be previewed at `/design/themes/`. Canvas/SVG figures re-read colours on theme change (`useThemeTick` in `components/ms/palette.ts`).
 - **graphite**: dark instrument panel, teal accent, warm grey text. Best for long analysis sessions; dark figures on screen export to white.
 - **paper**: warm off-white journal page, ink text, oxblood accent. Prints beautifully; reads "academic".
 - **spectra**: cool light slate with indigo accent and a faint spectral line under the header. Reads "clean lab".

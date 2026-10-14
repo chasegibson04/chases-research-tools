@@ -38,3 +38,14 @@ test('directory lists every tool and the directory ad slot never sits inside a t
   expect(await page.locator('a.card[href="/tools/peptide-mass-calculator/"]').count()).toBeGreaterThan(0); // listed once per subcategory
   expect(await page.locator('.tool-frame .ad-slot').count()).toBe(0);
 });
+
+test('theme picker switches the theme and remembers it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#theme-select').selectOption('graphite');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'graphite');
+  await page.goto('/tools/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'graphite');
+  await expect(page.locator('#theme-select')).toHaveValue('graphite');
+  await page.locator('#theme-select').selectOption('paper');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'paper');
+});

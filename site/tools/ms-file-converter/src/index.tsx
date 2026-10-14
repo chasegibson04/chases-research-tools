@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'preact/hooks';
 import type { ToolProps } from '@/lib/types';
+import { Panel } from '@/components/tool/Panel';
 import { ToolShell, type RunState } from '@/components/tool/ToolShell';
 import { HelpTip } from '@/components/tool/HelpTip';
 import { downloadJSON } from '@/lib/export';
@@ -241,7 +242,8 @@ export default function Converter({ manifest, examples, run }: ToolProps<Input, 
           </div>
         )}
         {items.length > 0 && (
-          <div class="results-table conv-tablewrap">
+          <Panel id="converter:queue" title="Queue" meta={`${items.length} input${items.length > 1 ? 's' : ''}`}>
+          <div class="results-table conv-tablewrap" style={{ border: 0, borderRadius: 0 }}>
             <table class="conv-queue" data-output="queue">
               <thead><tr><th>Input</th><th>Size</th><th>Format</th><th>Progress</th><th>Spectra</th><th>Output</th><th>Saved to</th><th></th></tr></thead>
               <tbody>
@@ -264,11 +266,11 @@ export default function Converter({ manifest, examples, run }: ToolProps<Input, 
               </tbody>
             </table>
           </div>
+          </Panel>
         )}
         {last && (
-          <section class="conv-preview">
-            <div class="conv-row">
-              <h3 class="small">Preview: {shown?.bundle.name} <span class="faint">(first {last.preview.length} spectra written)</span></h3>
+          <Panel id="converter:preview" title={`Preview: ${shown?.bundle.name ?? ''}`} meta={`first ${last.preview.length} spectra written`}>
+            <div class="conv-row" style={{ padding: 'var(--space-2) var(--space-3)' }}>
               <button type="button" class="linklike small" onClick={() => downloadJSON(`${shown?.bundle.name}-summary.json`, { ...last, files: last.files.map(({ blob: _b, ...f }) => f) })}>summary JSON</button>
             </div>
             <div class="results-table conv-tall">
@@ -277,7 +279,7 @@ export default function Converter({ manifest, examples, run }: ToolProps<Input, 
                 <tbody>{last.preview.map((p) => <tr><td>{p.index}</td><td class="mono">{p.id}</td><td>{p.msLevel}</td><td>{p.rt != null ? (p.rt / 60).toFixed(3) : ''}</td><td>{p.precursorMz != null ? p.precursorMz.toFixed(4) : ''}</td><td>{p.charge ?? ''}</td><td>{p.peaks}</td><td>{p.centroided ? 'centroid' : 'profile'}</td></tr>)}</tbody>
               </table>
             </div>
-          </section>
+          </Panel>
         )}
         {log.length > 0 && <details class="conv-log" open={state === 'error'}><summary class="small">Log ({log.length})</summary><pre class="small" data-output="log">{log.join('\n')}</pre></details>}
       </div>

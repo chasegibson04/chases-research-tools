@@ -22,3 +22,7 @@ desktop.ini
 
 # standalone tool exports (npm run export-tool)
 exports/
+
+# owner CV source material (private, never commit)
+CVDocsTransfer/
+CV_source/

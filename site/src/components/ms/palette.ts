@@ -1,9 +1,21 @@
+import { useEffect, useState } from 'preact/hooks';
 // Resolve theme tokens into concrete colours for canvas drawing and standalone SVG export.
 import type { SvgPalette } from '@/lib/ms/structureSvg';
 import type { IonType } from '@/lib/ms/fragments';
 
 const v = (name: string, fallback: string) =>
   (typeof getComputedStyle !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '') || fallback;
+
+/** Re-render counter that bumps when the page theme changes (theme picker), for memoised palettes. */
+export function useThemeTick(): number {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const mo = new MutationObserver(() => setTick((t) => t + 1));
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, []);
+  return tick;
+}
 
 export interface MsPalette extends SvgPalette { line: string; accent: string; internal: string; immonium: string; precursor: string; unassigned: string; err: string; ok: string }
 

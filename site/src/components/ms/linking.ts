@@ -33,10 +33,20 @@ export function complementOf(ion: Ion, ions: Ion[], p: Peptide): Ion | undefined
   return ions.find((i) => i.type === 'b' && !i.loss && i.carrier === 'H' && i.charge === ion.charge && i.size === size && (i.origins ?? [[i.start, i.end]]).some(([s]) => s % n === start));
 }
 
-export function structureHighlight(sel: Ion[], p: Peptide): StructureHighlight {
+/**
+ * Structure highlight for the selected ions: their cleavage markers and the residues they contain.
+ * `marksOnly` ions (e.g. the complement of a hovered ion) add markers but not residues; otherwise a b/y pair
+ * would shade the whole peptide.
+ */
+export function structureHighlight(sel: Ion[], p: Peptide, marksOnly: Ion[] = []): StructureHighlight {
   const n = p.residues.length;
   const marks: StructureHighlight['marks'] = [];
   const residues = new Set<number>();
+  for (const ion of marksOnly) {
+    if (ion.type === 'precursor' || ion.type === 'immonium') continue;
+    const side = p.cyclic ? 'n' : ionSide(ion.type) ?? 'n';
+    for (const b of ion.bonds) marks.push({ bond: b % (3 * n), side });
+  }
   for (const ion of sel) {
     if (ion.type === 'precursor') { for (let k = 0; k < n; k++) residues.add(k); continue; }
     if (ion.type === 'immonium') { residues.add(ion.start); continue; }

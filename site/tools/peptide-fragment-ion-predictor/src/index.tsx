@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ToolProps } from '@/lib/types';
+import { Panel } from '@/components/tool/Panel';
 import { ToolShell, type RunState } from '@/components/tool/ToolShell';
 import { ExportMenu } from '@/components/tool/ExportMenu';
 import { PeptideStructure } from '@/components/ms/PeptideStructure';
 import { SpectrumCanvas, type SpecAnnotation } from '@/components/ms/SpectrumCanvas';
 import { IonTable } from '@/components/ms/IonTable';
 import { IonTypePicker } from '@/components/ms/IonTypePicker';
-import { screenPalette, ionColor } from '@/components/ms/palette';
+import { screenPalette, ionColor, useThemeTick } from '@/components/ms/palette';
 import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedBonds, focusedIons, ionForLabel, frameMz, type Focus } from '@/components/ms/linking';
 import type { Ion, IonType } from '@/lib/ms/fragments';
 import { SeriesToggles, seriesOf, ionVisible, type SeriesKey } from '@/components/ms/SeriesToggles';
@@ -31,7 +32,8 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
   const [obsFile, setObsFile] = useState<File | null>(null);
   const [hidden, setHidden] = useState<Set<SeriesKey>>(new Set());
   const visible = (ion: Ion) => ionVisible(ion, hidden);
-  const palette = useMemo(() => screenPalette(), [out]);
+  const themeTick = useThemeTick();
+  const palette = useMemo(() => screenPalette(), [out, themeTick]);
 
   const shellManifest = useMemo(() => ({ ...manifest, inputs: manifest.inputs.filter((i) => !CUSTOM.has(i.name)) }), [manifest]);
   const cyclicInput = values.topology === 'cyclic' || /^\s*cyclo\(/i.test(String(values.sequence ?? ''));
@@ -65,11 +67,11 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
   const hlIons = useMemo(() => {
     const ids = hover ?? pinned.map((i) => i.id);
     const list = ids.map((id) => ionById.get(id)).filter(Boolean) as Ion[];
-    const withPairs = [...list];
-    if (out && list.length <= 3) for (const ion of list) { const c = complementOf(ion, out.ions, out.peptide); if (c) withPairs.push(c); }
-    return withPairs;
+    return list;
   }, [hover, pinned, ionById, out]);
-  const hlSet = useMemo(() => new Set(hlIons.map((i) => i.id)), [hlIons]);
+  /** Complements of a small selection: their markers and peaks are shown, but they do not shade residues. */
+  const hlPairs = useMemo(() => (out && hlIons.length <= 3 ? hlIons.map((ion) => complementOf(ion, out.ions, out.peptide)).filter((c): c is Ion => !!c && !hlIons.includes(c)) : []), [hlIons, out]);
+  const hlSet = useMemo(() => new Set([...hlIons, ...hlPairs].map((i) => i.id)), [hlIons, hlPairs]);
   /** Peaks drawn in the accent colour: only what the pointer is on (pinned ions keep their ion colours). */
   const hoverSet = useMemo(() => new Set(hover ?? []), [hover]);
 
@@ -120,7 +122,7 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
     setView(frameMz(mzs, focus?.kind === 'ion'));
   }, [pinned]);
 
-  const structureHl = useMemo(() => (out ? structureHighlight(hlIons, out.peptide) : undefined), [hlIons, out]);
+  const structureHl = useMemo(() => (out ? structureHighlight(hlIons, out.peptide, hlPairs) : undefined), [hlIons, hlPairs, out]);
   const families = useMemo(() => familiesFor(out?.ionTypes ?? [], !!out?.peptide.cyclic), [out]);
   const observed = useMemo(() => (out?.match ? observedBonds([...out.match.byIon.values()].map((m) => m.ion), out.peptide.cyclic) : undefined), [out]);
   const maxObs = useMemo(() => Math.max(1, ...(out?.observed?.peaks.map((p) => p.intensity) ?? [1])), [out]);
@@ -163,7 +165,7 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
       </>}>
       {out && (
         <div class="ms-tool">
-          <div class="ms-card">
+          <Panel id="predictor:structure" title="Structure">
             <PeptideStructure peptide={out.peptide} families={families} observed={observed} highlight={structureHl}
               filename={`${manifest.id}-structure`}
               onHover={(m) => setHover(m ? (m.label ? [ionForLabel(out.ions, m.type, m.size, m.side, out.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(out.ions, m.bond, m.side, out.peptide.cyclic).map((i) => i.id)) : null)}
@@ -184,9 +186,9 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
               </>) : <span class="small muted">Click a cleavage line to focus all its fragments, or an ion label (b₃, y₅…) for one ion. Solid = observed, dotted = theoretical.</span>}
               {focus && <><span class="spacer" /><button type="button" class="btn-sm" onClick={() => setFocus(null)}>Clear selection (Esc)</button></>}
             </div>
-          </div>
+          </Panel>
 
-          <div class="ms-card">
+          <Panel id="predictor:spectrum" title={observedLayer ? 'Spectrum: observed vs representative' : 'Spectrum'}>
             <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
             {observedLayer
               ? <SpectrumCanvas top={observedLayer} mirror={predictedLayer!} height={380} title="Observed (top) vs representative (bottom)" filename={`${manifest.id}-mirror`}
@@ -198,12 +200,12 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
                   view={view} onView={setView} topScale={scales.top} hideUnassigned={hidden.has('unassigned')}
                   markers={out.precursors.slice(-1).map((p) => ({ mz: p.mz, label: 'precursor' }))}
                   onHover={(h) => setHover(h ? [out.predicted[h.index].ionId] : null)} onPeakClick={(h) => pinIon(out.predicted[h.index].ionId)} />}
-          </div>
+          </Panel>
 
-          <div class="ms-card">
+          <Panel id="predictor:table" title="Fragment ions">
             <IonTable peptide={out.peptide} ions={out.ions} matches={out.match?.byIon} maxIntensity={maxObs} highlight={hlSet} palette={palette}
               onHover={(ids) => setHover(ids)} onSelect={(ion) => pinIon(ion.id)} mzRange={view} isVisible={visible} />
-          </div>
+          </Panel>
           <ExportMenu filename={`${manifest.id}-${out.peptide.text.replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)}`} rows={rows()} json={{ peptide: out.peptide.text, mono: out.mono, formula: out.formula, precursors: out.precursors, ions: rows() }} text={mgf()} formats={['csv', 'tsv', 'json', 'txt']} />
           <p class="small faint" style={{ margin: 0 }}>TXT exports the representative spectrum as MGF. Intensities are illustrative (rule-based), not a trained prediction.</p>
         </div>

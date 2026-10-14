@@ -47,7 +47,7 @@ The canonical prompt that triggers an import is simply:
     │   ├── lib/              # types, citation formatter, export helpers, figure wrapper
     │   │   ├── ms/           # Shared mass-spec library: residues, fragments, matching, mzML reader, … (ADR-009)
     │   │   └── runtime/      # Web Worker host, Pyodide/webR/WASM loaders, device limits
-    │   ├── pages/            # Routes (tools/[slug], categories, cv, about, contact, design/themes, design/next-tool, …)
+    │   ├── pages/            # Routes (tools/[slug], categories, cv, about, contact, design/themes, …)
     │   └── styles/           # tokens.css, themes/{graphite,paper,spectra,michigan,wisconsin}.css, global.css, cv.css
     ├── tools/                # ONE FOLDER PER TOOL (the public, downloadable modules)
     │   ├── tool.schema.json  # Manifest schema every tool must satisfy
@@ -81,4 +81,4 @@ Each tool is a folder `site/tools/<slug>/` containing a `tool.json` manifest (ca
 
 ## Status
 
-Launched 2026-10-13 on Cloudflare Workers (workers.dev URL); active theme michigan (`site/src/config/site.ts`). Tools: peptide mass calculator, peptide fragment ion predictor, mzML spectrum annotator, MS file converter. No custom domain yet; monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.
+Launched 2026-10-13 on Cloudflare Workers (workers.dev URL); default theme paper (`site/src/config/site.ts`); visitors can switch to Dark, Michigan or Wisconsin from the header. Tools: peptide mass calculator, peptide fragment ion predictor, mzML spectrum annotator, MS file converter. No custom domain yet; monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.

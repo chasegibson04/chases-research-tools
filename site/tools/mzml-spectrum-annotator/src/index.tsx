@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ToolProps } from '@/lib/types';
+import { Panel } from '@/components/tool/Panel';
 import { ToolShell, type RunState } from '@/components/tool/ToolShell';
 import { ExportMenu } from '@/components/tool/ExportMenu';
 import { PeptideStructure } from '@/components/ms/PeptideStructure';
 import { SpectrumCanvas, type SpecAnnotation } from '@/components/ms/SpectrumCanvas';
 import { IonTypePicker } from '@/components/ms/IonTypePicker';
-import { screenPalette, ionColor } from '@/components/ms/palette';
+import { screenPalette, ionColor, useThemeTick } from '@/components/ms/palette';
 import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedBonds, focusedIons, ionForLabel, frameMz, type Focus } from '@/components/ms/linking';
 import { deltaLookup, lowerBound, tolDa, ppmError, type Peak } from '@/lib/ms/match';
 import { PRESETS, presetFor } from '@/lib/ms/presets';
@@ -50,7 +51,6 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   /** Mass-scale correction in ppm applied to all observed m/z (recalibration from assigned peaks). */
   const [calPpm, setCalPpm] = useState(0);
   const [annError, setAnnError] = useState<string | undefined>();
-  const [scansOpen, setScansOpen] = useState(true);
   /** Pinned structure selection (a cleavage or one ion) that zooms the spectrum and greys out the rest. */
   const [focus, setFocus] = useState<Focus>(null);
   const [xicText, setXicText] = useState('');
@@ -60,7 +60,8 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const [xic, setXic] = useState<Array<{ label: string; values: Map<number, number> }>>([]);
   /** Pinned reference spectrum for a mirror comparison. */
   const [reference, setReference] = useState<{ label: string; mz: Float64Array; intensity: Float64Array } | null>(null);
-  const palette = useMemo(() => screenPalette(), [spectrum]);
+  const themeTick = useThemeTick();
+  const palette = useMemo(() => screenPalette(), [spectrum, themeTick]);
   const loaded = !!info;
 
   const shellManifest = useMemo(() => ({ ...manifest, inputs: manifest.inputs.filter((i) => !CUSTOM.has(i.name)) }), [manifest]);
@@ -174,16 +175,16 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const focusPeak = selected[selected.length - 1];
   const focusIons = useMemo(() => {
     const ids = hoverIons ?? (pinned.length ? pinned.map((i) => i.id) : focusPeak != null && assigned.get(focusPeak)?.ion ? [assigned.get(focusPeak)!.ion!.id] : []);
-    const list = ids.map((id) => ionById.get(id)).filter(Boolean) as Ion[];
-    if (ann && list.length <= 3) for (const ion of [...list]) { const c = complementOf(ion, ann.ions, ann.peptide); if (c) list.push(c); }
-    return list;
+    return ids.map((id) => ionById.get(id)).filter(Boolean) as Ion[];
   }, [hoverIons, focusPeak, assigned, ionById, ann, pinned]);
+  /** Complements of a small selection: shown as markers and peaks, without shading residues. */
+  const focusPairs = useMemo(() => (ann && focusIons.length <= 3 ? focusIons.map((ion) => complementOf(ion, ann.ions, ann.peptide)).filter((c): c is Ion => !!c && !focusIons.includes(c)) : []), [focusIons, ann]);
   const structureHl = useMemo(() => {
     if (!ann) return undefined;
     const sel = [...focusIons];
     if (selected.length >= 2) for (const k of selected.slice(-2)) { const a = assigned.get(k); if (a?.ion) sel.push(a.ion); }
-    return structureHighlight(sel, ann.peptide);
-  }, [focusIons, selected, assigned, ann]);
+    return structureHighlight(sel, ann.peptide, focusPairs);
+  }, [focusIons, focusPairs, selected, assigned, ann]);
 
   const pinnedPeaks = useMemo(() => [...assigned.values()].filter((a) => !a.isotope && a.ion && pinnedSet.has(a.ion.id)), [assigned, pinnedSet]);
   useEffect(() => {
@@ -298,10 +299,8 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
       </>}>
       {loaded && spectrum && (
         <div class="ms-tool">
-          <div class="ms-card">
+          <Panel id="annotator:scans" title="Scans">
             <div class="fig-bar">
-              <button type="button" class="linklike" aria-expanded={scansOpen} aria-label={scansOpen ? 'Collapse scans' : 'Expand scans'} onClick={() => setScansOpen(!scansOpen)}>{scansOpen ? '▾' : '▸'}</button>
-              <strong>Scans</strong>
               <span class="small muted">{info!.format}{info!.indexed ? ' (indexed)' : ''} · {info!.software.slice(0, 2).join(', ')}{info!.instrument ? ` · ${info!.instrument}` : ''}</span>
               <span class="spacer" />
               <select class="input-sm" value={String(msLevel)} onChange={(e) => { const v = (e.target as HTMLSelectElement).value; setMsLevel(v === 'all' ? 'all' : Number(v)); }} aria-label="MS level shown">
@@ -309,7 +308,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
               </select>
               <button type="button" class="btn-sm" disabled={!groups[0] || current?.key === groups[0].key} onClick={() => groups[0] && pickScans(groups[0].indices.slice(0, 5000), `${groups[0].label} · ${groups[0].indices.length} scans`, groups[0].key)} title="Average all scans of the main precursor group again">Reset</button>
             </div>
-            {scansOpen && <>
+            <>
             <div class="scan-groups">
               {groups.slice(0, 12).map((g) => (
                 <button type="button" class="btn-sm" aria-pressed={current?.key === g.key} onClick={() => pickScans(g.indices.slice(0, 5000), `${g.label} · ${g.indices.length} scans`, g.key)}>
@@ -329,10 +328,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                 : <button type="button" class="btn-sm" onClick={() => setReference({ label: current?.label ?? 'reference', mz: spectrum.mz, intensity: spectrum.intensity })} title="Keep this spectrum and compare it (mirrored below) with the next one you open">Pin as reference</button>}
             </div>
             <p class="small faint" style={{ margin: '0 var(--space-3) var(--space-2)' }}>Click a scan to view it; drag across scans to average them; buttons average a whole precursor group.</p>
-            </>}
-          </div>
+            </>
+          </Panel>
 
-          <div class="ms-card">
+          <Panel id="annotator:spectrum" title="Spectrum">
             <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
             <SpectrumCanvas hideUnassigned={hidden.has('unassigned')} top={topLayer} height={reference ? 460 : 380} mirror={reference ? { peaks: Array.from(reference.mz, (mz, i) => ({ mz, intensity: reference.intensity[i] })), label: `Reference: ${reference.label}` } : undefined} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
               selected={selected} view={view} onView={setView} topScale={topScale}
@@ -354,12 +353,12 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                   : <button type="button" class="btn-sm" onClick={() => setRefPeak(focusPeak)} title="Show every peak's mass difference to this peak in the table, with the residue that explains it">Set as reference peak</button>}
               </>) : <span class="small muted">Click a peak to inspect or assign it; shift-click a second peak to measure the mass difference.</span>}
             </div>
-          </div>
+          </Panel>
 
           {(delta || (focusPeak != null && ann)) && (
             <div class="ms-grid-2">
               {focusPeak != null && ann && (
-                <div class="ms-card">
+                <Panel id="annotator:assign" title="Assign peak">
                   <div class="fig-bar"><strong>Assign m/z {peaks[focusPeak].mz.toFixed(4)}</strong><span class="spacer" />
                     <button type="button" class="btn-sm" onClick={() => setOverride(focusPeak, { ionId: null })}>Unassign</button>
                     {overrides.has(keyAt(focusPeak)) && <button type="button" class="btn-sm" onClick={() => setOverride(focusPeak, null)}>Reset to auto</button>}
@@ -379,10 +378,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                     <input class="input-sm" placeholder="Custom label, e.g. b5* or contaminant" value={custom} onInput={(e) => setCustom((e.target as HTMLInputElement).value)} aria-label="Custom label" />
                     <button type="button" class="btn-sm" disabled={!custom.trim()} onClick={() => { setOverride(focusPeak, { ionId: null, label: custom.trim() }); setCustom(''); }}>Label</button>
                   </div>
-                </div>
+                </Panel>
               )}
               {delta && (
-                <div class="ms-card">
+                <Panel id="annotator:delta" title="Mass difference">
                   <div class="fig-bar"><strong>Δm/z {delta.d.toFixed(4)}</strong><span class="small muted">{f4(delta.a.mz)} → {f4(delta.b.mz)}</span></div>
                   <div class="results-table" style={{ maxHeight: '280px', border: 0 }}>
                     <table class="ion-list"><thead><tr><th>Candidate</th><th>Kind</th><th>z</th><th>Mass</th><th>Error (mDa)</th><th>ppm</th></tr></thead><tbody>
@@ -390,12 +389,12 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                       {!delta.cands.length && <tr><td colSpan={6} class="small muted">No residue, dipeptide or common loss within tolerance.</td></tr>}
                     </tbody></table>
                   </div>
-                </div>
+                </Panel>
               )}
             </div>
           )}
 
-          <div class="ms-card">
+          <Panel id="annotator:structure" title="Structure">
             {ann ? (<>
               <PeptideStructure peptide={ann.peptide} families={familiesFor(ann.ionTypes, ann.peptide.cyclic)} observed={stats?.observed} highlight={structureHl} filename={`${manifest.id}-structure`}
                 onHover={(m) => setHoverIons(m ? (m.label ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
@@ -413,10 +412,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                 <p class="small muted">{annError ? <span style={{ color: 'var(--err)' }}>Could not annotate: {annError}</span> : 'Enter the peptide sequence on the left (e.g. cyclo(V(Orn)LfPV(Orn)LfP) or DRVYIHPF) to draw its structure and annotate this spectrum. Changes apply immediately.'}</p>
               </div>
             )}
-          </div>
+          </Panel>
 
           <div class="ms-grid-2">
-            <div class="ms-card ion-table">
+            <Panel id="annotator:peaks" title="Peaks" class="ion-table">
               <div class="ts-bar">
                 <strong class="small">Peaks</strong>
                 <div class="seg" role="group" aria-label="Peak filter">
@@ -439,8 +438,8 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                   ))}
                 </tbody></table>
               </div>
-            </div>
-            <div class="ms-card">
+            </Panel>
+            <Panel id="annotator:error" title="Mass error">
               <div class="fig-bar"><strong>Mass error</strong><span class="small muted">{errPts.length} assigned · median {medErr != null ? `${medErr.toFixed(2)} ppm` : '–'}{calPpm ? ` · corrected by ${(-calPpm).toFixed(2)} ppm` : ''}</span><span class="spacer" />
                 {medErr != null && Math.abs(medErr) > 0.3 && <button type="button" class="btn-sm" onClick={() => setCalPpm(calPpm + medErr)} title="Shift all observed m/z by the median error of the strongest assignments, then consider a tighter tolerance">Recalibrate</button>}
                 {calPpm !== 0 && <button type="button" class="btn-sm" onClick={() => setCalPpm(0)}>Undo</button>}
@@ -460,7 +459,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
                   </>;
                 })()}
               </svg>
-            </div>
+            </Panel>
           </div>
 
           <div class="ts-bar">

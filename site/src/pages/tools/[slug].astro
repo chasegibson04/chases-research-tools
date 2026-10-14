@@ -37,7 +37,7 @@ const jsonLd = [
   ...(tool.seo.faq?.length ? [{ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: tool.seo.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }] : []),
 ];
 ---
-<Base title={tool.seo.title} description={tool.seo.metaDescription} canonical={url} jsonLd={jsonLd} noindex={tool.status === 'draft'} ogImage={tool.seo.ogImage ? new URL(tool.seo.ogImage, SITE.url).href : undefined}>
+<Base wide={tool.layout.fullWidth} title={tool.seo.title} description={tool.seo.metaDescription} canonical={url} jsonLd={jsonLd} noindex={tool.status === 'draft'} ogImage={tool.seo.ogImage ? new URL(tool.seo.ogImage, SITE.url).href : undefined}>
   <AdScripts slot="head" />
   <div class:list={['container', { 'container-wide': tool.layout.fullWidth }]}>
     <div class="tool-head">

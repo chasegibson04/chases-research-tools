@@ -7,7 +7,7 @@ import { SITE } from '@/config/site';
 import Header from '@/components/Header.astro';
 import Footer from '@/components/Footer.astro';
 import SEO from '@/components/SEO.astro';
-interface Props { title: string; description?: string; canonical?: string; ogImage?: string; jsonLd?: unknown[]; noindex?: boolean; theme?: string; class?: string }
+interface Props { title: string; description?: string; canonical?: string; ogImage?: string; jsonLd?: unknown[]; noindex?: boolean; theme?: string; class?: string; /** Full-width page: header and footer use the wide container too. */ wide?: boolean }
 const { title, description = SITE.description, canonical, ogImage, jsonLd = [], noindex = false, theme = SITE.theme } = Astro.props;
 ---
 <!doctype html>
@@ -18,10 +18,14 @@ const { title, description = SITE.description, canonical, ogImage, jsonLd = [], 
     <SEO {title} {description} {canonical} {ogImage} {jsonLd} {noindex} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <slot name="head" />
+    <script is:inline>
+      // Apply a visitor's saved theme before first paint (Header has the picker).
+      try { var t = localStorage.getItem('crt-theme'); if (t && ['paper','graphite','michigan','wisconsin','spectra'].indexOf(t) >= 0) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
   </head>
   <body class:list={['bg-grid', Astro.props.class]}>
-    <Header />
+    <Header wide={Astro.props.wide} />
     <main id="main"><slot /></main>
-    <Footer />
+    <Footer wide={Astro.props.wide} />
   </body>
 </html>
