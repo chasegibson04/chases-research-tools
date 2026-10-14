@@ -11,7 +11,7 @@ import { PRESETS, presetFor, parseFixedMods } from '@/lib/ms/presets';
 import { formatFormula, PROTON } from '@/lib/ms/elements';
 import type { Activation } from '@/lib/ms/predict';
 import { indexSpectra, openSource, type FileInfo, type SpectrumMeta } from '@/lib/ms/mzml';
-import { groupScans, averageRanges, inferCharge, MAX_SCANS, type ScanGroup, type SpectrumResult } from '@/lib/ms/spectrumFile';
+import { groupScans, averageRanges, inferCharge, extractIonChromatogram, MAX_SCANS, type ScanGroup, type SpectrumResult } from '@/lib/ms/spectrumFile';
 export { groupScans, inferCharge, type ScanGroup, type SpectrumResult };
 
 export interface AnnotateOptions {
@@ -40,7 +40,10 @@ export interface AnnotateOptions {
 }
 
 export interface Input extends AnnotateOptions {
-  op?: 'load' | 'spectrum' | 'annotate';
+  op?: 'load' | 'spectrum' | 'annotate' | 'xic';
+  /** xic op: target m/z values and tolerance */
+  xicTargets?: number[];
+  xicTolPpm?: number;
   file?: Blob | null;
   url?: string;
   fileName?: string;
@@ -65,7 +68,9 @@ export interface Annotation {
 }
 
 export interface Output {
-  op: 'load' | 'spectrum' | 'annotate';
+  op: 'load' | 'spectrum' | 'annotate' | 'xic';
+  /** xic op: one intensity per range, per target */
+  xic?: number[][];
   info?: FileInfo;
   spectra?: SpectrumMeta[];
   groups?: ScanGroup[];
@@ -135,6 +140,11 @@ const run: ComputeFn<Input, Output> = async (input, ctx) => {
     return { op, ...safeAnnotate(peaks, input, input.scanActivation, input.scanCharge ?? null) };
   }
   const file = await sourceOf(input);
+  if (op === 'xic') {
+    const targets = (input.xicTargets ?? []).filter((x) => Number.isFinite(x) && x > 0);
+    if (!targets.length) throw new Error('Enter at least one m/z for the chromatogram.');
+    return { op, xic: await extractIonChromatogram(file, input.ranges ?? [], input.info!, targets, Number(input.xicTolPpm) || 10, ctx) };
+  }
   if (op === 'spectrum') {
     const spectrum = await averageRanges(file, { ...input, ranges: input.ranges ?? [], info: input.info!, mobilityWindow: parseWindow(input.mobilityWindow) }, ctx);
     const inferred = inferCharge(spectrum, input.precursorMz ?? null);

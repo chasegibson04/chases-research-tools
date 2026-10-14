@@ -117,3 +117,46 @@ export async function sniffSpectrumFile(file: Blob): Promise<'mzML' | 'MGF' | 'm
   if (/[\u0000-\u0008\u000e-\u001f]/.test(head.slice(0, 4096))) return 'binary'; // control bytes => not a text peak list
   return 'text';
 }
+
+/**
+ * Extracted-ion chromatogram: summed intensity within ±tolPpm of each target m/z, for every spectrum range given.
+ * Reads the file in merged blocks (same as averaging). Returns one intensity per range per target.
+ */
+export async function extractIonChromatogram(file: Blob, ranges: AverageOptions['ranges'], info: AverageOptions['info'], targets: number[], tolPpm: number, ctx: ComputeContext): Promise<number[][]> {
+  const out = targets.map(() => new Array(ranges.length).fill(0));
+  const order = ranges.map((r, i) => ({ ...r, i })).sort((a, b) => a.start - b.start);
+  let k = 0;
+  while (k < order.length) {
+    let j = k; const blockStart = order[k].start; let blockEnd = order[k].end;
+    while (j + 1 < order.length && order[j + 1].start - blockEnd < 64 * 1024 && order[j + 1].end - blockStart < 48 * 1024 * 1024) { j++; blockEnd = order[j].end; }
+    const text = new TextDecoder('latin1').decode(await file.slice(blockStart, blockEnd).arrayBuffer());
+    for (let q = k; q <= j; q++) {
+      if (ctx.signal.aborted) throw new Error('Cancelled.');
+      const r = order[q];
+      const sp = parseSpectrumText(text.slice(r.start - blockStart, r.end - blockStart), info);
+      targets.forEach((t, ti) => {
+        const d = (t * tolPpm) / 1e6;
+        let lo = 0, hi = sp.mz.length;
+        while (lo < hi) { const mid = (lo + hi) >> 1; if (sp.mz[mid] < t - d) lo = mid + 1; else hi = mid; }
+        let sum = 0; for (let x = lo; x < sp.mz.length && sp.mz[x] <= t + d; x++) sum += sp.intensity[x];
+        out[ti][r.i] = sum;
+      });
+    }
+    ctx.progress(0.05 + 0.9 * ((j + 1) / order.length), `XIC ${j + 1}/${order.length}`);
+    k = j + 1;
+  }
+  return out;
+}
+
+/** Cosine similarity of two centroided spectra (peaks paired within tolPpm, √intensity weighting). */
+export function spectralCosine(a: { mz: ArrayLike<number>; intensity: ArrayLike<number> }, b: { mz: ArrayLike<number>; intensity: ArrayLike<number> }, tolPpm = 10): number {
+  let i = 0, j = 0, dot = 0, na = 0, nb = 0;
+  for (let x = 0; x < a.mz.length; x++) na += a.intensity[x];
+  for (let x = 0; x < b.mz.length; x++) nb += b.intensity[x];
+  while (i < a.mz.length && j < b.mz.length) {
+    const d = ((a.mz[i] - b.mz[j]) / b.mz[j]) * 1e6;
+    if (Math.abs(d) <= tolPpm) { dot += Math.sqrt(a.intensity[i] * b.intensity[j]); i++; j++; }
+    else if (d < 0) i++; else j++;
+  }
+  return na && nb ? dot / Math.sqrt(na * nb) : 0;
+}

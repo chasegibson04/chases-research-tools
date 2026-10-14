@@ -64,3 +64,19 @@ test.describe('mzml-spectrum-annotator interactions', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test('annotator: XIC and reference mirror comparison', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/tools/mzml-spectrum-annotator/');
+  await page.locator('#example-select').selectOption({ index: 1 });
+  await page.locator('[data-action="run"]').click();
+  await expect(page.locator('[data-output="spectraCount"]')).toHaveText('26', { timeout: 30_000 });
+  await page.locator('input[aria-label^="m/z values for an extracted-ion"]').fill('571.3602');
+  await page.getByRole('button', { name: 'Show XIC' }).click();
+  await expect(page.locator('.ts-status')).toContainText('XIC of 1 m/z', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Pin as reference' }).click();
+  await page.getByRole('button', { name: /MS2 523\.77/ }).click();
+  await expect(page.locator('.ms-card').filter({ hasText: 'Reference:' }).first()).toContainText('cosine', { timeout: 30_000 });
+  expect(errors).toEqual([]);
+});

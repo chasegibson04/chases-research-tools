@@ -8,10 +8,12 @@ interface Props {
   msLevel: number | 'all';
   onPick: (indices: number[]) => void;
   height?: number;
+  /** Extracted-ion chromatograms: spectrum index → intensity, one map per target (drawn as lines). */
+  xic?: Array<{ label: string; values: Map<number, number> }>;
 }
 
 /** Scan strip: TIC (or base peak) of every scan against RT (or scan order). Click = one scan; drag = range. */
-export function ScanChart({ spectra, active, msLevel, onPick, height = 120 }: Props) {
+export function ScanChart({ spectra, active, msLevel, onPick, height = 120, xic }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const [W, setW] = useState(800);
@@ -50,8 +52,18 @@ export function ScanChart({ spectra, active, msLevel, onPick, height = 120 }: Pr
       ctx.beginPath(); ctx.moveTo(px, height - B); ctx.lineTo(px, height - B - Math.max(1, h)); ctx.stroke();
     });
     ctx.globalAlpha = 1;
+    // XIC overlays, each scaled to its own maximum
+    const xicCols = [col('--ion-y', '#d55e00'), col('--ion-a', '#009e73'), col('--ion-x', '#cc79a7'), col('--ion-z', '#e69f00')];
+    (xic ?? []).forEach((tr, ti) => {
+      const pts = shown.map((s, i) => [X(xs[i]), tr.values.get(s.index) ?? 0] as [number, number]);
+      const mx = Math.max(1e-9, ...pts.map((p) => p[1]));
+      ctx.strokeStyle = xicCols[ti % xicCols.length]; ctx.lineWidth = 1.5; ctx.beginPath();
+      pts.forEach(([px, v], i) => { const y = height - B - (v / mx) * (height - T - B); if (i) ctx.lineTo(px, y); else ctx.moveTo(px, y); });
+      ctx.stroke();
+      ctx.fillStyle = xicCols[ti % xicCols.length]; ctx.textAlign = 'left'; ctx.fillText(`XIC ${tr.label}`, L + 6 + ti * 110, T + 10);
+    });
     if (drag) { ctx.fillStyle = col('--accent-soft', 'rgba(0,0,0,.1)'); ctx.fillRect(Math.min(...drag), T, Math.abs(drag[1] - drag[0]), height - T - B); }
-  }, [spectra, active, msLevel, W, drag]);
+  }, [spectra, active, msLevel, W, drag, xic]);
 
   const local = (e: MouseEvent) => e.clientX - cv.current!.getBoundingClientRect().left;
   const pickRange = (a: number, b: number) => {

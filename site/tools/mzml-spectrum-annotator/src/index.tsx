@@ -10,6 +10,7 @@ import { familiesFor, ionsForMarker, complementOf, structureHighlight, observedB
 import { deltaLookup, lowerBound, tolDa, ppmError, type Peak } from '@/lib/ms/match';
 import { PRESETS, presetFor } from '@/lib/ms/presets';
 import { downloadJSON } from '@/lib/export';
+import { spectralCosine } from '@/lib/ms/spectrumFile';
 import type { Ion, IonType } from '@/lib/ms/fragments';
 import '@/components/ms/ms.css';
 import { ScanChart } from './ScanChart';
@@ -51,6 +52,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const [scansOpen, setScansOpen] = useState(true);
   /** Pinned structure selection (a cleavage or one ion) that zooms the spectrum and greys out the rest. */
   const [focus, setFocus] = useState<Focus>(null);
+  const [xicText, setXicText] = useState('');
+  const [xic, setXic] = useState<Array<{ label: string; values: Map<number, number> }>>([]);
+  /** Pinned reference spectrum for a mirror comparison. */
+  const [reference, setReference] = useState<{ label: string; mz: Float64Array; intensity: Float64Array } | null>(null);
   const palette = useMemo(() => screenPalette(), [spectrum]);
   const loaded = !!info;
 
@@ -110,6 +115,18 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
     }, 400);
     return () => clearTimeout(t);
   }, [calPpm, values.sequence, values.topology, values.precursorCharge, values.activation, values.ionTypes, values.tolerance, values.toleranceUnit, values.losses, values.maxLosses, values.modLosses, values.fixedMods, values.adducts, values.immonium, values.precursorIons, values.cyclicHydrolysis, values.maxFragmentCharge]);
+
+  const runXic = () => {
+    if (!source || !info) return;
+    const targets = xicText.split(/[\s,;]+/).map(Number).filter((x) => x > 0);
+    const level = msLevel === 'all' ? null : msLevel;
+    const idx = spectra.filter((s) => level == null || s.msLevel === level).map((s) => s.index);
+    const ranges = idx.map((i) => ({ start: spectra[i].start, end: spectra[i].end, centroided: spectra[i].centroided }));
+    exec({ ...annOpts(), op: 'xic', file: source.file, url: source.url, ranges, info: { format: info.format, paramGroups: info.paramGroups }, xicTargets: targets, xicTolPpm: Number(values.tolerance) || 10 }, (o, ms) => {
+      setXic(targets.map((t, ti) => ({ label: t.toFixed(4), values: new Map(idx.map((sIdx, k) => [sIdx, o.xic![ti][k]])) })));
+      setMsg(`XIC of ${targets.length} m/z over ${idx.length} scans · ${(ms / 1000).toFixed(1)} s`);
+    });
+  };
 
   // ---- assignments ---------------------------------------------------------------------------------
   const peaks: Peak[] = useMemo(() => (spectrum ? Array.from(spectrum.mz, (mz, i) => ({ mz: mz * (1 - calPpm * 1e-6), intensity: spectrum.intensity[i] })) : []), [spectrum, calPpm]);
@@ -283,13 +300,22 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
               ))}
               {groups.length > 12 && <span class="small muted">+{groups.length - 12} more groups (pick scans in the strip)</span>}
             </div>
-            <ScanChart spectra={spectra} active={activeSet} msLevel={msLevel} onPick={(idx) => pickScans(idx)} />
+            <ScanChart spectra={spectra} active={activeSet} msLevel={msLevel} onPick={(idx) => pickScans(idx)} xic={xic} />
+            <div class="ts-bar" style={{ padding: '0 var(--space-3) var(--space-2)' }}>
+              <input class="input-sm" placeholder="XIC m/z, e.g. 589.2729 1046.54" value={xicText} onInput={(e) => setXicText((e.target as HTMLInputElement).value)} aria-label="m/z values for an extracted-ion chromatogram" onKeyDown={(e) => e.key === 'Enter' && runXic()} />
+              <button type="button" class="btn-sm" disabled={!xicText.trim()} onClick={runXic}>Show XIC</button>
+              {xic.length > 0 && <button type="button" class="btn-sm" onClick={() => setXic([])}>Clear XIC</button>}
+              <span class="spacer" />
+              {reference
+                ? <><span class="small muted">Reference: {reference.label} · cosine {spectralCosine(spectrum, reference, Number(values.tolerance) || 10).toFixed(3)}</span><button type="button" class="btn-sm" onClick={() => setReference(null)}>Clear reference</button></>
+                : <button type="button" class="btn-sm" onClick={() => setReference({ label: current?.label ?? 'reference', mz: spectrum.mz, intensity: spectrum.intensity })} title="Keep this spectrum and compare it (mirrored below) with the next one you open">Pin as reference</button>}
+            </div>
             <p class="small faint" style={{ margin: '0 var(--space-3) var(--space-2)' }}>Click a scan to view it; drag across scans to average them; buttons average a whole precursor group.</p>
             </>}
           </div>
 
           <div class="ms-card">
-            <SpectrumCanvas top={topLayer} height={380} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
+            <SpectrumCanvas top={topLayer} height={reference ? 460 : 380} mirror={reference ? { peaks: Array.from(reference.mz, (mz, i) => ({ mz, intensity: reference.intensity[i] })), label: `Reference: ${reference.label}` } : undefined} title={current?.label ?? 'Spectrum'} filename={`${(source?.name ?? 'spectrum').replace(/\.[^.]+$/, '')}-annotated`}
               selected={selected} view={view} onView={setView} topScale={topScale}
               measureLabel={delta ? `Δ ${delta.d.toFixed(4)}${delta.cands[0] ? ` · ${delta.cands[0].label}${delta.cands[0].charge > 1 ? ` (${delta.cands[0].charge}+)` : ''}` : ''}` : undefined}
               markers={current && spectra[current.indices[0]]?.precursorMz ? [{ mz: spectra[current.indices[0]].precursorMz!, label: 'precursor' }] : []}
