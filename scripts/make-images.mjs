@@ -17,7 +17,10 @@ const siteTs = readFileSync(join(site, 'src/config/site.ts'), 'utf8');
 const name = /name:\s*"([^"]+)"/.exec(siteTs)?.[1] ?? "Chase's Research Tools";
 const tagline = /tagline:\s*'([^']+)'/.exec(siteTs)?.[1] ?? '';
 const theme = /theme:\s*'(\w+)'/.exec(siteTs)?.[1] ?? 'graphite';
-const css = ['tokens.css', `themes/${theme}.css`].map((f) => readFileSync(join(site, 'src/styles', f), 'utf8')).join('\n');
+// Embed the self-hosted latin font files so the image renders the same on every machine.
+const fontFace = (family, pkg, file) => `@font-face{font-family:'${family}';font-weight:200 900;src:url(data:font/woff2;base64,${readFileSync(join(site, 'node_modules/@fontsource-variable', pkg, 'files', file)).toString('base64')}) format('woff2')}`;
+const fonts = fontFace('Source Sans 3 Variable', 'source-sans-3', 'source-sans-3-latin-wght-normal.woff2') + fontFace('JetBrains Mono Variable', 'jetbrains-mono', 'jetbrains-mono-latin-wght-normal.woff2');
+const css = fonts + ['tokens.css', `themes/${theme}.css`].map((f) => readFileSync(join(site, 'src/styles', f), 'utf8')).join('\n');
 
 const og = `<!doctype html><html data-theme="${theme}"><head><style>${css}
 html,body{margin:0}body{width:1200px;height:630px;background:var(--bg);color:var(--fg);font-family:var(--font-sans);display:flex;flex-direction:column;justify-content:space-between;padding:72px;box-sizing:border-box;background-image:radial-gradient(var(--grid-dot) 1.5px,transparent 1.5px);background-size:28px 28px}
@@ -35,12 +38,14 @@ html,body{margin:0}body{width:600px;height:600px;display:grid;place-items:center
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 await page.setContent(og);
+await page.evaluate(() => document.fonts.ready);
 await page.screenshot({ path: join(site, 'public/og-default.png'), type: 'png' });
 console.log('wrote site/public/og-default.png');
 const hs = join(site, 'public/cv/headshot.jpg');
 if (force || !existsSync(hs)) {
   await page.setViewportSize({ width: 600, height: 600 });
   await page.setContent(headshot);
+  await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: hs, type: 'jpeg', quality: 82 });
   console.log('wrote placeholder site/public/cv/headshot.jpg (replace with the real photo)');
 }

@@ -18,7 +18,7 @@ export const SITE = {
     github: 'CHANGEME',
   },
   repo: 'https://github.com/CHANGEME/chases-research-tools',
-  theme: 'graphite' as 'graphite' | 'paper' | 'spectra',
+  theme: 'paper' as 'graphite' | 'paper' | 'spectra',
   nav: [
     { label: 'Tools', href: '/tools/' },
     { label: 'Categories', href: '/categories/' },

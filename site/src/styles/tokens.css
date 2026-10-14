@@ -1,8 +1,8 @@
 /* Design tokens. Themes override these under [data-theme="..."] in ./themes/*.css.
    Rules: no pure black/white, no default-blue links, no gradient text, no glassmorphism. (docs/DESIGN_SYSTEM.md) */
 :root {
-  --font-sans: "Source Sans 3", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "Source Sans 3 Variable", "Source Sans 3", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
   --font-display: var(--font-sans);
   --fs-xs: 0.78rem; --fs-sm: 0.875rem; --fs-md: 1rem; --fs-lg: 1.15rem; --fs-xl: 1.45rem; --fs-2xl: 1.9rem; --fs-3xl: 2.5rem;
   --lh-tight: 1.2; --lh-body: 1.55;

@@ -5,8 +5,9 @@ Goal: a sleek, fast, scientific instrument feel that reads as hand-built. Everyt
 ## Tokens (`tokens.css`)
 Type scale, spacing, radii, shadows, motion, max widths, viz palette. Themes override colour tokens only.
 
-## Three theme candidates (`themes/*.css`) — pick at `/design/themes/`
-- **graphite** (default): dark instrument panel, teal accent, warm grey text. Best for long analysis sessions; dark figures on screen export to white.
+## Themes (`themes/*.css`) — preview at `/design/themes/`
+**Active theme: paper** (chosen by the owner 2026-10-13). The other two stay as alternatives.
+- **graphite**: dark instrument panel, teal accent, warm grey text. Best for long analysis sessions; dark figures on screen export to white.
 - **paper**: warm off-white journal page, ink text, oxblood accent. Prints beautifully; reads "academic".
 - **spectra**: cool light slate with indigo accent and a faint spectral line under the header. Reads "clean lab".
 Set `theme` in `src/config/site.ts`. A user-facing light/dark toggle is a planned addition (respect `prefers-color-scheme`; persist in `localStorage`).
@@ -17,7 +18,7 @@ Set `theme` in `src/config/site.ts`. A user-facing light/dark toggle is a planne
 3. Headlines are short, factual, sentence case. Copy is written like a methods section, not a landing page ("Monoisotopic mass, m/z for any charge state", not "Unlock insights").
 4. Density: tools are instruments. Compact spacing in the tool frame, generous spacing in prose.
 5. Texture is limited to the subtle dot grid (`.bg-grid`) and hairline borders.
-6. Fonts: system stack by default (zero download). Planned: self-host **Source Sans 3** + **JetBrains Mono** via `@fontsource-variable` (≈ 60 KB woff2) once the theme is chosen. Never load fonts from Google's CDN at runtime.
+6. Fonts: **Source Sans 3** (text) + **JetBrains Mono** (numbers/code), self-hosted via `@fontsource-variable/*` packages imported in `src/layouts/Base.astro`. Vite bundles the woff2 files into `/_astro/` (hashed, cached for a year); `unicode-range` means visitors only download the latin subsets (~ 70 KB total: 29 KB Source Sans 3 + 40 KB JetBrains Mono). System fonts are the fallback in `--font-sans` / `--font-mono`. Never load fonts from Google's CDN at runtime.
 7. Motion: 140 ms ease on hover/focus only. No scroll animations, no parallax.
 8. Icons: inline SVG, 1.5 px stroke, only where they carry meaning (help, export, external link).
 
