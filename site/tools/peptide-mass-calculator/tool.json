@@ -41,7 +41,7 @@
     ] },
   "ads": { "allow": true },
   "maintenance": { "created": "2026-10-13", "updated": "2026-10-13", "author": "Chase Gibson", "sourceOrigin": "Written as the reference example for the site scaffold." },
-  "links": { "repo": "https://github.com/CHANGEME/chases-research-tools/tree/main/site/tools/peptide-mass-calculator", "release": null, "paper": null, "docs": null },
+  "links": { "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/peptide-mass-calculator", "release": null, "paper": null, "docs": null },
   "privacy": { "sendsData": false, "storesLocal": false },
   "license": "MIT"
 }

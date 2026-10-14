@@ -6,8 +6,9 @@ authors:
   - family-names: Gibson
     given-names: Chase
     affiliation: "University of Wisconsin–Madison"
-repository-code: "https://github.com/CHANGEME/chases-research-tools"
-url: "https://CHANGEME.example"
+    orcid: "https://orcid.org/0009-0004-9871-8121"
+repository-code: "https://github.com/chasegibson04/chases-research-tools"
+url: "https://chases-research-tools.chase-gibson04.workers.dev"
 license: MIT
 version: 0.1.0
 date-released: 2026-10-13
