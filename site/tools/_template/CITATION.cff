@@ -7,5 +7,6 @@ date-released: __DATE__
 authors:
   - family-names: Gibson
     given-names: Chase
-url: "https://CHANGEME.example/tools/__SLUG__/"
+    orcid: "https://orcid.org/0009-0004-9871-8121"
+url: "https://chases-research-tools.chase-gibson04.workers.dev/tools/__SLUG__/"
 license: MIT

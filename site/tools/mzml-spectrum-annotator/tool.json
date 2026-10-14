@@ -1,0 +1,67 @@
+{
+  "$schema": "../tool.schema.json",
+  "id": "mzml-spectrum-annotator",
+  "name": "mzML Spectrum Viewer & MS/MS Annotator",
+  "tagline": "Open mzML or MGF files in your browser, average scans, measure peak gaps, and annotate fragments of linear or cyclic peptides.",
+  "description": "Load an mzML or MGF file directly from your computer (nothing is uploaded), browse scans, average the scans of a precursor, and annotate the MS/MS spectrum against a linear or head-to-tail cyclic peptide. Measure the distance between two peaks to get residue, dipeptide and neutral-loss suggestions, accept or override every assignment, and export the annotated spectrum, structure and peak table.",
+  "version": "0.1.0",
+  "status": "beta",
+  "kind": "interactive",
+  "category": "mass-spectrometry",
+  "subcategories": ["peptidomics", "proteomics"],
+  "tags": ["mzml", "spectrum-viewer", "annotation", "ms-ms", "cyclic-peptide", "fragmentation", "averaging", "de-novo"],
+  "keywords": ["mzML viewer online", "MS/MS spectrum annotation", "annotate cyclic peptide spectrum", "average mass spectra scans", "open mzML in browser", "peptide spectrum annotator", "mass difference amino acid calculator"],
+  "related": ["peptide-fragment-ion-predictor", "peptide-mass-calculator"],
+  "runtime": { "engine": "js", "languages": ["TypeScript"], "bundleSizeKB": 80 },
+  "compute": { "location": "client", "worker": true, "maxRuntimeSeconds": 600, "maxMemoryMB": 1024, "maxInputSizeMB": 2048, "threads": 1, "warnOnMobile": true, "longRunning": true },
+  "layout": { "aspect": "tall", "inputsPosition": "left", "inputsWidthPx": 320, "panels": ["inputs", "custom", "figure", "table"], "fullWidth": true },
+  "inputs": [
+    { "name": "file", "label": "Spectrum file (mzML or MGF)", "type": "file", "help": "mzML (plain or indexed; zlib, MS-Numpress, 32/64-bit) or MGF. The file is read inside your browser and never uploaded. Convert Thermo .raw first: ThermoRawFileParser -i file.raw -f 2, or msconvert --mzML --zlib.", "accept": ".mzML,.mzml,.mgf,.MGF", "maxSizeMB": 2048 },
+    { "name": "sequence", "label": "Peptide sequence (optional)", "type": "textarea", "help": "Enter the sequence to annotate fragments: PEPTIDE, M[Oxidation], [Acetyl]-..., lowercase = D-residue, (Orn) / [MeL] for non-standard residues, cyclo(...) for head-to-tail rings. Leave empty to browse and measure only.", "default": "", "placeholder": "e.g. cyclo(V(Orn)LfPV(Orn)LfP)" },
+    { "name": "topology", "label": "Topology", "type": "select", "help": "Linear peptides give a/b/c and x/y/z series; head-to-tail cyclic peptides give contiguous b/a arcs (and c/z-type arcs in ETD). cyclo(...) in the sequence sets cyclic automatically.", "default": "linear", "options": [{ "value": "linear", "label": "Linear" }, { "value": "cyclic", "label": "Head-to-tail cyclic" }] },
+    { "name": "precursorCharge", "label": "Precursor charge (0 = auto)", "type": "integer", "help": "0 uses the charge inferred from the precursor isotope spacing in the MS2 scans, then the charge written in the file. Thermo converters often write a wrong charge, so set it here when you know it.", "default": 0, "min": 0, "max": 10, "step": 1, "unit": "z" },
+    { "name": "activation", "label": "Fragmentation", "type": "select", "help": "Auto reads the activation from the scan filter string (handles HCD, CID, ETD, EThcD, ETciD, IR-ETD, IRMPD); pick one to override the ion-series preset.", "default": "auto", "options": [{ "value": "auto", "label": "Auto (from scan)" }, { "value": "HCD", "label": "HCD / CID / IRMPD" }, { "value": "ETD", "label": "ETD" }, { "value": "EThcD", "label": "EThcD / ETciD / IR-ETD" }, { "value": "UVPD", "label": "UVPD" }] },
+    { "name": "ionTypes", "label": "Ion types", "type": "multiselect", "help": "Fragment series to annotate. Leave on the preset (follows the fragmentation method) or click chips to choose; cyclic peptides use ring-arc ion types.", "default": [], "options": [{ "value": "b", "label": "b" }, { "value": "y", "label": "y" }] },
+    { "name": "tolerance", "label": "Fragment tolerance", "type": "number", "help": "Mass tolerance for assigning peaks. 10 ppm suits Orbitrap and Astral data (5 ppm after recalibration); use ~0.4 Da (switch the unit under Advanced) for ion-trap spectra.", "default": 10, "min": 0.0001, "max": 1000, "step": 0.5, "unit": "ppm" },
+    { "name": "averageTolPpm", "label": "Averaging tolerance", "type": "number", "help": "When averaging several scans, peaks within this many ppm are merged (intensity-weighted m/z, mean intensity). 10 ppm is a good default for Orbitrap MS2.", "default": 10, "min": 0.5, "max": 100, "step": 0.5, "unit": "ppm" },
+    { "name": "losses", "label": "Neutral losses (H₂O, NH₃)", "type": "boolean", "help": "Annotate −H₂O (fragments with S, T, E, D) and −NH₃ (R, K, Q, N), up to two combined losses (b−2H₂O, b−H₂O−NH₃) as seen in cyclic peptides.", "default": true },
+    { "name": "fixedMods", "label": "Fixed modifications", "type": "text", "help": "Name@Site, comma separated, e.g. Carbamidomethyl@C or TMT6plex@K+N-term. Leave empty for none.", "default": "", "placeholder": "e.g. Carbamidomethyl@C" },
+    { "name": "minFraction", "label": "Keep peaks present in ≥", "type": "number", "help": "When averaging, a merged peak must appear in at least this fraction of the scans (0.3 = 30 %). Removes random noise; set 0 to keep everything.", "default": 0.3, "min": 0, "max": 1, "step": 0.05, "advanced": true },
+    { "name": "minRelIntensity", "label": "Intensity threshold", "type": "number", "help": "Hide peaks below this percentage of the base peak after averaging (0 keeps all).", "default": 0, "min": 0, "max": 50, "step": 0.1, "unit": "%", "advanced": true },
+    { "name": "toleranceUnit", "label": "Tolerance unit", "type": "select", "help": "ppm scales with m/z (high-resolution analysers); Da is a fixed window for low-resolution ion-trap data.", "default": "ppm", "options": [{ "value": "ppm", "label": "ppm" }, { "value": "Da", "label": "Da" }], "advanced": true },
+    { "name": "maxFragmentCharge", "label": "Max fragment charge", "type": "integer", "help": "Highest fragment charge considered (capped at the precursor charge).", "default": 2, "min": 1, "max": 6, "step": 1, "advanced": true },
+    { "name": "maxLosses", "label": "Max losses per fragment", "type": "integer", "help": "How many neutral losses may combine on one fragment.", "default": 2, "min": 1, "max": 3, "step": 1, "advanced": true },
+    { "name": "modLosses", "label": "Modification losses", "type": "boolean", "help": "Characteristic losses from modified residues (−H₃PO₄ from phospho, −CH₄SO from oxidised Met).", "default": true, "advanced": true },
+    { "name": "adducts", "label": "Adduct ions", "type": "multiselect", "help": "Also annotate fragments carrying Na⁺, K⁺, NH₄⁺ or Li⁺ instead of one proton.", "default": [], "options": [{ "value": "Na", "label": "Na⁺" }, { "value": "K", "label": "K⁺" }, { "value": "NH4", "label": "NH₄⁺" }, { "value": "Li", "label": "Li⁺" }], "advanced": true },
+    { "name": "immonium", "label": "Immonium ions", "type": "boolean", "help": "Annotate low-mass immonium ions (residue − CO + H⁺).", "default": true, "advanced": true },
+    { "name": "precursorIons", "label": "Precursor ions", "type": "boolean", "help": "Label the remaining precursor and its neutral losses.", "default": true, "advanced": true },
+    { "name": "cyclicHydrolysis", "label": "b+H₂O ions (cyclic)", "type": "boolean", "help": "Cyclic only: arcs carrying an extra water (ring opened by hydrolysis), typical of depsipeptides.", "default": false, "advanced": true }
+  ],
+  "outputs": [
+    { "name": "spectrum", "label": "Annotated spectrum", "type": "figure", "exportFormats": ["svg", "png"] },
+    { "name": "peaks", "label": "Peak assignments", "type": "table", "help": "Every peak with its assignment (automatic or manual), theoretical m/z and error.", "exportFormats": ["csv", "tsv", "json"] },
+    { "name": "averaged", "label": "Averaged spectrum", "type": "file", "help": "The averaged peak list as MGF.", "exportFormats": ["txt"] }
+  ],
+  "figures": { "enabled": true, "library": "none", "exportable": true },
+  "exports": ["csv", "tsv", "json", "txt", "png", "svg"],
+  "examples": [
+    { "file": "demo-gramicidin.json", "label": "Synthetic demo: gramicidin S + angiotensin II (HCD)", "description": "Small synthetic mzML (not real data) that exercises scan grouping, averaging and cyclic annotation.", "expectedRuntimeSeconds": 2 }
+  ],
+  "citation": { "authors": [{ "family": "Gibson", "given": "Chase", "orcid": "0009-0004-9871-8121" }], "year": 2026, "title": "mzML Spectrum Viewer & MS/MS Annotator", "doi": null, "preferredFormat": "apa", "alsoCite": [
+    { "text": "Martens L et al. mzML—a community standard for mass spectrometry data. Mol Cell Proteomics 10, R110.000133 (2011).", "doi": "10.1074/mcp.R110.000133" },
+    { "text": "Teleman J et al. Numerical compression schemes for proteomics mass spectrometry data. Mol Cell Proteomics 13, 1537–1542 (2014).", "doi": "10.1074/mcp.O114.037879" }
+  ] },
+  "seo": { "title": "mzML Viewer & MS/MS Annotator (in-browser, cyclic peptides)", "metaDescription": "Open mzML or MGF files in your browser, average scans, measure peak gaps and annotate linear or cyclic peptide MS/MS spectra. Nothing is uploaded.", "ogImage": null, "schemaType": "WebApplication",
+    "faq": [
+      { "q": "Is my data uploaded anywhere?", "a": "No. The file is read in slices by a Web Worker inside your browser tab. The page never sends spectra to a server, so it is safe for unpublished data." },
+      { "q": "Can it open Thermo .raw files?", "a": "Not directly; no browser can read .raw files. Convert them first with ThermoRawFileParser (-f 2 for indexed mzML) or ProteoWizard msconvert, then open the mzML here." },
+      { "q": "How are scans averaged?", "a": "Peaks from all selected scans are pooled and merged within a ppm tolerance using the intensity-weighted m/z; the mean intensity counts missing scans as zero, and peaks seen in fewer than a set fraction of scans (default 30 %) are dropped. Profile scans are centroided first." },
+      { "q": "Why does the charge differ from the one in my file?", "a": "Thermo converters often write a wrong charge state. The tool infers the charge from the spacing of the residual precursor isotope peaks in the MS2 scans and shows both values; set the charge manually if needed." }
+    ] },
+  "ads": { "allow": true },
+  "maintenance": { "created": "2026-10-14", "updated": "2026-10-14", "author": "Chase Gibson", "sourceOrigin": "Written for this site; averaging, activation parsing and cyclic ion model follow the owner's cycfrag project (spectra.py, rawmeta.py, fragments.py)." },
+  "links": { "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/mzml-spectrum-annotator", "release": null, "paper": null, "docs": null },
+  "accessibility": { "keyboardOperable": false, "notes": "Spectrum interaction uses the mouse; the peak table offers the same assignments with the keyboard." },
+  "privacy": { "sendsData": false, "storesLocal": true },
+  "license": "MIT"
+}

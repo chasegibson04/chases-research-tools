@@ -1,0 +1,6 @@
+{
+  "label": "Cyclosporin A, HCD 1+ (cyclic, N-methylated)",
+  "description": "cyclo(MeBmt-Abu-Sar-MeLeu-Val-MeLeu-Ala-D-Ala-MeLeu-MeLeu-MeVal), C62H111N11O12, monoisotopic 1201.8413.",
+  "input": { "sequence": "cyclo([MeBmt][Abu][Sar][MeL]V[MeL]Aa[MeL][MeL][MeV])", "topology": "cyclic", "precursorCharge": 1, "activation": "HCD", "ionTypes": [], "maxFragmentCharge": 1, "losses": true, "maxLosses": 1, "modLosses": true, "fixedMods": "", "adducts": ["Na"], "immonium": false, "precursorIons": true, "internal": false, "internalMaxLength": 4, "cyclicHydrolysis": false, "observed": "", "tolerance": 10, "toleranceUnit": "ppm" },
+  "expected": { "mono": 1201.8413, "mz1": 1202.8486, "formula": "C62H111N11O12" }
+}
