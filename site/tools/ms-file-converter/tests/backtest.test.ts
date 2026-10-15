@@ -32,9 +32,9 @@ describe.runIf(list.length > 0)('backtest', () => {
     catch (e: any) { report(`BACKTEST FAIL ${path.basename(p)}: ${e.message}`); throw e; }
     const ms = performance.now() - t0;
     const f = out.files[0];
-    const back: any = await run({ bundle: { name: f.name, files: [{ path: f.name, file: f.blob }] }, outputFormat: 'CSV' } as any, ctx);
+    // re-open our own output (index only) and check every spectrum is there
+    const back: any = await run({ op: 'inspect', bundle: { name: f.name, files: [{ path: f.name, file: f.blob }] }, outputFormat: 'mzML' } as any, ctx);
     expect(back.spectraCount).toBe(out.spectraCount);
-    const csvRows = (await back.files[0].blob.text()).split('\n').length - 2;
     const msn = Object.entries(out.msLevels).filter(([l]) => Number(l) > 1).reduce((s, [, n]) => s + (n as number), 0);
     let mgf = 0;
     if (msn) { const m: any = await run({ bundle: b, outputFormat: 'MGF' } as any, ctx); mgf = m.spectraCount; expect(mgf).toBe(msn); }
