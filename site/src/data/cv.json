@@ -69,10 +69,6 @@
         "bullets": ["First-author poster: an untargeted metabolomics workflow and Alzheimer’s disease biomarker-discovery case study, with part of the EEG seizure-prediction work"] },
       { "title": "“mmWave Radar Based Night-Time Seizure Monitoring Device for Epileptic Patient SUDEP-risk Mitigation”", "org": "Senior Medical Device Design Course", "dates": "Nov 2025" }
     ]},
-    { "id": "manuscripts", "title": "Manuscripts in preparation", "type": "timeline", "items": [
-      { "title": "“An Optimized Untargeted Metabolomics Workflow: Data Management to Structure Elucidation”", "org": "First author · Cernak Lab, University of Michigan", "dates": "In preparation" },
-      { "title": "“Publication Citation Mapping for Endangered Species Medicinal Repurposing Efforts”", "org": "Co-author (computational chemistry, ML/AI models) · Cernak Lab, University of Michigan", "dates": "In preparation" }
-    ]},
     { "id": "projects", "title": "Computational & engineering projects", "type": "timeline", "items": [
       { "title": "Chase’s Research Tools (this website)", "current": true, "tags": ["Mass spectrometry", "Software", "WebAssembly"],
         "bullets": ["Open, browser-based mass-spectrometry tools that run entirely on the user’s computer: a linear and cyclic peptide fragment-ion predictor, an mzML spectrum viewer and MS/MS annotator, and an MS file converter that reads Thermo, Bruker, Agilent and MOBILion data (validated point for point against ProteoWizard and ThermoRawFileParser output)"] },
