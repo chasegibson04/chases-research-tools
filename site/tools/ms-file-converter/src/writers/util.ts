@@ -156,10 +156,13 @@ export interface OutputFormat {
   write?(src: SpectrumSource, opts: Record<string, unknown>, ctx: WriteContext): Promise<WrittenFile[]>;
 }
 
-export const fmt = (x: number) => (Number.isInteger(x) ? String(x) : String(+x.toPrecision(15)));
+/** Number for XML/text output; missing or non-finite values (malformed inputs) print as an empty string. */
+export const fmt = (x: number | undefined) => (x == null || !Number.isFinite(x) ? '' : Number.isInteger(x) ? String(x) : String(+x.toPrecision(15)));
 export function ticOf(s: SpectrumRecord) { let t = 0; for (let i = 0; i < s.intensity.length; i++) t += s.intensity[i]; return t; }
 export function basePeak(s: SpectrumRecord): [number, number] {
   let bi = -1, bv = -Infinity;
-  for (let i = 0; i < s.intensity.length; i++) if (s.intensity[i] > bv) { bv = s.intensity[i]; bi = i; }
+  // m/z and intensity can differ in length in malformed files (e.g. mzML 0.99 SRM spectra with no m/z array)
+  const n = Math.min(s.mz.length, s.intensity.length);
+  for (let i = 0; i < n; i++) if (s.intensity[i] > bv) { bv = s.intensity[i]; bi = i; }
   return bi < 0 ? [0, 0] : [s.mz[bi], bv];
 }
