@@ -5,6 +5,7 @@ Read `../AGENTS.md` first. Then pick the document for your task.
 | Task | Read |
 |---|---|
 | Copy-paste prompts for common jobs | [PROMPTS.md](PROMPTS.md) |
+| Scout other projects for tool ideas (paste into Claude elsewhere) | [TOOL_SCOUT_HANDOFF.md](TOOL_SCOUT_HANDOFF.md) |
 | Import a tool from another project | [TOOL_IMPORT_GUIDE.md](TOOL_IMPORT_GUIDE.md) → [TOOL_MANIFEST_SPEC.md](TOOL_MANIFEST_SPEC.md) → [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) |
 | Tool is in Python / R / C++ / Rust | [RUNTIMES.md](RUNTIMES.md) |
 | Tool needs plots or data export | [FIGURES_AND_EXPORTS.md](FIGURES_AND_EXPORTS.md) |
