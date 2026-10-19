@@ -11,6 +11,7 @@ import { generateFragments } from '@/lib/ms/fragments';
 import { predictSpectrum } from '@/lib/ms/predict';
 import { PROTON } from '@/lib/ms/elements';
 import demoEx from '../examples/demo-gramicidin.json';
+import lunaEx from '../examples/demo-luna18.json';
 
 const ctx = { progress: () => {}, log: () => {}, signal: new AbortController().signal };
 const DEMO = join(process.cwd(), 'public', 'tools', 'mzml-spectrum-annotator', 'demo-synthetic.mzML');
@@ -25,13 +26,15 @@ function spectrumXml(i: number, msLevel: number, rt: number, mz: number[], it: n
   const precXml = prec ? `<precursorList count="1"><precursor><isolationWindow><cvParam cvRef="MS" accession="MS:1000827" name="isolation window target m/z" value="${prec.mz.toFixed(4)}"/><cvParam cvRef="MS" accession="MS:1000828" name="isolation window lower offset" value="0.7"/><cvParam cvRef="MS" accession="MS:1000829" name="isolation window upper offset" value="0.7"/></isolationWindow><selectedIonList count="1"><selectedIon><cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="${prec.mz.toFixed(4)}"/><cvParam cvRef="MS" accession="MS:1000041" name="charge state" value="${prec.z}"/></selectedIon></selectedIonList><activation><cvParam cvRef="MS" accession="MS:1000422" name="beam-type collision-induced dissociation" value=""/><cvParam cvRef="MS" accession="MS:1000045" name="collision energy" value="30"/></activation></precursor></precursorList>` : '';
   return `<spectrum index="${i}" id="controllerType=0 controllerNumber=1 scan=${i + 1}" defaultArrayLength="${mz.length}"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="${msLevel}"/><cvParam cvRef="MS" accession="${msLevel === 1 ? 'MS:1000579' : 'MS:1000580'}" name="spectrum"/><cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/><cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum" value=""/><cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="${tic.toFixed(1)}"/><scanList count="1"><cvParam cvRef="MS" accession="MS:1000795" name="no combination" value=""/><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="${rt.toFixed(4)}" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/><cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="${filter}"/></scan></scanList>${precXml}<binaryDataArrayList count="2">${arr(mz, 'MS:1000514', 'm/z array')}${arr(it, 'MS:1000515', 'intensity array')}</binaryDataArrayList></spectrum>`;
 }
-function buildDemo(): string {
-  const r = rng(20261014);
+const GRAM_PEPTIDES = [
+  { seq: 'cyclo(V(Orn)LfPV(Orn)LfP)', z: 2 },
+  { seq: 'DRVYIHPF', z: 2 },
+];
+// LUNA18 (paluratide, C73H105F5N12O12): 11-residue N-methylated macrocycle, written as in PDB 7YV1 / the literature.
+const LUNA18 = 'cyclo(Maa-W2-Vn-Sar-O2a-P-Ac5-Vu-Mad-Mle-I)';
+function buildDemo(peptides: Array<{ seq: string; z: number }> = GRAM_PEPTIDES, seed = 20261014, id = 'demo-synthetic'): string {
+  const r = rng(seed);
   const gauss = () => Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r());
-  const peptides = [
-    { seq: 'cyclo(V(Orn)LfPV(Orn)LfP)', z: 2 },
-    { seq: 'DRVYIHPF', z: 2 },
-  ];
   const specs: string[] = [];
   let i = 0, rt = 0.05;
   for (const pep of peptides) {
@@ -57,7 +60,7 @@ function buildDemo(): string {
       rt += 0.01;
     }
   }
-  return `<?xml version="1.0" encoding="utf-8"?>\n<mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0" id="demo-synthetic"><cvList count="1"><cv id="MS" fullName="PSI-MS" URI="https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo"/></cvList><fileDescription><fileContent><cvParam cvRef="MS" accession="MS:1000580" name="MSn spectrum" value=""/></fileContent></fileDescription><softwareList count="1"><software id="crt-demo" version="1.0"><userParam name="Chase's Research Tools synthetic demo (not real data)"/></software></softwareList><instrumentConfigurationList count="1"><instrumentConfiguration id="IC1"><cvParam cvRef="MS" accession="MS:1000483" name="Thermo Fisher Scientific instrument model" value=""/></instrumentConfiguration></instrumentConfigurationList><run id="demo" defaultInstrumentConfigurationRef="IC1"><spectrumList count="${i}">\n${specs.join('\n')}\n</spectrumList></run></mzML>\n`;
+  return `<?xml version="1.0" encoding="utf-8"?>\n<mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0" id="${id}"><cvList count="1"><cv id="MS" fullName="PSI-MS" URI="https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo"/></cvList><fileDescription><fileContent><cvParam cvRef="MS" accession="MS:1000580" name="MSn spectrum" value=""/></fileContent></fileDescription><softwareList count="1"><software id="crt-demo" version="1.0"><userParam name="Chase's Research Tools synthetic demo (not real data)"/></software></softwareList><instrumentConfigurationList count="1"><instrumentConfiguration id="IC1"><cvParam cvRef="MS" accession="MS:1000483" name="Thermo Fisher Scientific instrument model" value=""/></instrumentConfiguration></instrumentConfigurationList><run id="demo" defaultInstrumentConfigurationRef="IC1"><spectrumList count="${i}">\n${specs.join('\n')}\n</spectrumList></run></mzML>\n`;
 }
 
 describe('synthetic demo file', () => {
@@ -89,6 +92,22 @@ describe('synthetic demo file', () => {
     // averaging lowers mass error: the median |ppm| of matched peaks is below the 1.5 ppm per-scan noise
     const errs = [...out.annotation!.match.byIon.values()].map((m) => Math.abs(m.errorPpm)).sort((a, b) => a - b);
     expect(errs[Math.floor(errs.length / 2)]).toBeLessThan(1.5);
+  });
+});
+
+const LUNA_FILE = join(process.cwd(), 'public', 'tools', 'mzml-spectrum-annotator', 'demo-luna18.mzML');
+describe('LUNA18 synthetic demo', () => {
+  it('file is up to date (MAKE_DEMO=1 regenerates)', () => {
+    const xml = buildDemo([{ seq: LUNA18, z: 2 }], 20261019, 'demo-luna18');
+    if (process.env.MAKE_DEMO || !existsSync(LUNA_FILE)) writeFileSync(LUNA_FILE, xml);
+    expect(readFileSync(LUNA_FILE, 'utf8')).toBe(xml);
+  });
+  it('the LUNA18 example annotates the macrocycle written in the pasted notation', async () => {
+    const out = (await run({ ...(lunaEx.input as Input), url: undefined, file: new Blob([readFileSync(LUNA_FILE)]) }, ctx)) as Output;
+    expect(out.annotation!.peptide.residues).toHaveLength(11);
+    expect(out.annotation!.precursors[1].mz).toBeCloseTo(lunaEx.expected.precursorMz, 3);
+    expect(out.annotation!.coverage.explainedIntensityPct).toBeGreaterThan(50);
+    expect(out.spectrum!.scans).toBe(12);
   });
 });
 

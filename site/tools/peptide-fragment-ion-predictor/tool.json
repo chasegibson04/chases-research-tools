@@ -4,7 +4,7 @@
   "name": "Peptide Fragment Ion Predictor",
   "tagline": "Predict a/b/c/x/y/z fragment ions for linear and cyclic peptides, on a full structure diagram linked to a spectrum and table.",
   "description": "Enter a linear or head-to-tail cyclic peptide (ProForma-style modifications, D- and N-methyl residues, non-standard building blocks) and get every theoretical fragment ion for HCD, CID, ETD, EThcD or UVPD. Fragments are drawn on the full chemical structure, linked to a representative spectrum and a fragment table, and can be matched against a pasted peak list. Runs entirely in your browser.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",
@@ -460,7 +460,7 @@
   },
   "maintenance": {
     "created": "2026-10-14",
-    "updated": "2026-10-14",
+    "updated": "2026-10-19",
     "author": "Chase Gibson",
     "sourceOrigin": "Written for this site; cyclic ion types and residue alphabet follow the owner's cycfrag package (Coon lab rotation project)."
   },

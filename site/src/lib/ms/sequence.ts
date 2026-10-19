@@ -82,12 +82,45 @@ function splitThreeLetter(body: string): string[] {
   return out;
 }
 
+const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
+/**
+ * Turn the notations people paste into the dash form the parser reads: arrows (MAA→7W2→…), commas, slashes and spaces
+ * between residue names, position subscripts (MAA_{1}, MAA₁), and cyclo[…] / cyclo{…} / cyclic(…) wrappers.
+ * Brackets and parentheses are left alone, so "[Gln->pyro-Glu]" keeps its text.
+ */
+export function normalizeSequenceText(input: string): string {
+  let t = input.trim().replace(/\text\{([^}]*)\}/g, '$1').replace(/^\s*cyclic/i, 'cyclo');
+  const m = /^cyclo\s*[([{](.*)[)\]}]\s*$/is.exec(t);
+  const wrap = !!m;
+  if (m) t = m[1];
+  // split on separators at bracket depth 0
+  const parts: string[] = [];
+  let depth = 0, cur = '';
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if ('[('.includes(ch)) depth++;
+    else if (')]'.includes(ch)) depth = Math.max(0, depth - 1);
+    const arrow = depth === 0 && (ch === '→' || ch === '⟶' || (ch === '-' && t[i + 1] === '>'));
+    if (depth === 0 && (/[\s,;|/·•]/.test(ch) || arrow)) { if (ch === '-') i++; parts.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  parts.push(cur);
+  const cleaned = parts.map((x) => x.replace(/_\{?\d+\}?/g, '').replace(new RegExp(`[${SUBSCRIPT}]+$`), '')).filter(Boolean);
+  // several residue names separated by spaces/commas/arrows: join them with dashes
+  const single = (x: string) => !!x && !/[[\]()]/.test(x) && (x.length === 1 ? /[A-Za-z]/.test(x) : !!resolveResidue(x));
+  const bracketed = (x: string) => /^[([]/.test(x);
+  const joined = cleaned.length > 1 && cleaned.every((x) => single(x) || bracketed(x)) ? cleaned.join('-') : cleaned.join('');
+  return wrap ? `cyclo(${joined})` : joined;
+}
+
 export function parseSequence(input: string, opts: { cyclic?: boolean; fixedMods?: FixedMod[] } = {}): Peptide {
-  let s = input.replace(/\s+/g, '');
+  let s = normalizeSequenceText(input);
   if (!s) throw new Error('Enter a peptide sequence.');
   let cyclic = !!opts.cyclic;
   const cyc = /^cyclo\((.*)\)$/i.exec(s);
   if (cyc) { cyclic = true; s = cyc[1].replace(/^-|-$/g, ''); }
+  // Dash-separated residue names (Maa-W2-Vn-Sar, possibly mixed with (Orn) / [MeL] tokens): read whole names, not letters.
+  const dashNames = /[A-Za-z0-9)\]]-[A-Za-z0-9([]/.test(s.replace(/\[[^\]]*\]-/g, '[]|').replace(/-\[[^\]]*\]$/, ''));
 
   const residues: Residue[] = [];
   const nTermMods: AppliedMod[] = [];
@@ -118,6 +151,12 @@ export function parseSequence(input: string, opts: { cyclic?: boolean; fixedMods
         const [body, j] = readBracket(s, i, '[', ']');
         if (!isResidueBracket(body)) throw new Error(`Modification [${body}] must follow a residue (or start the sequence as "[${body}]-").`);
         token = body; i = j;
+      }
+      else if (ch === '-' && dashNames) { i++; continue; }
+      else if (dashNames && /[A-Za-z0-9]/.test(ch)) {
+        const run = /^[A-Za-z0-9]+/.exec(s.slice(i))![0];
+        if (run.length > 1 && !resolveResidue(run)) throw new Error(`Unknown residue "${run}". Use one-letter codes, or names such as Orn, MeLeu, D-Phe, or PDB-style codes such as Maa, 7W2, Mle.`);
+        token = run; i += run.length;
       }
       else if (/[A-Za-z]/.test(ch)) { token = ch; i++; }
       else if (/[0-9.]/.test(ch)) { i++; continue; } // ignore stray numbering

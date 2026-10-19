@@ -69,6 +69,8 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const scanAct = current ? spectra[current.indices[0]]?.activation ?? 'HCD' : 'HCD';
   const actPreset = values.activation && values.activation !== 'auto' ? values.activation : presetFor(scanAct);
   const preset = PRESETS[actPreset as keyof typeof PRESETS]?.[cyclicInput ? 'cyclic' : 'linear'] ?? [];
+  /** Fragmentation method behind the automatic ion-type choice, in words. */
+  const detectedText = values.activation && values.activation !== 'auto' ? `${actPreset}, set under Fragmentation` : current ? `${actPreset}, read from the scan` : `${actPreset} until a scan is open`;
   const annOpts = () => ({ ...values, topology: cyclicInput ? 'cyclic' : 'linear' } as Input);
 
   const exec = (input: Input, onDone: (o: Output, ms: number) => void) => {
@@ -84,6 +86,7 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
   const onRun = () => {
     const file = (values.file as Blob | null | undefined) ?? null;
     const url = !file && values.url ? new URL(values.url, location.href).href : undefined;
+    if (!file && !url) { setState('error'); setMsg('Choose a file (or switch to Example and pick one), then press Run.'); return; }
     const name = file ? (file as File).name : (values.url ?? '').split('/').pop() ?? 'demo';
     setSource({ file, url, name });
     exec({ ...annOpts(), op: 'load', file, url, fileName: name }, (o, ms) => {
@@ -209,6 +212,18 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
     for (const a of assigned.values()) if (a.ion && hovered.has(a.ion.id)) highlight.add(a.peak);
     return { peaks, annotations, highlight, label: current?.label };
   }, [peaks, assigned, hoverIons, current, focus, pinnedSet, palette, hidden]);
+  /** Assigned ions that pass the show/hide chips: what the sequence view flags. */
+  const visibleIons = useMemo(() => {
+    const seen = new Map<string, Ion>();
+    for (const a of assigned.values()) if (a.ion && !a.isotope && ionVisible(a.ion, hidden)) seen.set(a.ion.id, a.ion);
+    return [...seen.values()];
+  }, [assigned, hidden]);
+  const figFamilies = useMemo(() => {
+    if (!ann) return { n: [], c: [] } as ReturnType<typeof familiesFor>;
+    const f = familiesFor(ann.ionTypes, ann.peptide.cyclic);
+    return { n: f.n.filter((k) => !hidden.has(k)), c: f.c.filter((k) => !hidden.has(k)) };
+  }, [ann, hidden]);
+  const theoretical = useMemo(() => new Set<SeriesKey>([...figFamilies.n, ...figFamilies.c]), [figFamilies]);
   const presentSeries = useMemo(() => new Set([...assigned.values()].filter((a) => a.ion).map((a) => seriesOf(a.ion!))), [assigned]);
   /** Neutral mass of a peak: uses its assigned charge (or 1). */
   const neutralOf = (k: number) => { const z = assigned.get(k)?.ion?.charge ?? 1; return peaks[k].mz * z - z * 1.00727646658; };
@@ -292,9 +307,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
 
   return (
     <ToolShell manifest={shellManifest} examples={examples} values={values} state={state} message={msg} progress={progress} header={header}
-      onChange={(k, v) => setValues({ ...values, [k]: v })} onLoadExample={(ex) => setValues({ ...defaults, ...ex.input })} onRun={onRun} onCancel={() => { handle.current?.cancel(); setState('idle'); }}
+      onChange={(k, v) => setValues({ ...values, [k]: v })} onLoadExample={(ex) => setValues({ ...defaults, ...ex.input })} onRun={onRun}
+      sourceChoice={{ onChange: (mode) => setValues((v) => (mode === 'file' ? { ...v, url: undefined } : { ...v, file: null })) }} onCancel={() => { handle.current?.cancel(); setState('idle'); }}
       extraInputs={<>
-        <IonTypePicker cyclic={cyclicInput} value={(values.ionTypes ?? []) as IonType[]} preset={preset} onChange={(v) => setValues({ ...values, ionTypes: v })} help={manifest.inputs.find((i) => i.name === 'ionTypes')!.help} />
+        <IonTypePicker cyclic={cyclicInput} value={(values.ionTypes ?? []) as IonType[]} preset={preset} detected={detectedText} onChange={(v) => setValues({ ...values, ionTypes: v })} help={manifest.inputs.find((i) => i.name === 'ionTypes')!.help} />
         <p class="small faint" style={{ margin: 0 }}>Files are read locally and never uploaded. Vendor files (.raw, .d): convert them first with the <a href="/tools/ms-file-converter/">MS File Converter</a> or <code>msconvert --mzML --zlib</code>.</p>
       </>}>
       {loaded && spectrum && (
@@ -396,9 +412,12 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
 
           <Panel id="annotator:structure" title="Structure">
             {ann ? (<>
-              <PeptideStructure peptide={ann.peptide} families={familiesFor(ann.ionTypes, ann.peptide.cyclic)} observed={stats?.observed} highlight={structureHl} filename={`${manifest.id}-structure`}
-                onHover={(m) => setHoverIons(m ? (m.label ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
+              <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
+              <PeptideStructure peptide={ann.peptide} families={figFamilies} observed={stats?.observed} highlight={structureHl} filename={`${manifest.id}-structure`}
+                ions={visibleIons} theoretical={theoretical} hoverIds={hoverIons ?? undefined}
+                onHover={(m) => setHoverIons(m ? (m.ids ? m.ids : m.label ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
                 onClick={(m) => {
+                  if (m.ids?.length) { const id = [...m.ids].sort((x, y) => (ionById.get(x)?.charge ?? 9) - (ionById.get(y)?.charge ?? 9))[0]; setFocus((f) => (f?.kind === 'ion' && f.id === id ? null : { kind: 'ion', id })); return; }
                   if (m.label) { const ion = ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond); setFocus((f) => (ion && !(f?.kind === 'ion' && f.id === ion.id) ? { kind: 'ion', id: ion.id } : null)); return; }
                   setFocus((f) => (f?.kind === 'bond' && f.bond === m.bond && f.side === m.side ? null : { kind: 'bond', bond: m.bond, side: m.side }));
                 }} />

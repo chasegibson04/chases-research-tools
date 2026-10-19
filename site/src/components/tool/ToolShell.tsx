@@ -25,6 +25,11 @@ interface Props<I> {
   leadInputs?: ComponentChildren;
   /** Compact summary shown in the sticky result header next to the status (key numbers of the current result). */
   header?: ComponentChildren;
+  /**
+   * Offer "Example" or "My file" as one either/or choice instead of showing both at once. The manifest's first
+   * `file` input is the file side; `onSourceChange` lets the tool clear the other side's values.
+   */
+  sourceChoice?: { onChange: (mode: 'example' | 'file') => void };
 }
 
 /** Standard two-panel tool layout: inputs (left) and results (right), with run/cancel/status. */
@@ -37,6 +42,10 @@ export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
   const inputs = p.manifest.inputs as ToolInputSpec[];
   const basic = inputs.filter((i) => !i.advanced);
   const adv = inputs.filter((i) => i.advanced);
+  const [src, setSrcState] = useState<'example' | 'file'>('file');
+  const [exampleIdx, setExampleIdx] = useState(-1);
+  const fileSpec = p.sourceChoice ? basic.find((i) => i.type === 'file') : undefined;
+  const setSrc = (m: 'example' | 'file') => { setSrcState(m); p.sourceChoice?.onChange(m); };
   const warnings = preflight(p.manifest);
   const blocked = warnings.some((w) => w.level === 'block');
   return (
@@ -49,10 +58,24 @@ export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2 L10 6 L3 10 Z" fill="currentColor" /></svg>
           </button>
         </div>
-        <button type="button" class="icon-btn ts-collapse" onClick={() => setCollapsed(true)} aria-label="Hide inputs" title="Hide inputs to give the results more room">{chevron('l')}</button>
-        <ExampleLoader examples={p.examples} onLoad={p.onLoadExample} />
+        <div class="ts-bar ts-run">
+          <button class="btn-primary" type="button" onClick={p.onRun} disabled={p.state === 'running' || blocked} data-action="run">Run</button>
+          {p.state === 'running' && <button type="button" onClick={p.onCancel} data-action="cancel">Cancel</button>}
+          <span class="spacer" />
+          <button type="button" class="btn-sm ts-collapse" onClick={() => setCollapsed(true)} aria-label="Hide inputs" title="Hide inputs to give the results more room">{chevron('l')} Hide</button>
+        </div>
+        {warnings.map((w) => <p class="small" style={{ color: w.level === 'block' ? 'var(--err)' : w.level === 'warn' ? 'var(--warn)' : 'var(--fg-faint)', margin: 0 }}>{w.message}</p>)}
+        {p.sourceChoice && (
+          <div class="field" data-input="source">
+            <div class="seg" role="group" aria-label="Where the data comes from">
+              <button type="button" class="btn-sm" data-source="file" aria-pressed={src === 'file'} onClick={() => setSrc('file')}>My file</button>
+              <button type="button" class="btn-sm" data-source="example" aria-pressed={src === 'example'} onClick={() => setSrc('example')}>Example</button>
+            </div>
+          </div>
+        )}
+        {(!p.sourceChoice || src === 'example') && <ExampleLoader examples={p.examples} selected={exampleIdx} onLoad={(ex, i) => { setExampleIdx(i); p.onLoadExample(ex); }} />}
         {p.leadInputs}
-        {basic.map((spec) => <ParamField spec={spec} value={p.values[spec.name]} error={p.errors?.[spec.name]} onChange={(v) => p.onChange(spec.name, v)} />)}
+        {basic.filter((spec) => !p.sourceChoice || spec !== fileSpec || src === 'file').map((spec) => <ParamField spec={spec} value={p.values[spec.name]} error={p.errors?.[spec.name]} onChange={(v) => p.onChange(spec.name, v)} />)}
         {p.extraInputs}
         {adv.length > 0 && (
           <details open={showAdv} onToggle={(e) => setShowAdv((e.target as HTMLDetailsElement).open)}>
@@ -62,11 +85,6 @@ export function ToolShell<I extends Record<string, any>>(p: Props<I>) {
             </div>
           </details>
         )}
-        <div class="ts-bar ts-run">
-          <button class="btn-primary" type="button" onClick={p.onRun} disabled={p.state === 'running' || blocked} data-action="run">Run</button>
-          {p.state === 'running' && <button type="button" onClick={p.onCancel} data-action="cancel">Cancel</button>}
-        </div>
-        {warnings.map((w) => <p class="small" style={{ color: w.level === 'block' ? 'var(--err)' : w.level === 'warn' ? 'var(--warn)' : 'var(--fg-faint)', margin: 0 }}>{w.message}</p>)}
       </aside>
       <section class="ts-main" aria-label="Results" aria-live="polite">
         <div class="ts-sticky">

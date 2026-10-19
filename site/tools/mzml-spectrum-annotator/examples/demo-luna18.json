@@ -1,0 +1,6 @@
+{
+  "label": "Synthetic demo: LUNA18 (paluratide) macrocycle (HCD)",
+  "description": "A synthetic mzML (not real data) for the 11-residue N-methylated cyclic peptide LUNA18 / paluratide, C73H105F5N12O12, 1436.7897 Da: 1 MS1 and 12 HCD MS2 scans built from predicted ring-opening b/a ions with 1.5 ppm noise. The sequence is written the way it is in PDB 7YV1 (Maa = N-Me-Ala, W2 = azetidine-2-carboxylic acid, Vn = N-ethyl-4-methyl-Phe, Sar, O2a = 3,5-difluoro-4-CF3-homoPhe, Ac5 = 1-aminocyclopentanecarboxylic acid, Vu = N-Me-cyclopentylglycine, Mad = N-Me-Asp dimethylamide, Mle = N-Me-Leu).",
+  "input": { "op": "load", "url": "/tools/mzml-spectrum-annotator/demo-luna18.mzML", "sequence": "cyclo(Maa-W2-Vn-Sar-O2a-P-Ac5-Vu-Mad-Mle-I)", "topology": "cyclic", "precursorCharge": 0, "activation": "auto", "ionTypes": [], "maxFragmentCharge": 2, "losses": true, "maxLosses": 2, "modLosses": true, "fixedMods": "", "adducts": [], "immonium": true, "precursorIons": true, "cyclicHydrolysis": false, "tolerance": 10, "toleranceUnit": "ppm", "averageTolPpm": 10, "minFraction": 0.3, "minRelIntensity": 0 },
+  "expected": { "precursorMz": 719.4021, "spectraCount": 13, "scansAveraged": 12 }
+}

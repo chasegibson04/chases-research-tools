@@ -96,7 +96,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .ts { display: grid; grid-template-columns: var(--inputs-w, 320px) minmax(0, 1fr); min-height: inherit; align-items: start; }
 /* Inputs stay in view while results scroll; Run is pinned to the bottom of the column. */
 .ts-inputs { border-right: 1px solid var(--line); padding: var(--space-4); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3); position: sticky; top: var(--header-h); max-height: calc(100vh - var(--header-h)); min-height: min(var(--tool-min-h), calc(100vh - var(--header-h))); }
-.ts-run { position: sticky; bottom: calc(-1 * var(--space-4)); margin: auto calc(-1 * var(--space-4)) calc(-1 * var(--space-4)); padding: var(--space-3) var(--space-4); background: var(--bg-panel); border-top: 1px solid var(--line); }
+.ts-run { position: sticky; top: 0; z-index: 5; margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0; padding: var(--space-3) var(--space-4); background: var(--bg-panel); border-bottom: 1px solid var(--line); align-items: center; }
 .ts-main { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 /* Compact result header: sticks under the site header while scrolling, returns to place at the top. */
 .ts-sticky { position: sticky; top: var(--header-h); z-index: 6; margin: 0 calc(-1 * var(--space-4)); padding: var(--space-2) var(--space-4); background: color-mix(in srgb, var(--bg-panel) 94%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); }
@@ -112,8 +112,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .field .hint { font-size: var(--fs-xs); color: var(--fg-faint); }
 .field .unit { font-size: var(--fs-xs); color: var(--fg-faint); font-weight: 400; }
 .help { display: inline-flex; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--fg-muted); font-size: 11px; align-items: center; justify-content: center; cursor: help; position: relative; font-weight: 600; }
-.help:hover .help-pop, .help:focus-visible .help-pop { display: block; }
-.help-pop { display: none; position: absolute; left: 20px; top: -4px; z-index: 20; width: 260px; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); font-size: var(--fs-xs); font-weight: 400; color: var(--fg); box-shadow: var(--shadow-2); line-height: 1.45; }
+.help-pop { display: none; position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; text-align: left; white-space: normal; width: 260px; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); font-size: var(--fs-xs); font-weight: 400; color: var(--fg); box-shadow: var(--shadow-2); line-height: 1.45; }
 .fig { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-elev); display: flex; flex-direction: column; min-height: 320px; }
 .fig-bar { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); flex-wrap: wrap; }
 .fig-bar .spacer { flex: 1; }
@@ -133,7 +132,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .panel-meta { margin-left: auto; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .panel-body[hidden] { display: none; }
 /* Collapsible inputs sidebar (ToolShell) */
-.ts-collapse { align-self: flex-end; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0 0; }
+.ts-run .ts-collapse { display: inline-flex; align-items: center; gap: 0.3rem; }
 .ts-rail { display: none; }
 .ts[data-inputs="collapsed"] { grid-template-columns: 2.5rem minmax(0, 1fr); }
 .ts[data-inputs="collapsed"] .ts-inputs { padding: var(--space-2) 0; align-items: center; overflow: hidden; }

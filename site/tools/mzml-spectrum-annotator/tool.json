@@ -4,7 +4,7 @@
   "name": "mzML Spectrum Viewer & MS/MS Annotator",
   "tagline": "Open mzML or MGF files in your browser, average scans, measure peak gaps, and annotate fragments of linear or cyclic peptides.",
   "description": "Load an mzML or MGF file directly from your computer (nothing is uploaded), browse scans, average the scans of a precursor, and annotate the MS/MS spectrum against a linear or head-to-tail cyclic peptide. Measure the distance between two peaks to get residue, dipeptide and neutral-loss suggestions, accept or override every assignment, and export the annotated spectrum, structure and peak table.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",
@@ -77,9 +77,9 @@
       "name": "sequence",
       "label": "Peptide sequence (optional)",
       "type": "textarea",
-      "help": "Enter the sequence to annotate fragments: PEPTIDE, M[Oxidation], [Acetyl]-..., lowercase = D-residue, (Orn) / [MeL] for non-standard residues, cyclo(...) for head-to-tail rings. Leave empty to browse and measure only.",
+      "help": "Enter the sequence to annotate fragments. Accepted: PEPTIDE; M[Oxidation]; [Acetyl]-...; lowercase = D-residue; (Orn) or [MeL] for non-standard residues; three-letter chains (Arg-Gly-Asp-D-Phe-Val); PDB-style short names (Maa-W2-Vn-Sar-O2a-P-Ac5-Vu-Mad-Mle-I), also separated by arrows, commas or spaces; cyclo(...) for head-to-tail rings. Leave empty to browse and measure only.",
       "default": "",
-      "placeholder": "e.g. cyclo(V(Orn)LfPV(Orn)LfP)"
+      "placeholder": "e.g. cyclo(V(Orn)LfPV(Orn)LfP) or DRVYIHPF"
     },
     {
       "name": "topology",
@@ -401,6 +401,12 @@
       "label": "Synthetic demo: gramicidin S + angiotensin II (HCD)",
       "description": "Small synthetic mzML (not real data) that exercises scan grouping, averaging and cyclic annotation.",
       "expectedRuntimeSeconds": 2
+    },
+    {
+      "file": "demo-luna18.json",
+      "label": "Synthetic demo: LUNA18 (paluratide) macrocycle (HCD)",
+      "description": "Synthetic mzML (not real data) for the 11-residue N-methylated cyclic peptide LUNA18, with the sequence written in PDB-style short names.",
+      "expectedRuntimeSeconds": 2
     }
   ],
   "citation": {
@@ -455,7 +461,7 @@
   },
   "maintenance": {
     "created": "2026-10-14",
-    "updated": "2026-10-14",
+    "updated": "2026-10-19",
     "author": "Chase Gibson",
     "sourceOrigin": "Written for this site; averaging, activation parsing and cyclic ion model follow the owner's cycfrag project (spectra.py, rawmeta.py, fragments.py)."
   },

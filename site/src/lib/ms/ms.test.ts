@@ -201,3 +201,34 @@ describe('dictionary-encoded zstd arrays (MS:1003782)', () => {
     expect(Array.from(out.values)).toEqual([10, 20, 10, 30, 20]);
   });
 });
+
+describe('pasted sequence notations (LUNA18 / paluratide)', () => {
+  const ref = parseSequence('cyclo([MeA][Aze][EtPhe4Me][Sar][hPheF5]P[Ac5c][MeCpg][MeAspNMe2][MeL]I)');
+  const same = (s: string) => {
+    const p = parseSequence(s);
+    expect(p.cyclic).toBe(true);
+    expect(p.residues).toHaveLength(11);
+    expect(peptideMass(p).mono).toBeCloseTo(peptideMass(ref).mono, 6);
+  };
+  it('has the published composition C73H105F5N12O12', () => {
+    expect(peptideMass(ref).mono).toBeCloseTo(1436.7897, 3); // C73H105F5N12O12 monoisotopic
+  });
+  it('reads dash-separated short names and PDB codes', () => {
+    same('cyclo(Maa-W2-Vn-Sar-O2a-P-Ac5-Vu-Mad-Mle-I)');
+    same('cyclo(MAA-7W2-7VN-SAR-02A-PRO-AC5-7VU-MeAspNMe2-MLE-ILE)');
+  });
+  it('reads arrows, subscripts, commas and spaces', () => {
+    same('cyclo[MAA_{1}→7W2_{2}→7VN_{3}→SAR_{4}→02A_{5}→PRO_{6}→AC5_{7}→7VU_{8}→Mad_{9}→MLE_{10}→ILE_{11}]');
+    same('cyclo(Maa, W2, Vn, Sar, O2a, P, Ac5, Vu, Mad, Mle, I)');
+    same('cyclo(Maa W2 Vn Sar O2a Pro Ac5 Vu Mad Mle Ile)');
+  });
+  it('still reads the other notations', () => {
+    expect(parseSequence('cyclo(V(Orn)LfPV(Orn)LfP)').residues).toHaveLength(10);
+    expect(parseSequence('DRVYIHPF').residues).toHaveLength(8);
+    expect(parseSequence('cyclo(Arg-Gly-Asp-D-Phe-Val)').residues).toHaveLength(5);
+    expect(parseSequence('A G V').residues).toHaveLength(3);
+    expect(parseSequence('[Acetyl]-PEPTIDE-[Amidated]').residues).toHaveLength(7);
+    expect(parseSequence('Ala-Gly-Val').residues).toHaveLength(3);
+    expect(() => parseSequence('cyclo(Maa-Xyz9-Sar)')).toThrow(/Unknown residue/);
+  });
+});

@@ -1,10 +1,10 @@
 import type { Example } from '@/lib/types';
-export function ExampleLoader<I>({ examples, onLoad }: { examples: Example<I>[]; onLoad: (ex: Example<I>) => void }) {
+export function ExampleLoader<I>({ examples, onLoad, selected = -1 }: { examples: Example<I>[]; onLoad: (ex: Example<I>, index: number) => void; selected?: number }) {
   if (!examples.length) return null;
   return (
     <div class="field">
       <label for="example-select">Load an example</label>
-      <select id="example-select" onChange={(e) => { const i = Number((e.target as HTMLSelectElement).value); if (i >= 0) onLoad(examples[i]); }}>
+      <select id="example-select" value={String(selected)} onChange={(e) => { const i = Number((e.target as HTMLSelectElement).value); if (i >= 0) onLoad(examples[i], i); }}>
         <option value="-1">Choose…</option>
         {examples.map((ex, i) => <option value={i}>{ex.label}</option>)}
       </select>

@@ -73,3 +73,4 @@ label.btn { display: inline-flex; align-items: center; cursor: pointer; }
 .series-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: var(--space-1) var(--space-3); border-bottom: 1px solid var(--line); }
 .chip-xs { font-size: var(--fs-xs); padding: 0.05rem 0.45rem; }
 .ion-cell.out { opacity: 0.25; }
+.pep-seq svg { width: auto; max-width: 100%; height: auto; margin: 0 auto; }

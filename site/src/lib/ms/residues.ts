@@ -102,6 +102,15 @@ const NONSTANDARD: ResidueDef[] = [
 ];
 /** Aliases from other notations (cycfrag uses [MeG] for sarcosine and [pE] for pyroglutamate). */
 export const RESIDUE_ALIASES: Record<string, string> = { MeG: 'Sar', pE: 'pGlu', Pyr: 'pGlu', pGlu: 'pGlu' };
+/**
+ * Case-insensitive aliases: PDB / ligand codes and the short names used for LUNA18 (paluratide) in the literature
+ * and in PDB 7YV1 (MAA, 7W2, 7VN, SAR, 02A, PRO, AC5, 7VU, MLE). Values are residue tokens resolved again below.
+ */
+export const RESIDUE_ALIASES_CI: Record<string, string> = {
+  maa: 'MeA', mle: 'MeL',
+  w2: 'Aze', '7w2': 'Aze', vn: 'EtPhe4Me', '7vn': 'EtPhe4Me', o2a: 'hPheF5', '02a': 'hPheF5',
+  ac5: 'Ac5c', vu: 'MeCpg', '7vu': 'MeCpg', mad: 'MeAspNMe2', sar: 'Sar',
+};
 
 export const RESIDUES: Record<string, ResidueDef> = Object.fromEntries([...STANDARD, ...NONSTANDARD].map((r) => [r.code, r]));
 export const STANDARD_CODES = STANDARD.map((r) => r.code);
@@ -116,6 +125,7 @@ const BY_THREE: Record<string, ResidueDef> = Object.fromEntries([...STANDARD, ..
 export function resolveResidue(token: string): { def: ResidueDef; dForm: boolean; nMethyl: boolean } | null {
   let t = token.trim();
   let dForm = false, nMethyl = false;
+  if (t.length > 1) t = RESIDUE_ALIASES_CI[t.toLowerCase()] ?? t;
   const exact = RESIDUES[t] ?? RESIDUES[RESIDUE_ALIASES[t] ?? ''];
   if (exact && t.length > 1) return { def: exact, dForm: false, nMethyl: false };
   if (/^[a-z]$/.test(t) && RESIDUES[t.toUpperCase()]) return { def: RESIDUES[t.toUpperCase()], dForm: t !== 'g', nMethyl: false };

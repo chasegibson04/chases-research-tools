@@ -1,5 +1,10 @@
 # Changelog — Peptide Fragment Ion Predictor
 
+## 0.2.1 — 2026-10-19
+- Sequence input accepts dash-separated names and PDB-style short names (Maa-W2-Vn-Sar-O2a-P-Ac5-Vu-Mad-Mle-I), with arrows, commas or spaces as separators.
+- Ion types: Auto (follows the fragmentation method) or Choose your own chips.
+- Run and Cancel moved to the top of the inputs column, with a Hide button; help tooltips are no longer clipped.
+
 ## 0.2.0 — 2026-10-14
 - b-ion sequence scrambling (optional): macrocyclic b ions that re-close and re-open elsewhere, flagged bₖˢ (type b-scr).
 - Residue-specific side-chain losses (optional): Thr −C₂H₄O, Ser −CH₂O, Asp/Glu −CO₂, Arg −CH₅N₃/−CH₂N₂, Met −CH₄S, dimethylamide −C₂H₇N.
