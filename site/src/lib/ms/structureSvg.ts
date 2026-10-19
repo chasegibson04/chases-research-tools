@@ -130,16 +130,23 @@ function linearMarker(m: SMarker, scene: StructureScene, o: SvgOptions, X: (x: n
   return parts.join('');
 }
 
-function cyclicMarker(m: SMarker, _scene: StructureScene, o: SvgOptions, X: (x: number) => number, Y: (y: number) => number, u: number) {
-  // Cyclic fragments are b/a-type; draw a radial tick across amide (by) and Cα–C (ax) bonds.
-  // Cyclic arcs: amide (b), Cα–C (a) and, for ETD-type arcs, N–Cα (c) bonds.
+function cyclicMarker(m: SMarker, scene: StructureScene, o: SvgOptions, X: (x: number) => number, Y: (y: number) => number, u: number) {
+  // Cyclic fragments are b/a-type (amide / Cα–C cuts) and, for ETD-type arcs, c-type (N–Cα) cuts. Each cut is drawn as a
+  // line through the ring that continues to a label inside the ring: dashed = no assigned ion, solid = observed.
   const type = m.family === 'by' ? 'b' : m.family === 'ax' ? 'a' : 'c';
   if (!o.families.n.includes(type)) return '';
   const obs = o.observed?.n.has(m.bond);
   if (o.observedOnly && !obs) return '';
   const col = o.palette.ion[type];
-  const r0 = -0.38, r1 = 0.42;
+  const n = scene.spans.length || 1;
+  const site = type === 'c' ? (m.bond / 3 === 0 ? n : m.bond / 3) : Math.floor(m.bond / 3) + 1; // cleavage after residue `site` (1-based)
+  const R = scene.ring?.r ?? 4;
+  const lab = Math.max(0.9, Math.min({ b: 2.0, a: 2.9, c: 3.8 }[type], R - 1.1)); // staggered so neighbouring cuts do not collide
+  const r0 = -(lab - 0.4), r1 = 0.5;
   const d = `M${X(m.x + m.nx * r0)},${Y(m.y + m.ny * r0)} L${X(m.x + m.nx * r1)},${Y(m.y + m.ny * r1)}`;
   const dash = `${(u * 0.07).toFixed(1)} ${(u * 0.06).toFixed(1)}`;
-  return `<g class="mk" data-bond="${m.bond}" data-side="n" data-type="${type}" opacity="${o.observed && !obs ? 0.4 : 1}"><path class="hit" d="${d}"/><path class="ln" d="${d}" stroke="${col}" stroke-width="${(u * 0.05).toFixed(2)}" stroke-dasharray="${obs ? 'none' : dash}"/></g>`;
+  const lx = X(m.x - m.nx * lab), ly = Y(m.y - m.ny * lab);
+  const sw = (u * (obs ? 0.055 : 0.04)).toFixed(2);
+  return `<g class="mk" data-bond="${m.bond}" data-side="n" data-type="${type}" data-size="${site}" opacity="${o.observed && !obs ? 0.55 : 1}"><path class="hit" d="${d}"/><path class="ln" d="${d}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${obs ? 'none' : dash}"/>`
+    + `<text data-label="1" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="${col}" font-size="${Math.round(u * 0.6)}" font-weight="600">${type}${subNum(site)}</text></g>`;
 }

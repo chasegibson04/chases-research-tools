@@ -237,7 +237,6 @@ function primitives(s: Scene, pal: MsPalette, p: Props, hover?: { layer: string;
     if (s.split && r > 0) { const yb = s.yBot(r); out.push({ t: 'line', x1: x0 - 4, y1: yb, x2: x0, y2: yb, c: pal.muted, w: 1 }, { t: 'text', x: x0 - 7, y: yb + 4, s: `${Math.round(r * 100)}`, c: pal.muted, size: 10, anchor: 'end' }); }
   }
   out.push({ t: 'text', x: 14, y: s.split ? (M.t + s.mirrorTop) / 2 : s.mirrorTop / 2 + 8, s: 'Rel. intensity (%)', c: pal.muted, size: 11, anchor: 'middle', rot: -90 });
-  if (p.top.label) out.push({ t: 'text', x: x1 - 4, y: M.t + 2, s: p.top.label, c: pal.muted, size: 11, anchor: 'end' });
   if (s.split && p.mirror?.label) out.push({ t: 'text', x: x1 - 4, y: H - M.b - 6, s: p.mirror.label, c: pal.muted, size: 11, anchor: 'end' });
 
   const layer = (L: SpecLayer, max: number, y: (r: number) => number, which: 'top' | 'mirror') => {

@@ -415,10 +415,10 @@ export default function Annotator({ manifest, examples, run }: ToolProps<Input, 
               <SeriesToggles present={presentSeries} hidden={hidden} onChange={setHidden} palette={palette} />
               <PeptideStructure peptide={ann.peptide} families={figFamilies} observed={stats?.observed} highlight={structureHl} filename={`${manifest.id}-structure`}
                 ions={visibleIons} theoretical={theoretical} hoverIds={hoverIons ?? undefined}
-                onHover={(m) => setHoverIons(m ? (m.ids ? m.ids : m.label ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
+                onHover={(m) => setHoverIons(m ? (m.ids ? m.ids : m.label && !ann.peptide.cyclic ? [ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(ann.ions, m.bond, m.side, ann.peptide.cyclic).filter((i) => [...assigned.values()].some((a) => a.ion?.id === i.id)).map((i) => i.id)) : null)}
                 onClick={(m) => {
                   if (m.ids?.length) { const id = [...m.ids].sort((x, y) => (ionById.get(x)?.charge ?? 9) - (ionById.get(y)?.charge ?? 9))[0]; setFocus((f) => (f?.kind === 'ion' && f.id === id ? null : { kind: 'ion', id })); return; }
-                  if (m.label) { const ion = ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond); setFocus((f) => (ion && !(f?.kind === 'ion' && f.id === ion.id) ? { kind: 'ion', id: ion.id } : null)); return; }
+                  if (m.label && !ann.peptide.cyclic) { const ion = ionForLabel(ann.ions, m.type, m.size, m.side, ann.peptide.cyclic, m.bond); setFocus((f) => (ion && !(f?.kind === 'ion' && f.id === ion.id) ? { kind: 'ion', id: ion.id } : null)); return; }
                   setFocus((f) => (f?.kind === 'bond' && f.bond === m.bond && f.side === m.side ? null : { kind: 'bond', bond: m.bond, side: m.side }));
                 }} />
               <div class="ms-info">

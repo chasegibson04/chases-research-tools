@@ -4,7 +4,7 @@
   "name": "mzML Spectrum Viewer & MS/MS Annotator",
   "tagline": "Open mzML or MGF files in your browser, average scans, measure peak gaps, and annotate fragments of linear or cyclic peptides.",
   "description": "Load an mzML or MGF file directly from your computer (nothing is uploaded), browse scans, average the scans of a precursor, and annotate the MS/MS spectrum against a linear or head-to-tail cyclic peptide. Measure the distance between two peaks to get residue, dipeptide and neutral-loss suggestions, accept or override every assignment, and export the annotated spectrum, structure and peak table.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "status": "beta",
   "kind": "interactive",
   "category": "mass-spectrometry",

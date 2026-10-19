@@ -168,9 +168,9 @@ export default function FragmentPredictor({ manifest, examples, run }: ToolProps
           <Panel id="predictor:structure" title="Structure">
             <PeptideStructure peptide={out.peptide} families={families} observed={observed} highlight={structureHl}
               filename={`${manifest.id}-structure`}
-              onHover={(m) => setHover(m ? (m.label ? [ionForLabel(out.ions, m.type, m.size, m.side, out.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(out.ions, m.bond, m.side, out.peptide.cyclic).map((i) => i.id)) : null)}
+              onHover={(m) => setHover(m ? (m.label && !out.peptide.cyclic ? [ionForLabel(out.ions, m.type, m.size, m.side, out.peptide.cyclic, m.bond)?.id].filter(Boolean) as string[] : ionsForMarker(out.ions, m.bond, m.side, out.peptide.cyclic).map((i) => i.id)) : null)}
               onClick={(m) => {
-                if (m.label) { pinIon(ionForLabel(out.ions, m.type, m.size, m.side, out.peptide.cyclic, m.bond)?.id ?? null); return; }
+                if (m.label && !out.peptide.cyclic) { pinIon(ionForLabel(out.ions, m.type, m.size, m.side, out.peptide.cyclic, m.bond)?.id ?? null); return; }
                 setFocus((f) => (f?.kind === 'bond' && f.bond === m.bond && f.side === m.side ? null : { kind: 'bond', bond: m.bond, side: m.side }));
               }} />
             <div class="ms-info" aria-live="polite">

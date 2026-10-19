@@ -2,7 +2,7 @@
 .ms-tool { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .ms-card { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-elev); min-width: 0; }
 .ms-card > .fig-bar { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); }
-.fig-bar .seg { display: inline-flex; }
+.seg { display: inline-flex; }
 .seg > button { border-radius: 0; margin-left: -1px; }
 .seg > button:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); margin-left: 0; }
 .seg > button:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
@@ -73,4 +73,4 @@ label.btn { display: inline-flex; align-items: center; cursor: pointer; }
 .series-toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: var(--space-1) var(--space-3); border-bottom: 1px solid var(--line); }
 .chip-xs { font-size: var(--fs-xs); padding: 0.05rem 0.45rem; }
 .ion-cell.out { opacity: 0.25; }
-.pep-seq svg { width: auto; max-width: 100%; height: auto; margin: 0 auto; }
+.pep-seq svg { display: block; margin: 0 auto; }

@@ -1,5 +1,9 @@
 # Changelog — mzML Spectrum Viewer & MS/MS Annotator
 
+## 0.3.1 — 2026-10-19
+- Fix: the My file / Example switch was clipped under the Run bar; inputs column spacing repaired.
+- Cyclic structure: every cleavage line now runs through the ring to a label (a1…, b1…) inside it; dashed = not observed. Sequence figure enlarged and de-crowded; spectrum no longer draws its title over peak labels.
+
 ## 0.3.0 — 2026-10-19
 - Choose either an example or your own file (My file / Example switch) instead of both at once.
 - Run (and Cancel) sit at the top of the inputs column, next to a Hide button that collapses the column.
