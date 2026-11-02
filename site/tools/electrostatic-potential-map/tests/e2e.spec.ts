@@ -61,8 +61,8 @@ test.describe('electrostatic-potential-map', () => {
     const before = await page.locator('[data-output="vsmax"]').textContent();
     await page.locator('.esp-group[data-group="colour"] select').nth(1).selectOption('kj');
     await expect(page.locator('[data-testid="esp-caption"]')).toContainText('kJ/mol');
-    const after = await page.locator('[data-output="vsmax"]').textContent();
-    expect(parseFloat(after!) / parseFloat(before!)).toBeCloseTo(4.184, 1);
+    // the statistics are rebuilt a moment after the caption changes
+    await expect.poll(async () => parseFloat((await page.locator('[data-output="vsmax"]').textContent())!) / parseFloat(before!), { timeout: 10_000 }).toBeCloseTo(4.184, 1);
   });
 
   test('switching to the HOMO draws two coloured lobes', async ({ page }) => {

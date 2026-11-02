@@ -30,6 +30,8 @@ for (const tool of tools) {
       for (const ex of tool.examples) {
         test(`example "${ex.label}" runs within budget`, async ({ page }) => {
           await page.goto(`/tools/${tool.id}/`);
+          // Wait for the island to hydrate before looking for the Example/My-file switch; counting too early skipped the click.
+          await page.locator('.ts').first().waitFor({ timeout: 30_000 });
           if (await page.locator('[data-source="example"]').count()) await page.locator('[data-source="example"]').click();
           await page.locator('#example-select').selectOption({ label: ex.label });
           const t0 = Date.now();
