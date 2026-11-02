@@ -24,7 +24,7 @@
     "h5wasm": "^0.10.3",
     "openchemlib": "^9.25.2",
     "plotly.js-basic-dist-min": "^4.1.2",
-    "preact": "^10.29.8",
+    "preact": "^11.1.0",
     "sql.js": "^1.14.2",
     "three": "^0.187.0"
   },
