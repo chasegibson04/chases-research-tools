@@ -1,0 +1,18 @@
+{
+  "label": "Acetate ion (SMILES)",
+  "description": "An anion: the whole surface is negative.",
+  "input": {
+    "source": "smiles",
+    "structure": "CC(=O)[O-]",
+    "basis": "6-31g",
+    "charge": 0,
+    "quality": "standard",
+    "optimize": true,
+    "seed": 42,
+    "reorient": true
+  },
+  "expected": {
+    "formula": "C2H3O2",
+    "energy": -227.1219
+  }
+}

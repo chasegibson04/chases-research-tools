@@ -1,0 +1,17 @@
+{
+  "label": "Benzene, D6h geometry (XYZ)",
+  "description": "Exact textbook geometry; values reproduce an independent PySCF calculation. Expected values: PySCF RHF/6-31G.",
+  "input": {
+    "source": "xyz",
+    "structure": "C 1.397000 0.000000 0.000000\nC 0.698500 1.209837 0.000000\nC -0.698500 1.209837 0.000000\nC -1.397000 0.000000 0.000000\nC -0.698500 -1.209837 0.000000\nC 0.698500 -1.209837 0.000000\nH 2.481000 0.000000 0.000000\nH 1.240500 2.148609 0.000000\nH -1.240500 2.148609 0.000000\nH -2.481000 0.000000 0.000000\nH -1.240500 -2.148609 0.000000\nH 1.240500 -2.148609 0.000000",
+    "basis": "6-31g",
+    "charge": 0,
+    "quality": "standard",
+    "reorient": true
+  },
+  "expected": {
+    "energy": -230.623507,
+    "esp3": -11.108,
+    "qzz": -8.688
+  }
+}

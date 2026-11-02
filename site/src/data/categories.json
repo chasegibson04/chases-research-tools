@@ -20,7 +20,8 @@
       "subcategories": [
         { "id": "solutions", "name": "Solutions & Buffers", "description": "Molarity, dilution, pH, and buffer preparation." },
         { "id": "formula-tools", "name": "Formula Tools", "description": "Elemental composition, molecular weight, and isotope patterns." },
-        { "id": "chromatography", "name": "Chromatography", "description": "LC and GC method and retention tools." }
+        { "id": "chromatography", "name": "Chromatography", "description": "LC and GC method and retention tools." },
+        { "id": "computational-chemistry", "name": "Computational Chemistry", "description": "Quantum-chemical properties, electron density, electrostatic potential and structure visualization that run in the browser." }
       ]
     },
     {

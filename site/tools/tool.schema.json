@@ -75,10 +75,10 @@
     "outputs": {
       "type": "array",
       "items": { "type": "object", "additionalProperties": false, "required": ["name", "label", "type"],
-        "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "type": { "enum": ["number", "text", "table", "figure", "file", "json"] }, "help": { "type": "string" }, "exportFormats": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf"] } } } }
+        "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "type": { "enum": ["number", "text", "table", "figure", "file", "json"] }, "help": { "type": "string" }, "exportFormats": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf", "xyz", "cube", "ply", "obj", "mol"] } } } }
     },
-    "figures": { "type": "object", "additionalProperties": false, "required": ["enabled", "library", "exportable"], "properties": { "enabled": { "type": "boolean" }, "library": { "enum": ["plotly", "none"] }, "exportable": { "type": "boolean" }, "defaultPalette": { "type": "string" } } },
-    "exports": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf"] }, "uniqueItems": true },
+    "figures": { "type": "object", "additionalProperties": false, "required": ["enabled", "library", "exportable"], "properties": { "enabled": { "type": "boolean" }, "library": { "enum": ["plotly", "three", "custom", "none"] }, "exportable": { "type": "boolean" }, "defaultPalette": { "type": "string" } } },
+    "exports": { "type": "array", "items": { "enum": ["csv", "tsv", "json", "txt", "png", "svg", "pdf", "xyz", "cube", "ply", "obj", "mol"] }, "uniqueItems": true },
     "examples": {
       "type": "array", "minItems": 1,
       "items": { "type": "object", "additionalProperties": false, "required": ["file", "label"], "properties": { "file": { "type": "string", "pattern": "\\.json$" }, "label": { "type": "string" }, "description": { "type": "string" }, "expectedRuntimeSeconds": { "type": "number" } } },

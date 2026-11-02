@@ -1,0 +1,18 @@
+{
+  "label": "Hexafluorobenzene (SMILES)",
+  "description": "The same ring with six fluorines: the \u03c0 face turns positive (blue) and the edge negative.",
+  "input": {
+    "source": "smiles",
+    "structure": "Fc1c(F)c(F)c(F)c(F)c1F",
+    "basis": "6-31g",
+    "charge": 0,
+    "quality": "standard",
+    "optimize": true,
+    "seed": 42,
+    "reorient": true
+  },
+  "expected": {
+    "formula": "C6F6",
+    "energy": -823.4869
+  }
+}

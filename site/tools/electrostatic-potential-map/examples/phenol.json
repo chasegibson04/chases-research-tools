@@ -1,0 +1,18 @@
+{
+  "label": "Phenol (SMILES)",
+  "description": "A polar aromatic: the oxygen lone pairs and the OH hydrogen stand out on the surface.",
+  "input": {
+    "source": "smiles",
+    "structure": "Oc1ccccc1",
+    "basis": "6-31g",
+    "charge": 0,
+    "quality": "standard",
+    "optimize": true,
+    "seed": 42,
+    "reorient": true
+  },
+  "expected": {
+    "formula": "C6H6O",
+    "energy": -305.4434
+  }
+}

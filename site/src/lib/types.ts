@@ -29,7 +29,7 @@ export interface ToolOutputSpec {
   label: string;
   type: 'number' | 'text' | 'table' | 'figure' | 'file' | 'json';
   help?: string;
-  exportFormats?: Array<'csv' | 'tsv' | 'json' | 'txt' | 'png' | 'svg' | 'pdf'>;
+  exportFormats?: Array<'csv' | 'tsv' | 'json' | 'txt' | 'png' | 'svg' | 'pdf' | 'xyz' | 'cube' | 'ply' | 'obj' | 'mol'>;
 }
 
 export interface ToolManifest {
@@ -72,8 +72,8 @@ export interface ToolManifest {
   };
   inputs: ToolInputSpec[];
   outputs: ToolOutputSpec[];
-  figures: { enabled: boolean; library: 'plotly' | 'none'; exportable: boolean; defaultPalette?: string };
-  exports: Array<'csv' | 'tsv' | 'json' | 'txt' | 'png' | 'svg' | 'pdf'>;
+  figures: { enabled: boolean; library: 'plotly' | 'three' | 'custom' | 'none'; exportable: boolean; defaultPalette?: string };
+  exports: Array<'csv' | 'tsv' | 'json' | 'txt' | 'png' | 'svg' | 'pdf' | 'xyz' | 'cube' | 'ply' | 'obj' | 'mol'>;
   examples: Array<{ file: string; label: string; description?: string; expectedRuntimeSeconds?: number }>;
   citation: {
     authors: Array<{ family: string; given: string; orcid?: string }>;

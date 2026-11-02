@@ -1,0 +1,381 @@
+{
+  "$schema": "../tool.schema.json",
+  "id": "electrostatic-potential-map",
+  "name": "Electrostatic Potential Map Generator",
+  "tagline": "Draw a molecule or paste SMILES, compute its electron density and electrostatic potential in your browser, and export a publication figure.",
+  "description": "Turn a SMILES string, a structure you draw, or an XYZ or MOL file into an electrostatic potential (ESP) map painted on the electron-density surface, the kind of figure used to explain cation–π interactions. A closed-shell Hartree–Fock calculation runs entirely in your browser, then you rotate the surface, change the colour scale, atom style and view, add 2D slices and ring probes, and export PNG, mesh and Gaussian cube files. Nothing is uploaded.",
+  "version": "0.1.0",
+  "status": "beta",
+  "kind": "interactive",
+  "category": "chemistry",
+  "subcategories": [
+    "computational-chemistry"
+  ],
+  "tags": [
+    "esp",
+    "electrostatic-potential",
+    "electron-density",
+    "cation-pi",
+    "aromatic",
+    "smiles",
+    "hartree-fock",
+    "molecular-orbitals",
+    "isosurface",
+    "figure"
+  ],
+  "keywords": [
+    "electrostatic potential map from SMILES",
+    "ESP map generator online",
+    "electron density isosurface from SMILES",
+    "cation-pi interaction electrostatic potential",
+    "benzene hexafluorobenzene electrostatic potential",
+    "molecular electrostatic potential surface",
+    "HOMO LUMO orbital viewer online",
+    "draw molecule electron density"
+  ],
+  "related": [
+    "peptide-mass-calculator"
+  ],
+  "runtime": {
+    "engine": "js",
+    "languages": [
+      "TypeScript"
+    ],
+    "bundleSizeKB": 950
+  },
+  "compute": {
+    "location": "client",
+    "worker": true,
+    "maxRuntimeSeconds": 900,
+    "maxMemoryMB": 1536,
+    "maxInputSizeMB": 1,
+    "threads": 1,
+    "warnOnMobile": true,
+    "longRunning": true
+  },
+  "layout": {
+    "aspect": "tall",
+    "inputsPosition": "left",
+    "inputsWidthPx": 340,
+    "panels": [
+      "inputs",
+      "results",
+      "figure",
+      "table"
+    ],
+    "fullWidth": true
+  },
+  "inputs": [
+    {
+      "name": "source",
+      "label": "Input format",
+      "type": "select",
+      "help": "How to read the structure box: SMILES (a text line such as c1ccccc1), XYZ (element and x y z in Å, used exactly as given, best for published geometries), or MOL/SDF text. Drawing a structure fills the box with SMILES for you.",
+      "default": "smiles",
+      "options": [
+        {
+          "value": "smiles",
+          "label": "SMILES"
+        },
+        {
+          "value": "xyz",
+          "label": "XYZ coordinates"
+        },
+        {
+          "value": "molfile",
+          "label": "MOL / SDF text"
+        }
+      ],
+      "required": true
+    },
+    {
+      "name": "structure",
+      "label": "Structure",
+      "type": "textarea",
+      "help": "A SMILES string (benzene = c1ccccc1, hexafluorobenzene = Fc1c(F)c(F)c(F)c(F)c1F), or XYZ or MOL text. One molecule, neutral or a closed-shell ion, elements H to Ca. SMILES input gets a 3D geometry from OpenChemLib refined with the MMFF94s force field.",
+      "default": "c1ccccc1",
+      "placeholder": "c1ccccc1",
+      "required": true
+    },
+    {
+      "name": "structureFile",
+      "label": "Or open a file",
+      "type": "file",
+      "help": "Load an .xyz, .mol or .sdf file from your computer. It is read in your browser, never uploaded, and its text replaces the structure box.",
+      "accept": ".xyz,.mol,.sdf,.sd,.txt",
+      "maxSizeMB": 1
+    },
+    {
+      "name": "basis",
+      "label": "Basis set",
+      "type": "select",
+      "help": "Size of the Gaussian basis. STO-3G is fastest but quantitatively crude. 3-21G is a good quick choice. 6-31G is the default: it reproduces benzene's quadrupole moment and is still fast. Larger sets cost more time and memory and are limited to about 120 basis functions.",
+      "default": "6-31g",
+      "options": [
+        {
+          "value": "sto-3g",
+          "label": "STO-3G (fastest)"
+        },
+        {
+          "value": "3-21g",
+          "label": "3-21G"
+        },
+        {
+          "value": "6-31g",
+          "label": "6-31G (default)"
+        }
+      ],
+      "required": true
+    },
+    {
+      "name": "charge",
+      "label": "Total charge",
+      "type": "integer",
+      "help": "Net charge of the molecule, used for XYZ and MOL input only. SMILES carries its charge in the formal charges (C[NH3+], CC(=O)[O-]). The number of electrons must be even: radicals and odd-electron ions are not supported.",
+      "default": 0,
+      "min": -4,
+      "max": 4,
+      "step": 1,
+      "unit": "e",
+      "advanced": true
+    },
+    {
+      "name": "quality",
+      "label": "Surface quality",
+      "type": "select",
+      "help": "Grid spacing for the density and potential grids. Draft is for quick looks, Standard suits most figures, Fine and Publication give smoother surfaces and more accurate potentials at the cost of seconds to minutes on large molecules.",
+      "default": "standard",
+      "options": [
+        {
+          "value": "draft",
+          "label": "Draft (fast)"
+        },
+        {
+          "value": "standard",
+          "label": "Standard"
+        },
+        {
+          "value": "fine",
+          "label": "Fine"
+        },
+        {
+          "value": "publication",
+          "label": "Publication (slow)"
+        }
+      ]
+    },
+    {
+      "name": "optimize",
+      "label": "Refine geometry (MMFF94s)",
+      "type": "boolean",
+      "help": "Relaxes the embedded 3D structure with the MMFF94s force field so bond lengths are realistic. Turn off to keep the raw embedded geometry. Ignored for XYZ input, which is always used as given.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "seed",
+      "label": "Conformer seed",
+      "type": "integer",
+      "help": "Random seed for the 3D embedding. Flexible molecules have many conformers and the map shows one of them; change the seed to see another. Planar aromatic molecules do not depend on it.",
+      "default": 42,
+      "min": 1,
+      "max": 99999,
+      "step": 1,
+      "advanced": true
+    },
+    {
+      "name": "reorient",
+      "label": "Align to principal axes",
+      "type": "boolean",
+      "help": "Moves the molecule to its centre and rotates it so a planar molecule lies in the xy plane with the viewer looking down the z axis. Turn off to keep your XYZ orientation.",
+      "default": true,
+      "advanced": true
+    },
+    {
+      "name": "maxBasis",
+      "label": "Size limit",
+      "type": "integer",
+      "help": "Largest number of basis functions the calculation may use. The default 120 keeps memory near 200 MB (about 20 heavy atoms in 6-31G). Raise it up to 150 for a drug-sized molecule; memory use grows with the fourth power (about 500 MB at 150), so close other tabs first.",
+      "default": 120,
+      "min": 20,
+      "max": 150,
+      "step": 1,
+      "unit": "functions",
+      "advanced": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "surface",
+      "label": "ESP-mapped density surface",
+      "type": "figure",
+      "help": "Interactive 3D surface coloured by electrostatic potential, orbital lobes or plain density.",
+      "exportFormats": [
+        "png",
+        "ply",
+        "obj"
+      ]
+    },
+    {
+      "name": "slice",
+      "label": "2D potential slice",
+      "type": "figure",
+      "help": "ESP, density or orbital amplitude on a plane through or above the molecule, as vector SVG.",
+      "exportFormats": [
+        "svg",
+        "png"
+      ]
+    },
+    {
+      "name": "profile",
+      "label": "Ring probe profile",
+      "type": "figure",
+      "help": "Potential along the normal through each aromatic ring centre.",
+      "exportFormats": [
+        "png",
+        "svg",
+        "csv"
+      ]
+    },
+    {
+      "name": "atoms",
+      "label": "Atoms and charges",
+      "type": "table",
+      "exportFormats": [
+        "csv",
+        "json",
+        "xyz"
+      ]
+    },
+    {
+      "name": "grids",
+      "label": "Volumetric data",
+      "type": "file",
+      "help": "Gaussian cube files of the density, potential and orbitals.",
+      "exportFormats": [
+        "cube"
+      ]
+    }
+  ],
+  "figures": {
+    "enabled": true,
+    "library": "three",
+    "exportable": true,
+    "defaultPalette": "RdBu"
+  },
+  "exports": [
+    "png",
+    "svg",
+    "csv",
+    "json",
+    "xyz",
+    "mol",
+    "cube",
+    "ply",
+    "obj"
+  ],
+  "examples": [
+    {
+      "file": "benzene.json",
+      "label": "Benzene (SMILES)",
+      "description": "The electron-rich π face of benzene: red above the ring, blue at the hydrogens.",
+      "expectedRuntimeSeconds": 6
+    },
+    {
+      "file": "hexafluorobenzene.json",
+      "label": "Hexafluorobenzene (SMILES)",
+      "description": "The same ring with six fluorines: the π face turns positive (blue) and the edge negative.",
+      "expectedRuntimeSeconds": 10
+    },
+    {
+      "file": "benzene-xyz.json",
+      "label": "Benzene, D6h geometry (XYZ)",
+      "description": "Exact textbook geometry; values reproduce an independent PySCF calculation.",
+      "expectedRuntimeSeconds": 6
+    },
+    {
+      "file": "hexafluorobenzene-xyz.json",
+      "label": "Hexafluorobenzene, D6h geometry (XYZ)",
+      "description": "Exact D6h geometry; values reproduce an independent PySCF calculation.",
+      "expectedRuntimeSeconds": 12
+    },
+    {
+      "file": "phenol.json",
+      "label": "Phenol (SMILES)",
+      "description": "A polar aromatic: the oxygen lone pairs and the OH hydrogen show up on the surface.",
+      "expectedRuntimeSeconds": 10
+    },
+    {
+      "file": "acetate.json",
+      "label": "Acetate ion (SMILES)",
+      "description": "An anion: the whole surface is negative.",
+      "expectedRuntimeSeconds": 8
+    }
+  ],
+  "citation": {
+    "authors": [
+      {
+        "family": "Gibson",
+        "given": "Chase"
+      }
+    ],
+    "year": 2026,
+    "title": "Electrostatic Potential Map Generator",
+    "doi": null,
+    "preferredFormat": "apa",
+    "alsoCite": [
+      {
+        "text": "Sun, Q. et al. (2020). Recent developments in the PySCF program package. J. Chem. Phys. 153, 024109 (used to validate the calculation)",
+        "doi": "10.1063/5.0006074"
+      },
+      {
+        "text": "McMurchie, L. E.; Davidson, E. R. (1978). One- and two-electron integrals over Cartesian Gaussian functions. J. Comput. Phys. 26, 218–231",
+        "doi": "10.1016/0021-9991(78)90092-X"
+      }
+    ]
+  },
+  "seo": {
+    "title": "Electrostatic Potential Map Generator from SMILES",
+    "metaDescription": "Free ESP map and electron density generator: draw a molecule or paste SMILES, compute in your browser, export a publication-quality figure. Nothing is uploaded.",
+    "ogImage": null,
+    "schemaType": "WebApplication",
+    "faq": [
+      {
+        "q": "How do I make an electrostatic potential map from a SMILES string?",
+        "a": "Paste the SMILES into the structure box (or draw the molecule), choose a basis set and press Run. The tool builds a 3D geometry, runs a Hartree–Fock calculation in your browser, and paints the electrostatic potential on the 0.002 e/bohr³ electron-density surface. Red marks negative potential (electron-rich regions) and blue marks positive potential."
+      },
+      {
+        "q": "Why is the face of benzene red and the face of hexafluorobenzene blue?",
+        "a": "Benzene's π cloud puts negative charge above and below the ring, which attracts cations (the cation–π interaction). Six electronegative fluorines pull that π density toward the ring edge, so the face becomes positive and the edge negative, reversing the quadrupole moment from about −8.7 B to about +9.5 B."
+      },
+      {
+        "q": "Is this calculation accurate enough for a publication figure?",
+        "a": "Hartree–Fock with a split-valence basis such as 6-31G reproduces the qualitative pattern and sign of the potential of small organic molecules and matches independent PySCF results to better than 1e-6 atomic units. For quantitative claims use a larger basis and a method with electron correlation in a dedicated quantum-chemistry package and state the level of theory in your caption."
+      },
+      {
+        "q": "Does my structure leave my computer?",
+        "a": "No. The geometry, the quantum calculation and the figure are all produced by code running in your browser tab; there is no server and no upload."
+      }
+    ]
+  },
+  "ads": {
+    "allow": true
+  },
+  "maintenance": {
+    "created": "2026-11-02",
+    "updated": "2026-11-02",
+    "author": "Chase Gibson",
+    "sourceOrigin": "Built for a collaborator's request: SMILES or drawn structure to electron-density/ESP figure, modelled on the cation–π slides (benzene vs hexafluorobenzene)."
+  },
+  "links": {
+    "repo": "https://github.com/chasegibson04/chases-research-tools/tree/main/site/tools/electrostatic-potential-map",
+    "release": null,
+    "paper": null,
+    "docs": null
+  },
+  "privacy": {
+    "sendsData": false,
+    "storesLocal": true
+  },
+  "license": "MIT"
+}

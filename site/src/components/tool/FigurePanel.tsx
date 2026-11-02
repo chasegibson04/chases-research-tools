@@ -22,6 +22,26 @@ export function FigurePanel({ traces, style: initialStyle = {}, filename = 'figu
     return () => { alive = false; };
   }, [traces, style]);
 
+  // Plotly only listens to window resizes. A plot created while its panel was collapsed (or later squeezed by a narrower
+  // layout) must follow its container, otherwise it keeps the fallback width and forces sideways scrolling on phones.
+  useEffect(() => {
+    const host = el.current;
+    if (!host || typeof ResizeObserver === 'undefined') return;
+    let raf = 0;
+    let last = 0;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(async () => {
+        const w = host.clientWidth;
+        if (!w || Math.abs(w - last) < 2 || !(host as any)._fullLayout) return;
+        last = w;
+        (await loadPlotly()).Plots.resize(host);
+      });
+    });
+    ro.observe(host);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, []);
+
   const doExport = async (format: 'png' | 'svg') => {
     if (!el.current) return;
     const Plotly = await loadPlotly();

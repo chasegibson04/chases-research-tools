@@ -1,0 +1,17 @@
+{
+  "label": "Hexafluorobenzene, D6h geometry (XYZ)",
+  "description": "Exact D6h geometry; values reproduce an independent PySCF calculation. Expected values: PySCF RHF/6-31G.",
+  "input": {
+    "source": "xyz",
+    "structure": "C 1.394000 0.000000 0.000000\nC 0.697000 1.207239 0.000000\nC -0.697000 1.207239 0.000000\nC -1.394000 0.000000 0.000000\nC -0.697000 -1.207239 0.000000\nC 0.697000 -1.207239 0.000000\nF 2.721000 0.000000 0.000000\nF 1.360500 2.356455 0.000000\nF -1.360500 2.356455 0.000000\nF -2.721000 0.000000 0.000000\nF -1.360500 -2.356455 0.000000\nF 1.360500 -2.356455 0.000000",
+    "basis": "6-31g",
+    "charge": 0,
+    "quality": "standard",
+    "reorient": true
+  },
+  "expected": {
+    "energy": -823.486887,
+    "esp3": 16.89,
+    "qzz": 14.895
+  }
+}
