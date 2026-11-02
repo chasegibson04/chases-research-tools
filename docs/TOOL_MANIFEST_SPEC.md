@@ -37,8 +37,8 @@ Schema: `site/tools/tool.schema.json` (JSON Schema 2020-12). Validator: `npm run
 | `layout.fullWidth` | bool | – | Use the full viewport width. |
 | `inputs[]` | object[] | ✓ | `name` (identifier), `label`, `type` (text/textarea/number/integer/boolean/select/multiselect/file/range/color), **`help` (≥15 chars)**, `default`, `required`, `unit`, `min`, `max`, `step`, `options[{value,label}]`, `placeholder`, `accept`, `maxSizeMB`, `group`, `advanced` (collapsed under "Advanced options"). |
 | `outputs[]` | object[] | ✓ | `name`, `label`, `type` (number/text/table/figure/file/json), `help`, `exportFormats[]`. Documentation + export expectations. |
-| `figures` | {enabled, library, exportable, defaultPalette?} | ✓ | plotly or none. |
-| `exports` | enum[] | ✓ | Union of formats the UI offers: csv/tsv/json/txt/png/svg/pdf. |
+| `figures` | {enabled, library, exportable, defaultPalette?} | ✓ | `library`: plotly, three (WebGL 3D), custom (the tool draws its own canvas/SVG) or none. |
+| `exports` | enum[] | ✓ | Union of formats the UI offers: csv/tsv/json/txt/png/svg/pdf, plus chemistry/3D formats xyz/mol/cube/ply/obj. |
 | `examples[]` | {file, label, description?, expectedRuntimeSeconds?} | ✓ ≥1 | Files in `examples/`. Label must match the file's `label`. |
 | `citation` | {authors[], year, title, doi, version?, preferredFormat?, alsoCite[]} | ✓ | See CITATIONS.md. |
 | `seo` | {title ≤65, metaDescription 70–160, ogImage, schemaType, faq[]} | ✓ | schemaType: WebApplication (default) / SoftwareApplication / SoftwareSourceCode (showcase). |

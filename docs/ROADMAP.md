@@ -22,6 +22,16 @@
 - [x] ms-file-converter: in-browser msconvert (Thermo .raw via OpenTFRaw WASM, Bruker TDF/TSF, Agilent, MOBILion, open formats)
 - [x] Tool self-containment: `npm run validate` enforces the allowed imports; `npm run export-tool -- <slug>` writes a standalone runnable copy
 
+## Done: computational chemistry (2026-11-02)
+- [x] electrostatic-potential-map: SMILES / drawn / XYZ / MOL → in-browser RHF (STO-3G, 3-21G, 6-31G; H–Ca) validated against PySCF → ESP on the density surface, orbital lobes, 2D slices, ring probes, publication PNG, PLY/OBJ meshes and Gaussian cube files (ADR-012)
+
+## Next (electrostatic-potential-map follow-ups)
+- [ ] Polarization (d) functions and a DFT or MP2 option for quantitative potentials; open-shell (UHF/ROHF) species
+- [ ] Complexes: place a probe cation (Na+, K+, NH4+) above a ring and report the electrostatic and total interaction energy; two-fragment SMILES
+- [ ] 2D structure inset and atom-numbered legend drawn into the exported PNG; vector (SVG) export of the 3D view by depth-sorted projection
+- [ ] Parallel ESP evaluation across a bounded pool of workers (the grid is embarrassingly parallel) and sparse ERI storage to lift the 120-basis-function limit
+- [ ] Heavier elements (Br, I, transition metals) with d shells and effective core potentials
+
 ## Next
 - [ ] De novo residue-ladder tool: working preview on branch `preview/de-novo-ladder` (not on the live site; owner is still deciding); promote to a real tool
 - [ ] ms-file-converter: upstream the vendored OpenTFRaw activation-decoding patch (or drop it once upstream decodes activation)

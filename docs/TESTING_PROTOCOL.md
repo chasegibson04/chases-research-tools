@@ -49,5 +49,8 @@ Lighthouse on the tool page: Performance ≥ 90, Accessibility ≥ 95, SEO = 100
 ## Python / R / WASM specifics
 Unit tests cannot execute Pyodide/webR in Node; cover numerical correctness with e2e golden examples (the runtime downloads in Chromium during the test; allow `expectedRuntimeSeconds` ≥ 30 for the first example). Keep a tiny JS fallback or input validation unit-tested.
 
+## Numerical tools: validate against an independent program
+Golden values should come from a different implementation than the one under test (hand calculation, a trusted package, or literature), never from the tool's own output. The ESP tool checks energies, charges, dipoles, second moments, density and potential at probe points against PySCF for 45 molecule/basis combinations, and its e2e tests decode the exported PNG and count red and blue pixels to prove the figure was actually drawn. Generator scripts live next to the tool (`scripts/gen_*.py`) and write committed JSON.
+
 ## Regression rule
 Changing any result changes `expected` values: that is a `major` version bump, a `CHANGELOG.md` line explaining why, and a changelog entry. Never silently edit golden values to make tests pass.

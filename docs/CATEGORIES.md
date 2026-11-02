@@ -5,7 +5,7 @@ Source of truth: `site/src/data/categories.json`. Every tool declares exactly on
 ## Current registry
 
 - **mass-spectrometry** — peptidomics, proteomics, metabolomics, lipidomics, instrumentation
-- **chemistry** — solutions, formula-tools, chromatography
+- **chemistry** — solutions, formula-tools, chromatography, computational-chemistry (quantum-chemical properties, electron density / ESP, structure visualization)
 - **biology** — sequence-analysis, molecular-biology, cell-culture
 - **statistics** — hypothesis-testing, curve-fitting, data-utilities
 - **visualization** — plot-builders, color-and-style

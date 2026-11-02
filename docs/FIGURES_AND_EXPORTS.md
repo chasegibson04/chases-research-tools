@@ -13,6 +13,15 @@ Usage in a tool:
 ```
 Memoize `traces` with `useMemo` so re-renders don't redraw. Multiple figures per tool are fine. For heatmaps, 3D, contour, etc., import the full `plotly.js-dist-min` inside the tool chunk and note `bundleSizeKB`.
 
+## 3D and 2D-slice figures (`tools/electrostatic-potential-map`)
+For property-on-surface chemistry figures the ESP tool shows what a publication-grade, customizable figure needs; reuse these ideas for new tools.
+- **3D view** (`src/surface/viewer3d.ts`, three.js, lazy-loaded): trackball rotate, pan, zoom (wheel zoom only after clicking the view or with Ctrl/Cmd, so page scrolling is never trapped), face-on / edge-on / end-on / angled presets, perspective or orthographic projection, cut-away plane, opaque or translucent surface (translucent = back faces then front faces, no sorting artifacts), ball-and-stick / stick / space-filling / hidden atoms, atom labels, dark / white / transparent / custom background.
+- **Colour scale**: diverging maps with white at zero (red–white–blue, red–yellow–blue), colour-blind-safe orange–purple and brown–teal, rainbow for classic ESP, viridis and grey; automatic symmetric, automatic min–max or manual range; kcal/mol, kJ/mol, a.u. or eV; colour bar with ticks and units drawn into the image.
+- **Print export**: PNG at a physical width in inches × dpi (150/300/600, capped by the GPU, about 8000 px) with any aspect ratio; the colour bar, title and labels are composited into the file. Meshes go out as binary PLY and OBJ with vertex colours (Å), volumetric data as Gaussian cube files (bohr).
+- **Reproducibility**: a generated caption states method, geometry, isovalue, colour scale and units; "Copy settings" / "Paste settings" round-trip every figure option as JSON.
+- **2D slice** (`src/slice.ts`): raster heatmap + vector contours (marching squares), atoms, ticks and colour bar in one self-contained SVG (also PNG). Plotly's basic bundle has no heatmap/contour trace, so this is custom and small.
+- **Guideline**: a figure the user will publish must state the method, the isovalue or level, the colour scale with units, and what the colours mean; offer a fixed range so panels of several molecules are comparable.
+
 ## Data exports (`ExportMenu`, `src/lib/export.ts`)
 - `downloadCSV/TSV(filename, rows, header?)` (RFC 4180 quoting, CRLF, UTF-8), `downloadJSON`, `downloadText`, `downloadBlob`.
 - `ExportMenu` renders buttons for the formats listed in the manifest `exports`. Name files `<tool-id>-<descriptor>.<ext>`.

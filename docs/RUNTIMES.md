@@ -41,6 +41,13 @@ Everything executes inside `site/src/lib/runtime/tool.worker.ts` (a module Web W
 - Load with `loadWasmBindgen(() => import('./runtime/pkg/<crate>.js'))`.
 - Prefer `serde-wasm-bindgen` for structured I/O.
 
+## Heavy numerical JS in one worker (electrostatic-potential-map)
+Not everything needs WASM. The ESP tool runs an entire Hartree–Fock engine (integrals, SCF, grids) in plain TypeScript inside the shared worker: preallocated `Float64Array`s, no per-iteration allocation, Schwarz screening, and a hard basis-function cap so the packed two-electron integral array stays under about 200 MB. A 108-function hexafluorobenzene job takes about 3 s (3-21G) to 10 s (6-31G) in Node. Patterns worth copying:
+- **Cap by problem size before work starts** (basis functions, grid points) and fail with a message that names the limit and the fix.
+- **Follow-up operations reuse results**: the run output carries a compact wavefunction; later `op: 'orbital' | 'slice'` runs take it back as input instead of repeating the SCF. Grids travel as `Float32Array`s and the main thread rebuilds isosurfaces from them, so isovalue, colours and range change instantly without recomputing.
+- **Vendored runtime data**: files a library needs but hides behind its `exports` map (OpenChemLib's `resources.json`) are copied into the tool's `src/runtime/` with their licence and loaded through Vite's `?url`.
+- **Validate against an independent program** with maintainer-only scripts (`scripts/gen_reference.py` needs PySCF) that write small committed JSON files, so CI needs no Python.
+
 ## Threads, SIMD, and the ad conflict
 Multithreaded WASM needs `SharedArrayBuffer`, which needs cross-origin isolation (COOP `same-origin` + COEP `require-corp` or `credentialless`). COEP `require-corp` blocks AdSense/EthicalAds scripts. Policy: **single-threaded by default**. To opt in for a specific heavy tool: set `compute.threads > 1`, add a path-scoped rule in `site/public/_headers` for `/tools/<slug>/*` with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless`, set `ads.allow: false` for that tool, and test in Chrome, Firefox, and Safari (credentialless support varies; the code falls back to one thread automatically via `safeThreads()`). WASM SIMD is fine everywhere modern; ship a non-SIMD fallback only if you must support very old browsers.
 

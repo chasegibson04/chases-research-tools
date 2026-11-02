@@ -55,7 +55,8 @@ The canonical prompt that triggers an import is simply:
     │   ├── peptide-mass-calculator/          # Reference implementation
     │   ├── peptide-fragment-ion-predictor/
     │   ├── mzml-spectrum-annotator/
-    │   └── ms-file-converter/                # In-browser msconvert (vendor formats → mzML/MGF/…)
+    │   ├── ms-file-converter/                # In-browser msconvert (vendor formats → mzML/MGF/…)
+    │   └── electrostatic-potential-map/      # SMILES/drawn structure → in-browser Hartree–Fock → ESP-on-density figure (ADR-012)
     ├── tests/e2e/            # Site-wide generic Playwright protocol (tool-specific specs live in tools/<slug>/tests/)
     └── public/               # Static files: _headers, _redirects, ads.txt, robots.txt, og-default.png,
                               #   cv/headshot.jpg, tools/<id>/ (showcase figures), runtimes/, fonts/
@@ -81,4 +82,4 @@ Each tool is a folder `site/tools/<slug>/` containing a `tool.json` manifest (ca
 
 ## Status
 
-Launched 2026-10-13 on Cloudflare Workers (workers.dev URL); default theme paper (`site/src/config/site.ts`); visitors can switch to Dark, Michigan or Wisconsin from the header. Tools: peptide mass calculator, peptide fragment ion predictor, mzML spectrum annotator, MS file converter. No custom domain yet; monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.
+Launched 2026-10-13 on Cloudflare Workers (workers.dev URL); default theme paper (`site/src/config/site.ts`); visitors can switch to Dark, Michigan or Wisconsin from the header. Tools: peptide mass calculator, peptide fragment ion predictor, mzML spectrum annotator, MS file converter, electrostatic potential map generator. No custom domain yet; monetization IDs unset. See [docs/ROADMAP.md](docs/ROADMAP.md) for the launch checklist.
