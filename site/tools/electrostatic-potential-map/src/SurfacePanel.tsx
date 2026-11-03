@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Panel } from '@/components/tool/Panel';
 import { downloadText } from '@/lib/export';
 import type { Output } from './compute';
-import { colorsToBytes, buildSurface, DEFAULT_FIGURE, saveFigureSettings, type BuiltSurface, type FigureSettings } from './surface/figure';
-import { COLORMAPS, cssGradient, type ColormapName } from './surface/colormap';
+import { colorsToBytes, buildSurface, DEFAULT_FIGURE, LOOKS, saveFigureSettings, type BuiltSurface, type FigureSettings } from './surface/figure';
+import { COLORMAPS, colorAt, cssGradient, setCustomStops, stopsOf, type ColormapName } from './surface/colormap';
 import { EspViewer, type ViewPreset } from './surface/viewer3d';
 import { toOBJ, toPLY } from './exporters';
 import { UNIT_LABEL, UNIT_NAMES, UNIT_FACTOR, niceNumber, type EspUnit } from './units';
@@ -46,6 +46,7 @@ export default function SurfacePanel({ result, settings: s, onChange, orbitals, 
   const [busy, setBusy] = useState(true);
   const [glError, setGlError] = useState<string | null>(null);
   const [copied, setCopied] = useState('');
+  setCustomStops(s.customStops);
   const nocc = result.wave!.nocc;
   const nbf = result.wave!.nbf;
   const orbIndex = s.orbitalIndex < 0 ? nocc - 1 : s.orbitalIndex;
@@ -74,7 +75,7 @@ export default function SurfacePanel({ result, settings: s, onChange, orbitals, 
   useEffect(() => { viewer.current?.setOverlay(overlayState(), labelTexts, labelColor()); }, [labelTexts]);
 
   // surface (debounced)
-  const depKey = [s.property, s.isovalue, orbIndex, s.orbitalIso, s.colormap, s.reverse, s.rangeMode, s.vmin, s.vmax, s.units, s.posColor, s.negColor, s.plainColor].join('|');
+  const depKey = [s.property, s.isovalue, orbIndex, s.orbitalIso, s.colormap, s.reverse, s.rangeMode, s.vmin, s.vmax, s.units, s.posColor, s.negColor, s.plainColor, s.customStops.join(',')].join('|');
   useEffect(() => {
     if (!viewer.current) return;
     if (s.property === 'orbital' && !orbData) { if (!orbitalBusy) requestOrbital(orbIndex); return; }
@@ -164,6 +165,12 @@ export default function SurfacePanel({ result, settings: s, onChange, orbitals, 
         </div>
 
         <div class="esp-controls" aria-label="Figure controls">
+          <Field label="Look" help="One-click styles that set the colour map, range, background and surface together. 'Lecture slide' reproduces the dark rainbow ESP maps from the cation–π slides; 'Journal' gives a white, zero-centred figure. You can still change every setting afterwards.">
+            <select value="" data-testid="look-select" onChange={(e) => { const l = LOOKS.find((x) => x.id === (e.target as HTMLSelectElement).value); if (l) onChange({ ...l.patch, property: l.patch.property ?? 'esp' }); }}>
+              <option value="">Choose a look…</option>
+              {LOOKS.map((l) => <option value={l.id} title={l.note}>{l.label}</option>)}
+            </select>
+          </Field>
           <Group id="surface" title="Surface">
             <Field label="Colour by" help="ESP paints the electrostatic potential on the density surface (red negative, blue positive with the default map). Orbital shows the two phases of one molecular orbital. Density only draws the bare surface in one colour.">
               <select value={s.property} onChange={(e) => onChange({ property: (e.target as HTMLSelectElement).value as FigureSettings['property'] })}>
@@ -209,6 +216,32 @@ export default function SurfacePanel({ result, settings: s, onChange, orbitals, 
                 <div class="esp-bar-preview" style={{ background: cssGradient(s.colormap, s.reverse) }} aria-hidden="true" />
               </Field>
               <label class="small" style="display:flex;gap:.4rem;align-items:center"><input type="checkbox" style="width:auto" checked={s.reverse} onChange={(e) => onChange({ reverse: (e.target as HTMLInputElement).checked })} /> Reverse colours</label>
+              {s.colormap === 'custom' && (
+                <div class="esp-custom" data-testid="custom-gradient">
+                  <p class="small muted" style="margin:0">Colours run from the most negative potential (left) to the most positive (right), evenly spaced.</p>
+                  <div class="esp-stops">
+                    {s.customStops.map((c, i) => (
+                      <input type="color" aria-label={`Gradient colour ${i + 1} of ${s.customStops.length}`} value={c} onInput={(e) => { const n = [...s.customStops]; n[i] = (e.target as HTMLInputElement).value; onChange({ customStops: n }); }} />
+                    ))}
+                  </div>
+                  <div class="esp-presets">
+                    <button type="button" class="btn-sm" disabled={s.customStops.length >= 8} onClick={() => onChange({ customStops: [...s.customStops, s.customStops[s.customStops.length - 1]] })}>Add colour</button>
+                    <button type="button" class="btn-sm" disabled={s.customStops.length <= 2} onClick={() => onChange({ customStops: s.customStops.slice(0, -1) })}>Remove last</button>
+                    <button type="button" class="btn-sm" onClick={() => onChange({ customStops: [...s.customStops].reverse() })}>Flip order</button>
+                  </div>
+                  <label class="small muted" for="esp-start-from">Start from</label>
+                  <select id="esp-start-from" value="" onChange={(e) => {
+                    const name = (e.target as HTMLSelectElement).value as ColormapName;
+                    if (!name) return;
+                    const n = Math.min(7, stopsOf(name).length);
+                    const hex = (v: number) => Math.round(v).toString(16).padStart(2, '0');
+                    onChange({ customStops: Array.from({ length: n }, (_, k) => { const [r, g, b] = colorAt(name, k / (n - 1)); return `#${hex(r)}${hex(g)}${hex(b)}`; }) });
+                  }}>
+                    <option value="">an existing map…</option>
+                    {(Object.keys(COLORMAPS) as ColormapName[]).filter((k) => k !== 'custom').map((k) => <option value={k}>{COLORMAPS[k].label}</option>)}
+                  </select>
+                </div>
+              )}
               <Field label="Units" help="Units for the colour scale and the extrema: kcal/mol and kJ/mol are the energy a +1 charge would gain or lose at that point; a.u. is hartree per electron; eV is volts.">
                 <select value={s.units} onChange={(e) => {
                   const next = (e.target as HTMLSelectElement).value as EspUnit;

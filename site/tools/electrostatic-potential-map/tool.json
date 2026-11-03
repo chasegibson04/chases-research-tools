@@ -4,7 +4,7 @@
   "name": "Electrostatic Potential Map Generator",
   "tagline": "Draw a molecule or paste SMILES, compute its electron density and electrostatic potential in your browser, and export a publication figure.",
   "description": "Turn a SMILES string, a structure you draw, or an XYZ or MOL file into an electrostatic potential (ESP) map painted on the electron-density surface, the kind of figure used to explain cation–π interactions. A closed-shell Hartree–Fock calculation runs entirely in your browser, then you rotate the surface, change the colour scale, atom style and view, add 2D slices and ring probes, and export PNG, mesh and Gaussian cube files. Nothing is uploaded.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "beta",
   "kind": "interactive",
   "category": "chemistry",

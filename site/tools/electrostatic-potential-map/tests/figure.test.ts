@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSurface, DEFAULT_FIGURE, colorsToBytes } from '../src/surface/figure';
+import { buildSurface, DEFAULT_FIGURE, LOOKS, colorsToBytes } from '../src/surface/figure';
+import { COLORMAPS } from '../src/surface/colormap';
 import type { GridSpec } from '../src/qm/grid';
 
 const grid = (): { g: GridSpec & { data: Float32Array }; esp: GridSpec & { data: Float32Array } } => {
@@ -56,5 +57,17 @@ describe('buildSurface', () => {
     expect(reds).toBeLessThan(total - 10);
     const plain = buildSurface(g, undefined, undefined, { ...DEFAULT_FIGURE, property: 'plain', isovalue: 0.01 });
     expect(plain.stats!.volume).toBeGreaterThan(1);
+  });
+
+  it('custom gradients recolour the surface, and every look names a real colour map', () => {
+    const { g, esp } = grid();
+    const base = { ...DEFAULT_FIGURE, isovalue: 0.01, units: 'au' as const, colormap: 'custom' as const };
+    const a = buildSurface(g, esp, undefined, { ...base, customStops: ['#000000', '#ffffff'] });
+    const b = buildSurface(g, esp, undefined, { ...base, customStops: ['#ff0000', '#00ff00'] });
+    expect(Array.from(a.colors.slice(0, 12))).not.toEqual(Array.from(b.colors.slice(0, 12)));
+    // black-to-white: every vertex is a grey (r = g = b)
+    for (let i = 0; i < a.colors.length; i += 3) expect(Math.abs(a.colors[i] - a.colors[i + 2])).toBeLessThan(1e-6);
+    for (const l of LOOKS) if (l.patch.colormap) expect(Object.keys(COLORMAPS)).toContain(l.patch.colormap);
+    expect(LOOKS.map((l) => l.id)).toContain('slide');
   });
 });

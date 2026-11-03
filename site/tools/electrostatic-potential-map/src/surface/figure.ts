@@ -3,7 +3,7 @@ import { ANGSTROM_PER_BOHR } from '../chem';
 import { UNIT_FACTOR, niceRange, type EspUnit } from '../units';
 import { sampleGridCubic, type GridSpec } from '../qm/grid';
 import { isoSurface, meshStats, type Mesh } from './marching';
-import { colorAt, COLORMAPS, type ColormapName } from './colormap';
+import { colorAt, COLORMAPS, setCustomStops, type ColormapName } from './colormap';
 import { DEFAULT_VIEWER_STYLE, type ViewerStyle } from './viewer3d';
 
 export type SurfaceProperty = 'esp' | 'orbital' | 'plain';
@@ -13,6 +13,8 @@ export interface FigureSettings extends ViewerStyle {
   orbitalIndex: number;
   orbitalIso: number;
   colormap: ColormapName;
+  /** colours of the 'custom' gradient, evenly spaced from the negative end to the positive end */
+  customStops: string[];
   reverse: boolean;
   rangeMode: 'auto-sym' | 'auto' | 'manual';
   vmin: number;
@@ -33,7 +35,7 @@ export interface FigureSettings extends ViewerStyle {
 export const DEFAULT_FIGURE: FigureSettings = {
   ...DEFAULT_VIEWER_STYLE,
   property: 'esp', isovalue: 0.002, orbitalIndex: -1, orbitalIso: 0.04,
-  colormap: 'rwb', reverse: false, rangeMode: 'auto-sym', vmin: -30, vmax: 30, units: 'kcal',
+  colormap: 'rwb', customStops: ['#d62839', '#ffffff', '#1d4ed8'], reverse: false, rangeMode: 'auto-sym', vmin: -30, vmax: 30, units: 'kcal',
   posColor: '#2f6fed', negColor: '#e5484d', plainColor: '#9aa7b5',
   title: '', showBar: true, barPosition: 'right', labels: 'none',
   exportWidthIn: 6.5, exportDpi: 300, exportAspect: 'screen',
@@ -66,6 +68,7 @@ export function buildSurface(
   orbital: Float32Array | undefined,
   s: FigureSettings,
 ): BuiltSurface {
+  setCustomStops(s.customStops);
   if (s.property === 'orbital' && orbital) {
     const pos = isoSurface(orbital, density, Math.abs(s.orbitalIso), 1);
     const neg = isoSurface(orbital, density, -Math.abs(s.orbitalIso), -1);
@@ -136,3 +139,13 @@ export function loadFigureSettings(): FigureSettings {
   return { ...DEFAULT_FIGURE };
 }
 export function saveFigureSettings(s: FigureSettings) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage blocked */ } }
+
+/** One-click looks: each sets the colour map, range behaviour, background and surface so a figure matches a familiar style. */
+export interface LookPreset { id: string; label: string; note: string; patch: Partial<FigureSettings> }
+export const LOOKS: LookPreset[] = [
+  { id: 'slide', label: 'Lecture slide (dark, rainbow)', note: 'Red negative to violet positive on black, as in the cation–π slides.', patch: { colormap: 'spartan', reverse: false, rangeMode: 'auto', background: 'black', opacity: 0.9, atomStyle: 'ballstick', showBar: true } },
+  { id: 'journal', label: 'Journal (white, red–white–blue)', note: 'White background, zero-centred diverging scale, opaque surface.', patch: { colormap: 'rwb', reverse: false, rangeMode: 'auto-sym', background: 'white', opacity: 1, projection: 'orthographic', showBar: true } },
+  { id: 'cvd', label: 'Colour-blind safe (orange–purple)', note: 'Readable with red–green colour blindness; zero-centred.', patch: { colormap: 'puor', reverse: false, rangeMode: 'auto-sym', background: 'white', opacity: 1, showBar: true } },
+  { id: 'spectral', label: 'Spectral, zero-centred', note: 'Red–yellow–green–blue–violet with a symmetric range.', patch: { colormap: 'spectral', reverse: false, rangeMode: 'auto-sym', background: 'dark', opacity: 1, showBar: true } },
+  { id: 'grey', label: 'Greyscale (print)', note: 'For black-and-white printing.', patch: { colormap: 'gray', reverse: false, rangeMode: 'auto', background: 'white', opacity: 1, showBar: true } },
+];

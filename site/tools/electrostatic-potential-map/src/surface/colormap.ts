@@ -1,5 +1,5 @@
 // Colormaps for property-on-surface figures. t in [0,1]; t = 0 is the "negative" end of a diverging map.
-export type ColormapName = 'rwb' | 'rainbow' | 'rdylbu' | 'puor' | 'brbg' | 'viridis' | 'gray';
+export type ColormapName = 'spartan' | 'rwb' | 'rainbow' | 'spectral' | 'rdylbu' | 'puor' | 'brbg' | 'viridis' | 'gray' | 'custom';
 
 const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 function hsl2rgb(h: number, s: number, l: number): [number, number, number] {
@@ -11,6 +11,10 @@ const toHex = (c: [number, number, number]) => '#' + c.map((v) => v.toString(16)
 
 // ColorBrewer diverging schemes (11 classes) are in the public domain; viridis is CC0.
 const STOPS: Record<ColormapName, string[]> = {
+  // modelled on the cation-pi lecture figure: red -> orange -> yellow -> green -> teal -> blue -> violet
+  spartan: ['#e0132b', '#f2561d', '#f6a21e', '#eed21f', '#8fd12f', '#19b58f', '#1f7fd6', '#3a45c2', '#5b2a9e'],
+  spectral: ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#ffffbf', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2'],
+  custom: ['#d62839', '#ffffff', '#1d4ed8'],
   rwb: ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#f7f7f7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061'],
   rdylbu: ['#a50026', '#d73027', '#f46d43', '#fdae61', '#fee090', '#ffffbf', '#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'],
   puor: ['#7f3b08', '#b35806', '#e08214', '#fdb863', '#fee0b6', '#f7f7f7', '#d8daeb', '#b2abd2', '#8073ac', '#542788', '#2d004b'],
@@ -22,6 +26,9 @@ const STOPS: Record<ColormapName, string[]> = {
 };
 
 export const COLORMAPS: Record<ColormapName, { label: string; diverging: boolean; cvdSafe: boolean }> = {
+  spartan: { label: 'Slide style: red–orange–yellow–green–blue–violet', diverging: false, cvdSafe: false },
+  spectral: { label: 'Spectral (red–yellow–green–blue–violet)', diverging: false, cvdSafe: false },
+  custom: { label: 'Custom gradient…', diverging: false, cvdSafe: false },
   rwb: { label: 'Red–white–blue (diverging)', diverging: true, cvdSafe: false },
   rainbow: { label: 'Rainbow (classic ESP)', diverging: false, cvdSafe: false },
   rdylbu: { label: 'Red–yellow–blue (diverging)', diverging: true, cvdSafe: false },
@@ -32,6 +39,17 @@ export const COLORMAPS: Record<ColormapName, { label: string; diverging: boolean
 };
 
 const PARSED = Object.fromEntries(Object.entries(STOPS).map(([k, v]) => [k, v.map(hex)])) as Record<ColormapName, Array<[number, number, number]>>;
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+/** Sets the stops used by the 'custom' colormap (2 to 8 hex colours, evenly spaced; invalid entries are ignored). */
+export function setCustomStops(stops: string[]): void {
+  const ok = stops.filter((c) => HEX.test(c)).slice(0, 8);
+  if (ok.length < 2) return;
+  STOPS.custom = ok;
+  PARSED.custom = ok.map(hex);
+}
+export const getCustomStops = () => [...STOPS.custom];
+export const stopsOf = (name: ColormapName) => [...STOPS[name]];
 
 export function colorAt(name: ColormapName, t: number, reverse = false): [number, number, number] {
   const stops = PARSED[name];

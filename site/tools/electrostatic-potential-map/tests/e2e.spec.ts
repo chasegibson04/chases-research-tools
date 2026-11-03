@@ -133,4 +133,33 @@ test.describe('electrostatic-potential-map', () => {
     }).length);
     expect(unnamed).toBe(0);
   });
+
+  test('the lecture-slide look gives a rainbow on black, and a custom gradient can be edited', async ({ page }) => {
+    await run(page, 'Benzene (SMILES)');
+    await page.locator('[data-testid="look-select"]').selectOption('slide');
+    await expect(page.locator('[data-testid="esp-stage"][data-ready="true"]')).toBeVisible();
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-action="save-png"]').click()]);
+    const c = await page.evaluate(async (b64) => {
+      const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (x) => x.charCodeAt(0))], { type: 'image/png' }));
+      const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+      const ctx = cv.getContext('2d')!; ctx.drawImage(bmp, 0, 0);
+      const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+      let yellowGreen = 0, red = 0, dark = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        const [r, g, bl] = [d[i], d[i + 1], d[i + 2]];
+        if (g > 150 && bl < 110 && r > 60) yellowGreen++;
+        if (r > 170 && g < 90 && bl < 90) red++;
+        if (r < 25 && g < 25 && bl < 25) dark++;
+      }
+      return { yellowGreen, red, dark, total: d.length / 4 };
+    }, readFileSync(await download.path()).toString('base64'));
+    expect(c.yellowGreen).toBeGreaterThan(c.total * 0.004);
+    expect(c.red).toBeGreaterThan(c.total * 0.004);
+    expect(c.dark).toBeGreaterThan(c.total * 0.3); // black background
+    // custom gradient editor
+    await page.locator('.esp-group[data-group="colour"] select').first().selectOption('custom');
+    await expect(page.locator('[data-testid="custom-gradient"] input[type="color"]')).toHaveCount(3);
+    await page.getByRole('button', { name: 'Add colour' }).click();
+    await expect(page.locator('[data-testid="custom-gradient"] input[type="color"]')).toHaveCount(4);
+  });
 });

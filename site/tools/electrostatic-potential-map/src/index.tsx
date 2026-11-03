@@ -126,7 +126,7 @@ export default function EspTool({ manifest, examples, run }: ToolProps<Input & R
               : <Panel title="Surface figure" id="esp-surface"><p class="small muted" style="padding:1rem">Loading the 3D viewer…</p></Panel>}
             <DataPanel result={result} orbitals={orbitals} units={fig.units} />
             <RingPanel result={result} units={fig.units} />
-            <SlicePanel result={result} run={run} units={fig.units} colormap={fig.colormap} />
+            <SlicePanel result={result} run={run} units={fig.units} colormap={fig.colormap} customStops={fig.customStops} />
           </div>
         )}
         {!result && state !== 'running' && (

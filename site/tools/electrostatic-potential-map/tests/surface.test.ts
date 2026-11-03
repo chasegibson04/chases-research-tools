@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isoSurface, meshStats } from '../src/surface/marching';
-import { colorAt, COLORMAPS, cssGradient, type ColormapName } from '../src/surface/colormap';
+import { colorAt, COLORMAPS, cssGradient, setCustomStops, getCustomStops, type ColormapName } from '../src/surface/colormap';
 import { sampleGridCubic, type GridSpec } from '../src/qm/grid';
 import { toCube, toOBJ, toPLY, toXYZ } from '../src/exporters';
 import run, { type Input, type Output } from '../src/compute';
@@ -54,6 +54,24 @@ describe('marching tetrahedra', () => {
 });
 
 describe('colormaps and exporters', () => {
+  it('the slide-style map runs red, yellow-green, blue and violet; custom stops are validated and used', () => {
+    expect(colorAt('spartan', 0)[0]).toBeGreaterThan(200); // red
+    const mid = colorAt('spartan', 0.5); // yellow-green region
+    expect(mid[1]).toBeGreaterThan(150);
+    expect(mid[2]).toBeLessThan(120);
+    const end = colorAt('spartan', 1); // violet
+    expect(end[2]).toBeGreaterThan(end[1]);
+    setCustomStops(['#ff0000', '#00ff00', '#0000ff']);
+    expect(colorAt('custom', 0)).toEqual([255, 0, 0]);
+    expect(colorAt('custom', 0.5)).toEqual([0, 255, 0]);
+    expect(colorAt('custom', 1)).toEqual([0, 0, 255]);
+    expect(cssGradient('custom')).toContain('#00ff00');
+    setCustomStops(['nope', '#123456']); // fewer than two valid colours: ignored
+    expect(getCustomStops()).toEqual(['#ff0000', '#00ff00', '#0000ff']);
+    setCustomStops(Array(12).fill('#abcdef')); // capped at eight
+    expect(getCustomStops()).toHaveLength(8);
+  });
+
   it('every colormap is defined on [0,1], reversible and has a CSS gradient', () => {
     for (const name of Object.keys(COLORMAPS) as ColormapName[]) {
       const a = colorAt(name, 0), b = colorAt(name, 1), mid = colorAt(name, 0.5), rev = colorAt(name, 0, true);

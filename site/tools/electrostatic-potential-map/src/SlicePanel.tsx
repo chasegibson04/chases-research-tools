@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import { Panel } from '@/components/tool/Panel';
 import type { ToolProps } from '@/lib/types';
 import type { Input, Output, SliceSpec } from './compute';
-import { COLORMAPS, colorAt, type ColormapName } from './surface/colormap';
+import { COLORMAPS, colorAt, setCustomStops, type ColormapName } from './surface/colormap';
 import { buildSliceSvg, sliceLayout } from './slice';
 import { UNIT_FACTOR, UNIT_LABEL, niceNumber, niceRange, type EspUnit } from './units';
 import { Field, NumberBox, downloadURL } from './ui';
@@ -19,7 +19,8 @@ const dot = (a: ArrayLike<number>, b: ArrayLike<number>) => a[0] * b[0] + a[1] *
 
 interface Computed { out: NonNullable<Output['slice']>; plane: Plane; prop: Prop; offset: number }
 
-export default function SlicePanel({ result, run, units, colormap }: { result: Output; run: ToolProps<Input, Output>['run']; units: EspUnit; colormap: ColormapName }) {
+export default function SlicePanel({ result, run, units, colormap, customStops }: { result: Output; run: ToolProps<Input, Output>['run']; units: EspUnit; colormap: ColormapName; customStops: string[] }) {
+  setCustomStops(customStops);
   const [plane, setPlane] = useState<Plane>('xy');
   const [offset, setOffset] = useState(1.7);
   const [prop, setProp] = useState<Prop>('esp');
@@ -91,7 +92,7 @@ export default function SlicePanel({ result, run, units, colormap }: { result: O
     ctx.putImageData(img, 0, 0);
     const svg = buildSliceSvg({ imageHref: cv.toDataURL('image/png'), nu: out.nu, nv: out.nv, data, uMin: out.spec.uMin, uMax: out.spec.uMax, vMin: out.spec.vMin, vMax: out.spec.vMax, uLabel: ax.uL, vLabel: ax.vL, lo: a, hi: b, colormap: cmap, reverse: false, unitLabel, propertyLabel: propLabel, contourStep: contours ? step : 0, atoms, title: title || `${propLabel}, plane ${ax.nL} = ${computed.offset} Å · ${result.qm!.method}` });
     return { svg, data, lo: a, hi: b };
-  }, [computed, cmap, rangeMode, lo, hi, contours, title, units]);
+  }, [computed, cmap, rangeMode, lo, hi, contours, title, units, customStops.join(',')]);
 
   const onMove = (e: MouseEvent) => {
     if (!computed || !view || !box.current) return;
